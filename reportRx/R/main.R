@@ -885,9 +885,9 @@ citime<-function (data, response, times, units="Years",outcomes=NULL,decimals=2)
 }
 
 
-#' Create a forrest plot
+#' Create a forest plot
 #' 
-#' Create a forrest plot. All entires with cutoff=T will be plotted with an NA
+#' Create a forest plot. All entires with cutoff=T will be plotted with an NA
 #' rather than their original value.
 #' 
 #' @param data dataframe containing data

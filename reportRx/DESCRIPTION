@@ -4,7 +4,7 @@ Description: reportRx is a set of tools that integrates with LaTeX and knitr to
     automatically generate generate reproducible clinical reports. Fuctions to
     automatically produce demoraphic tables, outcome summaries, univariate and
     multivariate analysis results and more are included.
-Version: 1.0
+Version: 1.01
 License: GPL-3
 Author: Ryan Del Bel
     <rdelbel@gmail.com>,
