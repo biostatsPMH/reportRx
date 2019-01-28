@@ -240,10 +240,15 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param markup boolean indicating if you want latex markup
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
+#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param testcont test of choice for continuous variables, one of \emph{rank-sum} (default) or \emph{ANOVA}
+#'@param testcat test of choice for categorical variables, one of \emph{Chi-squared} (default) or \emph{Fisher}
 #'@keywords dataframe
 #'@export
-covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=T,sanitize=T,nicenames=T){
-  
+covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE, IQR = FALSE,
+                 testcont = c('rank-sum test','ANOVA'), testcat = c('Chi-squared','Fisher')){
+  testcont <- match.arg(testcont)
+  testcat <- match.arg(testcat)
   if(!markup){
     lbld<-identity
     addspace<-identity
@@ -277,11 +282,13 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=T,sanitize=T,nicename
     #if the covariate is a factor
     if(is.factor(data[,cov])){
       factornames<-c(levels(data[,cov]),factornames)
-      if(!is.null(maincov)){
-        p<-try(lpvalue(fisher.test(data[,maincov],data[,cov])$p.value))
-        if(class(p)=="try-error") p<-chisq.test(data[,maincov],data[,cov])$p.value
-        p<-lpvalue(p)
-      } 
+      if (!is.null(maincov)) {
+        p <- if( testcat=='Fisher'){ try(fisher.test(data[, maincov], data[, cov])$p.value)
+        } else try(chisq.test(data[, maincov], data[, cov])$p.value)
+        if (class(p) == "try-error") 
+          p <- NA
+        p <- lpvalue(p)
+      }
       
       
       #set up the main columns
@@ -306,23 +313,27 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=T,sanitize=T,nicename
       #if the covariate is not a factor
     }else{
       #setup the first column
-      factornames<-c("Mean (sd)", "Median (Min,Max)",factornames)
-      if(!is.null(maincov)){
-        p<-try(anova(lm(data[,cov]~data[,maincov]))[5][[1]][1])
-        if(class(p)=="try-error") p<-NA
-        p<-lpvalue(p)}
-      
-      
+      factornames <- c("Mean (sd)", ifelse(IQR, "Median (Q1,Q3)", "Median (Min,Max)"), factornames)
+      if (!is.null(maincov)) {
+        p <- if( testcont=='rank-sum test'){
+          if( length(unique(data[, maincov]))==2 ){
+            try( wilcox.test(data[, cov] ~ data[, maincov])$p.value )
+          } else try( kruskal.test(data[, cov] ~ data[, maincov])$p.value )
+        } else try(anova(lm(data[, cov] ~ data[, maincov]))[5][[1]][1])
+        if (class(p) == "try-error") 
+          p <- NA
+        p <- lpvalue(p)
+      }
       #set up the main columns
-      onetbl<-mapply(function(sublevel,N){
-        missing<-NULL
+      onetbl <- mapply(function(sublevel,N){
+        missing <- NULL
         if(sublevel[1]!="NOMAINCOVNULLNA"){
           subdata<-subset(data,subset=data[,maincov]%in%sublevel)
         }else{subdata<-data}
         summary<-round(summary(subdata[,cov]),1)
         meansd<-paste(summary[4]," (", round(sd(subdata[,cov],na.rm=T),1),")",sep="")
-        mmm<-paste(summary[3]," (",summary[1],",",summary[6],")",sep="")
-        
+        mmm <- if( IQR ){ paste(summary[3], " (", summary[2], ",", summary[5], ")", sep = "")
+        }else paste(summary[3], " (", summary[1], ",", summary[6], ")", sep = "")
         
         #if there is a missing in the whole data
         if(ismiss){          
@@ -744,7 +755,7 @@ pmvsum<-function(model,data){
 #' @keywords print
 #' @export
 
-makedocx<-function(dir,fname,pdwd,imwd=""){
+makedocx<-function(dir,fname,pdwd="C:\\PROGRA~1\\RStudio\\bin\\pandoc\\",imwd=""){
   oldwd<-getwd()
   if(imwd!=""){
     setwd(imwd)
@@ -754,6 +765,9 @@ makedocx<-function(dir,fname,pdwd,imwd=""){
   setwd(pdwd)
   command<-paste("pandoc -o ",dir,fname,".docx ",dir,fname,".tex ",
                  "--default-image-extension=png",sep="")
+  setwd(dir)
+  command <- paste(pdwd,"pandoc -o ", dir, fname, ".docx ", dir, fname, ".tex ", 
+                   "--default-image-extension=png", sep = "")
   shell(command)
   setwd(oldwd)
 }
