@@ -20,6 +20,6 @@ PATH=C:\Users\oesping\AppData\Local\Rtools\bin;C:\Users\oesping\AppData\LocalRto
 T:
 cd T:\reportRx
 
-R CMD check reportRx_dev
+R CMD check reportRx
 
-R CMD build reportRx_dev
+R CMD build reportRx

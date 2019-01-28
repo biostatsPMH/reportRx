@@ -245,6 +245,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param testcat test of choice for categorical variables, one of \emph{Chi-squared} (default) or \emph{Fisher}
 #'@keywords dataframe
 #'@export
+#'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}} and \code{\link{anova}}
 covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE, IQR = FALSE,
                  testcont = c('rank-sum test','ANOVA'), testcat = c('Chi-squared','Fisher')){
   testcont <- match.arg(testcont)
