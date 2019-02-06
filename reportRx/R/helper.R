@@ -21,7 +21,7 @@ pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 #'@examples
 #'psthr(c(1.111111,2.2222222,3.333333))
 psthr<-function(x,y=2){
-  x<-round(x,y)
+  x <- sapply(x,function(x){ifelse(abs(x)<0.01,format(x, scientific = TRUE, digits=y),round(x,y))})
   pstprn(x)
 }
 covnm<-function(betanames,call){

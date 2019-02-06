@@ -245,7 +245,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param testcat test of choice for categorical variables, one of \emph{Chi-squared} (default) or \emph{Fisher}
 #'@keywords dataframe
 #'@export
-#'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}} and \code{\link{anova}}
+#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
 covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE, IQR = FALSE,
                  testcont = c('rank-sum test','ANOVA'), testcat = c('Chi-squared','Fisher')){
   testcont <- match.arg(testcont)
@@ -380,16 +380,16 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,ni
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
-#'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
+#'@param ... additional options passed to function  \code{\link{covsum}}
 #'@keywords print
 #'@export
-pcovsum<-function(data,covs,maincov=NULL,numobs=NULL,TeX=F){
+pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
   if(!TeX){
-    print.xtable(xtable(covsum(data,covs,maincov,numobs)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{  
     
-    print.xtable(xtable(covsum(data,covs,maincov,numobs)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }}
 
 #'Get univariate summary dataframe
