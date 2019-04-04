@@ -747,28 +747,41 @@ pmvsum<-function(model,data){
 
 #' Convert .TeX to .docx
 #' 
-#' Covertes the knitr-compiled .TeX file to a .docx file
+#' Converts the knitr-compiled .TeX file to a .docx file. The function calls ImageMagick to convert .pdf images into .png and then calls pandoc (included with RStudio) to convert the .Tex file into .docx.
 #' 
 #' @param dir full path of .TeX file directory
-#' @param fname .TeX file file name. Do not include extension
-#' @param pdwd full path to pandoc
+#' @param fname .TeX file filename. Do not include extension.
+#' @param pdwd full path to pandoc. The default value is the usual installation path for Windows systems if RStudio is installed.
 #' @param imwd full path to image magick. Only include if there is at least one graphic.
 #' @keywords print
 #' @export
 
-makedocx<-function(dir,fname,pdwd="C:\\PROGRA~1\\RStudio\\bin\\pandoc\\",imwd=""){
+makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
   oldwd<-getwd()
-  if(imwd!=""){
+  ### convert path to forward slashes if any
+  dir <- gsub("\\\\", "/", dir)
+  setwd(dir)
+  if( grepl(" ",fname) ){## check whether fname has spaces, if it does rename it with a warning.
+    file.rename(from = fname, to = gsub(" ","-",fname))
+    fname <- gsub(" ","-",fname)
+    warning("Your fname has spaces, the new filename is: ",fname)
+  }
+    
+  if(imwd!="" & dir.exists(paste0(dir,"/figure"))){
     setwd(imwd)
-    command<-paste("mogrify -path ", dir,"figure\\ ", "-format png ", dir, "figure\\*.pdf",sep="" )
+    if( grepl("*ImageMagick-6[.]*",imwd) ){
+      exec <- "mogrify" 
+    }else if ( grepl("*ImageMagick-7[.]*",imwd) ){
+      exec <- "magick mogrify"
+    }else warning("The installation path for ImageMagick has an unrecognized format.") 
+  
+    command <- paste0(exec,' -path "', dir,'/figure/" ', '-format png "', dir, '/figure/*.pdf"')
     shell(command)
   }
-  setwd(pdwd)
-  command<-paste("pandoc -o ",dir,fname,".docx ",dir,fname,".tex ",
-                 "--default-image-extension=png",sep="")
   setwd(dir)
-  command <- paste(pdwd,"pandoc -o ", dir, fname, ".docx ", dir, fname, ".tex ", 
-                   "--default-image-extension=png", sep = "")
+  command <- paste0('"',pdwd,'/pandoc" -o ', fname, '.docx ', fname, '.tex ',
+                   "--default-image-extension=png")
+
   shell(command)
   setwd(oldwd)
 }

@@ -21,13 +21,14 @@ pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 #'@examples
 #'psthr(c(1.111111,2.2222222,3.333333))
 psthr<-function(x,y=2){
-  x <- sapply(x,function(x){ifelse(abs(x)<0.01,format(x, scientific = TRUE, digits=y),round(x,y))})
+  x <- sapply(x,function(x){ifelse(abs(x)<0.01 | abs(x)>1000,format(x, scientific = TRUE, digits=y),round(x,y))})
   pstprn(x)
 }
 covnm<-function(betanames,call){
   sapply(betanames,function(betaname){
     
-    indx<-which(sapply(call,function(cov){charmatch(cov,betaname)})==1)
+    # indx<-which(sapply(call,function(cov){charmatch(cov,betaname)})==1)
+    indx=which(sapply(call,function(cov)grepl(cov,betaname,fixed=TRUE))) ## changed on Feb 21, 2019 for checkings
     if(length(indx)==1) return(call[indx])
     #If one  facorname is a subset of another
     indx2<-which.max(sapply(call[indx],nchar))
@@ -194,7 +195,8 @@ matchcovariate=function(betanames,ucall){
   out=as.vector(sapply(betanames,function(betaname){
     splitbetaname=unlist(strsplit(betaname,":",fixed=T))
     out=sapply(splitbetaname,function(bname){
-      indx=which(sapply(ucall,function(cov)charmatch(cov,bname))==1)
+      #indx=which(sapply(ucall,function(cov)charmatch(cov,bname))==1)
+      indx=which(sapply(ucall,function(cov)grepl(cov,bname,fixed=TRUE))) ## changed on Feb 21, 2019 for checkings
       if(length(indx)==1)return(indx)
       #If one  facorname is a subset of another
       indx2<-which.max(sapply(ucall[indx],nchar))
