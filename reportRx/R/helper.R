@@ -216,3 +216,103 @@ matchcovariate=function(betanames,ucall){
   if(-1 %in% out) return(-1)
   return (out)
 }
+
+# (ggsurv) ---------------------------------------------------------
+
+pstprn0 <- function (x) 
+{
+  paste0(x[1], "(", paste0(x[-1], collapse = ","), 
+         ")", sep = "")
+}
+
+psthr0 <- function (x, y = 2) 
+{
+  x <- sapply(x, function(x) {
+    ifelse(abs(x) < 0.01 | abs(x) > 1000, format(x, scientific = TRUE, 
+                                                 digits = y), round(x, y))
+  })
+  pstprn0(x)
+}
+break_function <- function(xmax){
+  
+  xmax_length <- ifelse(xmax>1,nchar(round(xmax)),round(abs(log10(xmax))))
+  
+  byx <- if(xmax>1) {round(xmax/10,digits = 2-xmax_length)
+  }else round(xmax/10,digits = xmax_length+1)
+  
+  breaks <- seq(0,xmax,by=byx)
+  if(max(breaks)<byx) breaks <- c(breaks,max(breaks)+byx)
+  return(breaks)
+}
+
+lpvalue2 <- function (x) 
+{
+  if (is.na(x) | class(x) == "character") 
+    return(x)
+  else if (x <= 0.001) 
+    return("<0.001")
+  else x = signif(x, 2)
+}
+
+.extract_ggplot_colors <- function(p, grp.levels){
+  g <- ggplot_build(p)
+  .cols <- unlist(unique(g$data[[1]]["colour"]))
+  if(!is.null(grp.levels)){
+    if(length(.cols)==1) .cols <- rep(.cols, length(grp.levels))
+    names(.cols) <- grp.levels
+  }
+  .cols
+}
+
+.set_large_dash_as_ytext <- function(ggp){
+  ggp + theme(axis.text.y = element_text(size = 50, vjust = 0.35),
+              axis.ticks.y = element_blank())
+}
+
+##This function is used by the survfit package
+survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
+                            selow, ulimit=TRUE) {
+  zval <- qnorm(1- (1-conf.int)/2, 0,1)
+  if (missing(selow)) scale <- 1.0
+  else scale <- ifelse(selow==0, 1.0, selow/se)  # avoid 0/0 at the origin
+  if (!logse) se <- ifelse(se==0, 0, se/p)   # se of log(survival) = log(p)
+  
+  if (conf.type=='plain') {
+    se2 <- se* p * zval  # matches equation 4.3.1 in Klein & Moeschberger
+    if (ulimit) list(lower= pmax(p -se2*scale, 0), upper = pmin(p + se2, 1))
+    else  list(lower= pmax(p -se2*scale, 0), upper = p + se2)
+  }
+  else if (conf.type=='log') {
+    #avoid some "log(0)" messages
+    xx <- ifelse(p==0, NA, p)  
+    se2 <- zval* se 
+    temp1 <- exp(log(xx) - se2*scale)
+    temp2 <- exp(log(xx) + se2)
+    if (ulimit) list(lower= temp1, upper= pmin(temp2, 1))
+    else  list(lower= temp1, upper= temp2)
+  }
+  else if (conf.type=='log-log') {
+    xx <- ifelse(p==0 | p==1, NA, p)
+    se2 <- zval * se/log(xx)
+    temp1 <- exp(-exp(log(-log(xx)) - se2*scale))
+    temp2 <- exp(-exp(log(-log(xx)) + se2))
+    list(lower = temp1 , upper = temp2)
+  }
+  else if (conf.type=='logit') {
+    xx <- ifelse(p==0, NA, p)  # avoid log(0) messages
+    se2 <- zval * se *(1 + xx/(1-xx))
+    
+    temp1 <- 1- 1/(1+exp(log(p/(1-p)) - se2*scale))
+    temp2 <- 1- 1/(1+exp(log(p/(1-p)) + se2))
+    list(lower = temp1, upper=temp2)
+  }
+  else if (conf.type=="arcsin") {
+    xx <- ifelse(p==0, NA, p)
+    se2 <- .5 *zval*se * sqrt(xx/(1-xx))
+    list(lower= (sin(pmax(0, asin(sqrt(xx)) - se2*scale)))^2,
+         upper= (sin(pmin(pi/2, asin(sqrt(xx)) + se2)))^2)
+  }
+  else stop("invalid conf.int type")
+}
+
+

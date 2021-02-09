@@ -1,17 +1,18 @@
 Package: reportRx
 Title: Tools for automatically generating reproducible clinical report
 Description: reportRx is a set of tools that integrates with LaTeX and knitr to
-    automatically generate generate reproducible clinical reports. Fuctions to
-    automatically produce demoraphic tables, outcome summaries, univariate and
+    automatically generate reproducible clinical reports. Fuctions to
+    produce demographic tables, outcome summaries, univariate and
     multivariate analysis results and more are included.
-Version: 1.01
+Version: 1.02
 License: GPL-3
 Author: Ryan Del Bel
     <rdelbel@gmail.com>,
     Wei Xu
     <wxu@uhnres.utoronto.ca>
-Maintainer: Ryan Del Bel <rdelbel@gmail.com>
-Imports: survival, xtable, aod, cmprsk, geoR, stringr,
+Maintainer: Biostatistics Department Princess Margaret Cancer Centre <biostatsPMH@gmail.com>
+Imports: survival, xtable, aod, cmprsk, 
+         stringr, plyr, ggplot2, gridExtra, geoR
 Depends: reshape
 Collate: 'helper.R' 'main.R' 'misc.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
