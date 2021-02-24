@@ -20,8 +20,12 @@ pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 #'@export
 #'@examples
 #'psthr(c(1.111111,2.2222222,3.333333))
-psthr<-function(x,y=2){
-  x <- sapply(x,function(x){ifelse(abs(x)<0.01 | abs(x)>1000,format(x, scientific = TRUE, digits=y),format(round(x,y),nsmall=y)})
+# LA updated to always return a formatted string
+psthr<- function (x, y = 2)
+{
+  x <- sapply(x, function(x) {
+    ifelse(abs(x) < 0.01 | abs(x) > 1000, format(x, scientific = TRUE,digits = y), format(round(x, y),nsmall = y))
+  })
   pstprn(x)
 }
 covnm<-function(betanames,call){
@@ -317,18 +321,17 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   else stop("invalid conf.int type")
 }
 
-#' function to play counts on plots at the max y value
+# LA new 2021 ---------------------------------------------------------
+
 lbl_count <- function(y){
   q75 <- summary(y)[5]
   return(data.frame(y=max(y),  label=paste('n =',length(y))))
 }
 
-#' create column header to reflect CI width
 betaWithCI <-function(betaname,CIwidth=0.95){
 paste0(betaname,"(",100*CIwidth,"%CI)")
 }
 
-#' like nicenames, but also replaces '/' for wrapping plot labels
 niceStr <- function (strings)
 {
   out <- sapply(strings, function(x) {
