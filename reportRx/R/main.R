@@ -1441,3 +1441,104 @@ ggsurv <- function(response,cov=NULL,data,type=NULL,times = NULL,table = TRUE,re
 
 
 }
+
+#' Plot univariate relationships all on one plot
+#' Need a hierarchy of how to display plots sensibly
+#' If response is continuous
+#'   For a numeric predictor -> scatterplot
+#'   For a categorical predictor -> boxplot
+#' If response is a factor
+#'   For a numeric predictor -> boxplot
+#'   For a categorical predictor -> barplot
+#' @param response character vector with names of columns to use for response
+#' @param covs character vector with names of columns to use for covariates
+#' @param data dataframe containing your data
+#' @param showN boolean indicating whether sample sizes should be shown on the plots
+#' @param na.rm boolean indicating whether na values should be shown or removed
+#' @param response_title character value with title of the plot
+#' @keywords plot
+#' @import ggplot2
+#' @importFrom ggpubr ggarrange
+#' @export
+plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL){
+  # if (!class(data[[response]])[1] %in% c('factor','ordered','numeric')) {
+  #   stop('Response variable must be numeric or factor.')
+  # }
+  # bad_covs = sapply(covs,function(x) !class(data[[x]])[1] %in% c('factor','ordered','numeric'))
+  # if (sum(bad_covs)>0){
+  #   stop(paste('The following variables are neither numeric nor factors and can not be covariates:',c(covs[bad_covs])))
+  # }
+
+  for (v in c(response,covs)){
+    if (class(data[[v]])=='character') data[[v]] <- factor(data[[v]])
+  }
+
+  if (is.null(response_title)) response_title = response
+  response_title = niceStr(response_title)
+  plist <- NULL
+  if (class(data[[response]])[1] %in% c('factor','ordered')){
+    levels(data[[response]]) = niceStr(levels(data[[response]]))
+    for (x_var in covs){
+      # remove missing data, if requested
+      if (na.rm) pdata = na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
+
+      if (class(pdata[[x_var]])[1] =='numeric' ){
+        p <- ggplot(data=pdata, aes_string(y=response,x=x_var,fill=response)) +
+          geom_boxplot()
+        if (showN){
+          p=  p+
+            stat_summary(geom='text',fun.data = lbl_count,vjust=-0.5,hjust=1)
+        }
+      } else {
+        p <- ggplot(data=pdata, aes_string(x=x_var,fill=response)) +
+          geom_bar(position='fill') +
+          scale_x_discrete(labels= function(x) wrp_lbl(x))
+        if (showN){
+          p <- p +
+            geom_text(aes(label=stat(count)),stat='count',position='fill',vjust=1)
+        }
+        if (length(unique(pdata[[x_var]]))>8){
+          p <- p + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        }
+      }
+      plist[[x_var]] <- p  +
+        theme(axis.text.y=element_blank(),
+              axis.ticks.y = element_blank(),
+              legend.position = 'bottom',
+              plot.title = element_text(size=10),
+              plot.margin = unit(c(0,1,0,1), "lines")) +
+        labs(title=niceStr(x_var),x='',y='',fill=response_title)
+    }
+  } else{
+    for (x_var in covs){
+      # remove missing data, if requested
+      if (na.rm) pdata = na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
+
+      if (class(pdata[[x_var]])[1] =='numeric' ){
+        p <- ggplot(data=pdata, aes_string(y=response,x=x_var)) +
+          geom_point()
+      } else
+        p <- ggplot(data=pdata, aes_string(y=response,x=x_var,fill=response)) +
+          geom_boxplot() +
+          scale_x_discrete(labels= function(x) wrp_lbl(x))
+      if (showN){
+        p=  p+
+          stat_summary(geom='text',fun.data = lbl_count,vjust=-0.5,hjust=1)
+      }
+      if (length(unique(pdata[[x_var]]))>8){
+        p <- p + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      }
+      plist[[x_var]] <- p  +
+        theme(
+          legend.position = 'bottom',
+          plot.title = element_text(size=10),
+          plot.margin = unit(c(0,1,0,1), "lines")) +
+        labs(title=niceStr(x_var),x='',y='',fill=response_title)
+    }
+
+  }
+  ggarrange(plotlist=plist,
+            common.legend = T,
+            ncol=2,
+            nrow=ceiling(length(plist)/2))
+}

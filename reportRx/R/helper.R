@@ -1,7 +1,7 @@
 #' Paste with parentheses
-#' 
+#'
 #' Paste with parentheses
-#' 
+#'
 #' @param x a vector
 #'@keywords helper
 #'@export
@@ -11,9 +11,9 @@
 pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 
 #' Round and paste with parentheses
-#' 
+#'
 #' Round and paste with parentheses
-#' 
+#'
 #' @param x a numeic vector
 #' @param y integer corresponding to the number of digits to round by
 #'@keywords helper
@@ -21,12 +21,12 @@ pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 #'@examples
 #'psthr(c(1.111111,2.2222222,3.333333))
 psthr<-function(x,y=2){
-  x <- sapply(x,function(x){ifelse(abs(x)<0.01 | abs(x)>1000,format(x, scientific = TRUE, digits=y),round(x,y))})
+  x <- sapply(x,function(x){ifelse(abs(x)<0.01 | abs(x)>1000,format(x, scientific = TRUE, digits=y),format(round(x,y),nsmall=y)})
   pstprn(x)
 }
 covnm<-function(betanames,call){
   sapply(betanames,function(betaname){
-    
+
     # indx<-which(sapply(call,function(cov){charmatch(cov,betaname)})==1)
     indx=which(sapply(call,function(cov)grepl(cov,betaname,fixed=TRUE))) ## changed on Feb 21, 2019 for checkings
     if(length(indx)==1) return(call[indx])
@@ -34,8 +34,8 @@ covnm<-function(betanames,call){
     indx2<-which.max(sapply(call[indx],nchar))
     if(length(indx2)==1) return(call[indx[indx2]])
     indx3<-which(sapply(call[indx2],function(c){substr(betaname,1,nchar(c))==c}))
-    if(length(indx3)==1)  return(call[indx[indx2[indx3]]])                      
-  })  
+    if(length(indx3)==1)  return(call[indx[indx2[indx3]]])
+  })
 }
 
 alleql<-function(x,y){
@@ -63,10 +63,11 @@ betaindx<-function(x){
   }
 }
 
+
 #' Capitalize a string
-#' 
+#'
 #' Calitalize a string
-#' 
+#'
 #' @param x string
 #' @keywords helper
 #' @export
@@ -91,9 +92,9 @@ nicename<-function(strings){
 }
 
 #' Formats p-values
-#' 
+#'
 #' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits
-#' 
+#'
 #' @param x an integer
 #' @export
 pvalue<-function(x){
@@ -117,13 +118,13 @@ sanitize <- function(str) {
   result <- gsub("#", "\\#", result, fixed = TRUE)
   result <- gsub("^", "\\verb|^|", result, fixed = TRUE)
   result <- gsub("~", "\\~{}", result, fixed = TRUE)
-  result <- gsub("SANITIZE.BACKSLASH", "$\\backslash$", 
+  result <- gsub("SANITIZE.BACKSLASH", "$\\backslash$",
                  result, fixed = TRUE)
   return(result)
 }
 
 #' Sanitizes strings to not break LaTeX
-#' 
+#'
 #' Strings with special charaters will break LaTeX if returned 'asis' by knitr. This happens every time we use one of the main reportRx functions. We first sanitize our strings with this function to stop LaTeX from breaking.
 #'
 #'@param str a vector of strings to sanitize
@@ -153,7 +154,7 @@ addspace<-function(x){
   paste("~~~",x,sep="")
 }
 #' Formats p-values for LaTeX
-#' 
+#'
 #' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits. Will bold the p-value if it is <= 0.05
 #' @param x an integer
 #' @export
@@ -173,7 +174,7 @@ removedollar<-function(x){
   if(length(unique(indx))==1){
     if(unique(indx)!=0) x<-unlist(lapply(colnms,function(colnm) paste(substring(colnm,indx[1]),collapse=":")))
   }
-  return(x)  
+  return(x)
 }
 
 modelmatrix<-function(f,data=NULL){
@@ -195,6 +196,7 @@ matchcovariate=function(betanames,ucall){
   out=as.vector(sapply(betanames,function(betaname){
     splitbetaname=unlist(strsplit(betaname,":",fixed=T))
     out=sapply(splitbetaname,function(bname){
+      bname=gsub(" ","",bname) # added 14 Dec 2020 to allow matching with centred variables
       #indx=which(sapply(ucall,function(cov)charmatch(cov,bname))==1)
       indx=which(sapply(ucall,function(cov)grepl(cov,bname,fixed=TRUE))) ## changed on Feb 21, 2019 for checkings
       if(length(indx)==1)return(indx)
@@ -202,8 +204,8 @@ matchcovariate=function(betanames,ucall){
       indx2<-which.max(sapply(ucall[indx],nchar))
       if(length(indx2)==1) return(indx[indx2])
       indx3<-which(sapply(ucall[indx2],function(c){substr(betaname,1,nchar(c))==c}))
-      if(length(indx3)==1)  return(ucall[indx[indx2[indx3]]])  
-      return(-1)      
+      if(length(indx3)==1)  return(ucall[indx[indx2[indx3]]])
+      return(-1)
     })
     if(-1 %in% out) return(-1)
     result=0
@@ -219,37 +221,37 @@ matchcovariate=function(betanames,ucall){
 
 # (ggsurv) ---------------------------------------------------------
 
-pstprn0 <- function (x) 
+pstprn0 <- function (x)
 {
-  paste0(x[1], "(", paste0(x[-1], collapse = ","), 
+  paste0(x[1], "(", paste0(x[-1], collapse = ","),
          ")", sep = "")
 }
 
-psthr0 <- function (x, y = 2) 
+psthr0 <- function (x, y = 2)
 {
   x <- sapply(x, function(x) {
-    ifelse(abs(x) < 0.01 | abs(x) > 1000, format(x, scientific = TRUE, 
+    ifelse(abs(x) < 0.01 | abs(x) > 1000, format(x, scientific = TRUE,
                                                  digits = y), round(x, y))
   })
   pstprn0(x)
 }
 break_function <- function(xmax){
-  
+
   xmax_length <- ifelse(xmax>1,nchar(round(xmax)),round(abs(log10(xmax))))
-  
+
   byx <- if(xmax>1) {round(xmax/10,digits = 2-xmax_length)
   }else round(xmax/10,digits = xmax_length+1)
-  
+
   breaks <- seq(0,xmax,by=byx)
   if(max(breaks)<byx) breaks <- c(breaks,max(breaks)+byx)
   return(breaks)
 }
 
-lpvalue2 <- function (x) 
+lpvalue2 <- function (x)
 {
-  if (is.na(x) | class(x) == "character") 
+  if (is.na(x) | class(x) == "character")
     return(x)
-  else if (x <= 0.001) 
+  else if (x <= 0.001)
     return("<0.001")
   else x = signif(x, 2)
 }
@@ -276,7 +278,7 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   if (missing(selow)) scale <- 1.0
   else scale <- ifelse(selow==0, 1.0, selow/se)  # avoid 0/0 at the origin
   if (!logse) se <- ifelse(se==0, 0, se/p)   # se of log(survival) = log(p)
-  
+
   if (conf.type=='plain') {
     se2 <- se* p * zval  # matches equation 4.3.1 in Klein & Moeschberger
     if (ulimit) list(lower= pmax(p -se2*scale, 0), upper = pmin(p + se2, 1))
@@ -284,8 +286,8 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   }
   else if (conf.type=='log') {
     #avoid some "log(0)" messages
-    xx <- ifelse(p==0, NA, p)  
-    se2 <- zval* se 
+    xx <- ifelse(p==0, NA, p)
+    se2 <- zval* se
     temp1 <- exp(log(xx) - se2*scale)
     temp2 <- exp(log(xx) + se2)
     if (ulimit) list(lower= temp1, upper= pmin(temp2, 1))
@@ -301,7 +303,7 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   else if (conf.type=='logit') {
     xx <- ifelse(p==0, NA, p)  # avoid log(0) messages
     se2 <- zval * se *(1 + xx/(1-xx))
-    
+
     temp1 <- 1- 1/(1+exp(log(p/(1-p)) - se2*scale))
     temp2 <- 1- 1/(1+exp(log(p/(1-p)) + se2))
     list(lower = temp1, upper=temp2)
@@ -315,4 +317,43 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   else stop("invalid conf.int type")
 }
 
+#' function to play counts on plots at the max y value
+lbl_count <- function(y){
+  q75 <- summary(y)[5]
+  return(data.frame(y=max(y),  label=paste('n =',length(y))))
+}
 
+#' create column header to reflect CI width
+betaWithCI <-function(betaname,CIwidth=0.95){
+paste0(betaname,"(",100*CIwidth,"%CI)")
+}
+
+#' like nicenames, but also replaces '/' for wrapping plot labels
+niceStr <- function (strings)
+{
+  out <- sapply(strings, function(x) {
+    x <- chartr('/',' ',x)
+    x <- chartr(".", " ", x)
+    x <- chartr("_", " ", x)
+    return(x)
+  })
+  return(out)
+}
+
+wrp_lbl <- function(x,width = 10){
+  x <- niceStr(x)
+  str_wrap(x,width = width)
+}
+
+
+label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
+  fun <- function(labels) {
+    labels <- label_value(labels, multi_line = multi_line)
+    lapply(labels, function(x) {
+      x <- niceStr(x)
+      x <- strwrap(x, width = width, simplify = FALSE)
+      vapply(x, paste, character(1), collapse = "\n")
+    })
+  }
+  structure(fun, class = "labeller")
+}
