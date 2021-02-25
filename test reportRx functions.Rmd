@@ -1,0 +1,152 @@
+---
+title: "Test ReportRx"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(survival)
+library(myReportRx)
+#library(reportRx)
+library(tidyverse)
+```
+
+Make some changes to the lung data
+```{r,eval=FALSE}
+data(lung)
+lung <- lung %>%
+  mutate(
+    Status=factor(status-1),
+    Sex = factor(sex,labels = c('Male','Female')),
+    AgeGroup = cut(age, breaks=seq(0,100,10)),
+    OneLevelFactor = factor(x='one level')
+  ) %>%
+  arrange(Status)
+
+lung$x_null = rnorm(nrow(lung))
+lung$x_pred = c(rnorm(sum(lung$Status==0),0,1),
+                rnorm(sum(lung$Status==1),1,1))
+test_data = tibble(
+  y= rnorm(100),
+  x0= geoR::rboxcox(100, lambda=0.5, mean=10, sd=2),
+  x1= x0*y
+)
+save(lung,test_data,file='testData.R')
+```
+
+## Test covsum
+
+```{r test-covsum-1}
+covsum(data=lung,
+       covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor')
+)
+```
+
+```{r test-covsum-2}
+covsum(data=lung,
+       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+       maincov = 'Sex'
+)
+```
+
+
+## Test plotunivariate
+```{r test-plotunivariate}
+plot_univariate(data=lung,
+                covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+                response = 'Status',
+                response_title = 'Test Response Title',
+                showN=T
+)
+```
+## Tests for uvsum
+
+### Test logistic
+
+```{r test-uv-logistic}
+uvsum(response = 'Status',
+      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+      data=lung,
+      type='logistic',
+      markup=F)
+
+uvsum(response = 'Status',
+      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+      data=lung,
+      type='logistic',
+      markup=F, 
+      CIwidth=.9)
+
+
+uvsum(response = 'Status',
+      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+      data=lung,
+      type='logistic',
+      markup=F, 
+      CIwidth=.99)
+
+```
+
+### Test Linear
+```{r test-uv-linear}
+uvsum(response = 'wt.loss',
+      covs=c('Status','Sex','ph.ecog','meal.cal','age'),
+      data=lung,
+      markup=F,
+      CIwidth=.95)
+uvsum(response = 'wt.loss',
+      covs=c('age'),
+      data=lung,
+      markup=F,
+      CIwidth=.90)
+
+```
+
+### Test coxph
+```{r test-uv-coxph}
+uvsum(response = c('time','status'),
+      covs=c('Sex','ph.ecog','meal.cal','age'),
+      data=lung,
+      markup=F,
+      CIwidth=.95)
+uvsum(response = c('time','status'),
+      covs=c('Sex','ph.ecog','meal.cal','age'),
+      data=lung,
+      markup=F,
+      CIwidth=.90)
+
+```
+
+### Test crr
+```{r test-uv-crr}
+uvsum(response = c('time','status'),
+      covs=c('Sex','ph.ecog','meal.cal','age'),
+      data=lung,
+      markup=F,
+      type='crr',
+      CIwidth=.90)
+
+uvsum(response = c('time','status'),
+      covs=c('age'),
+      data=lung,
+      markup=F,
+      type='crr')
+
+```
+
+### Test boxcox
+```{r test-uv-boxcox}
+uvsum(response = 'y',
+      covs=c('x0','x1'),
+      data=test_data,
+      markup=F,
+      type='boxcox',
+      CIwidth=.90)
+```
+
+## Test mvsum
+
+```{r}
+
+```
+

@@ -293,8 +293,8 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,ni
     if(is.factor(data[[cov]])){
       factornames<-c(levels(data[[cov]]),factornames)
       if (!is.null(maincov)) {
-        p <- if( testcat=='Fisher'){ try(fisher.test(data[[maincov]],data[[cov]])$p.value)
-        } else try(chisq.test(data[[maincov]],data[[cov]])$p.value)
+        p <- if( testcat=='Fisher'){ try(fisher.test(data[[maincov]],data[[cov]])$p.value,silent=T)
+        } else try(chisq.test(data[[maincov]],data[[cov]])$p.value,silent=T)
         if (class(p) == "try-error")
           p <- NA
         p <- lpvalue(p)
