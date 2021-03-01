@@ -11,8 +11,20 @@ Author: Ryan Del Bel
     Wei Xu
     <wxu@uhnres.utoronto.ca>
 Maintainer: Biostatistics Department Princess Margaret Cancer Centre <biostatsPMH@gmail.com>
-Imports: survival, xtable, aod, cmprsk, 
-         stringr, plyr, ggplot2, ggpubr,gridExtra, geoR
+Imports: 
+    survival,
+    xtable,
+    aod,
+    cmprsk,
+    stringr,
+    plyr,
+    ggplot2,
+    ggpubr,
+    gridExtra,
+    geoR,
+    pander,
+    knitr,
+    kableExtra
 Depends: reshape
 Collate: 'helper.R' 'main.R' 'misc.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
@@ -20,6 +32,7 @@ NeedsCompilation: no
 Repository: CRAN
 Date/Publication: 2013-12-17 23:18:16
 RoxygenNote: 7.1.1
+Encoding: UTF-8
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

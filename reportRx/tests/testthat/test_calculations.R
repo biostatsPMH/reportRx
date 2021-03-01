@@ -1,9 +1,5 @@
+#-------------------------------------------------------------------------------------
 # Data Definition
-# NOTE: Data should be stored in the testthat folder in helper-*.R files !!!!
-#-------------------------------------------------------------------------------------
-# However, I get a parse error that I'm unable to fix (I've tried ascii encoding, and utf-8 but no joy)
-#-------------------------------------------------------------------------------------
-# IDEALLY, this code should remain in the test reportRx finctions.Rmd and
 library(survival)
 data(lung)
 lung$Status=factor(lung$status-1)
@@ -20,7 +16,6 @@ test_data = data.frame(
   y= rnorm(100),
   x0= geoR::rboxcox(100, lambda=0.5, mean=10, sd=2))
 test_data$x1=  test_data$x0*test_data$y
-
 #-------------------------------------------------------------------------------------
 
 

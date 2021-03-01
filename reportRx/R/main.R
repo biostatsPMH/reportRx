@@ -1545,3 +1545,263 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
             ncol=2,
             nrow=ceiling(length(plist)/2))
 }
+
+# Rmarkdown Reporting --------------------------------------------------------------
+#' The output function for the print methods
+#' Table output defaults to kable, but the kableExtra package doesn't work well with Word.
+#' To export nice tables to Word use options('doc_type'='doc')
+#' @param tab a table to format
+#' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
+#' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
+#' @param caption table caption
+#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#' @param ... other variables passed to covsum and the table output function
+#' @export
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label,...){
+
+  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
+  out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
+  chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
+
+  # set NA to empty in kable
+  options(knitr.kable.NA = '')
+
+  if (is.null(to_indent)) to_indent = numeric(0)
+  to_indent = as.vector(to_indent)
+  rownames(tab) <- NULL
+
+
+  if (out_fmt=='doc'){
+    caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
+    tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
+    tab[tab==''] <-'&nbsp;'
+
+    tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
+    if (length(to_bold)>0) {
+      pander::pander(tab,
+                     caption=caption,
+                     emphasize.strong.rows=to_bold,
+                     split.table=Inf, split.cells=15,
+                     justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+
+    } else {
+      pander::pander(tab,
+                     caption=caption,
+                     split.table=Inf, split.cells=15,
+                     justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+    }
+  } else {
+    if (nrow(tab)>30){
+      kout <- knitr::kable(tab, booktabs=TRUE,
+                           longtable=TRUE,
+                           linesep='',
+                           caption=caption,
+                           align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+      if (ncol(tab)>4) {
+        kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
+      } else {
+        kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      }
+    } else {
+      kout <- knitr::kable(tab, booktabs=TRUE,
+                           longtable=FALSE,
+                           linesep='',
+                           caption=caption,
+                           align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
+    }
+    kout <- kableExtra::add_indent(kout,positions = to_indent)
+    if (length(to_bold)>0){
+      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
+    }
+    kout
+  }
+
+}
+
+#'
+#'Returns a dataframe corresponding to a descriptive table for printing in Rmarkdown
+#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
+#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#'
+#'@param data dataframe containing data
+#'@param covs character vector with the names of columns to include in table
+#'@param maincov covariate to stratify table by
+#'@param caption character containing table caption
+#'@param excludeLevels a named list of levels to exclude in the form list(varname =c('level1','level2')) these levels will be excluded from association tests
+#'@param showP boolean indicating if p values should be displayed (may only want corrected p-values)
+#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param tableOnly should a dataframe or a formatted print object be returned
+#'@param covTitle character with the names of the covariate column
+#'@param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#'@param ... other variables passed to covsum and the table output function
+#'@keywords dataframe
+#'@return A formatted table displaying a summary of the covariates stratified by maincov
+#'@export
+#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,excludeLevels=NULL,showP=TRUE,IQR=FALSE,tableOnly=FALSE,covTitle='Covariate',
+                        chunk_label,...){
+
+  tab <- covsum(data,covs,maincov,markup=FALSE,IQR=IQR,sanitize=FALSE,...)
+  if (is.null(maincov))
+    showP=FALSE
+  to_bold = numeric(0)
+  if (showP) {
+    # format p-values nicely
+    p_vals <- tab[,ncol(tab)]
+    new_p <- sapply(p_vals,formatp)
+    tab[,ncol(tab)] <- new_p
+    to_bold <- which(as.numeric(new_p)<0.05)
+  } else {
+    tab <- tab[,!names(tab) %in%'p-value']
+  }
+  nice_var_names = gsub('[_.]',' ',covs)
+  to_indent <- which(!tab$Covariate %in% nice_var_names )
+  if (IQR) {
+    tab$Covariate <- gsub('[(]Q1,Q3[)]','(IQR)',tab$Covariate)
+  }
+  if (covTitle !='Covariate') names(tab[1]) <-covTitle
+  if (tableOnly){
+    return(tab)
+  }
+  if (is.null(caption)) {
+    if (!is.null(maincov)){
+      caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
+    } else
+      caption = 'Summary sample statistics.'
+  }
+
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+
+}
+
+#' Output several univariate models nicely in a single table in Rmarkdown
+#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
+#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#'
+#' @param response string vector with name of response
+#' @param covs character vector with the names of columns to fit univariate models to
+#' @param data dataframe containing data
+#' @param caption table caption
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @param showP boolean indicating if p-values should be shown (may only want to show holm-corrected values)
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param removeInf boolean indicating if infinite estimates should be removed from the table
+#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#' @param ... other variables passed to uvsum and the table output functions
+#' @export
+#'
+rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
+
+  # get the table
+  tab <- uvsum(response,covs,data,CIwidth=CIwidth,markup = FALSE,sanitize=FALSE,...)
+
+  cap_warn <- character(0)
+  if (removeInf){
+    # Do not display unstable estimates
+    inf_values =  grep('Inf',tab[,2])
+    if (length(inf_values)>0){
+      tab[inf_values,2:4] <-NA
+      cap_warn <- paste0(cap_warn,'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
+
+    }
+  }
+
+  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
+  if (HolmGlobalp){
+    p_sig <- p.adjust(tab$`Global p-value`,method='holm')
+    tab$"Holm Adj p" = p_sig
+  } else {
+    p_sig <- tab$`Global p-value`
+  }
+
+  to_bold <- which(as.numeric(p_sig)<0.05)
+  nice_var_names = gsub('[_.]',' ',covs)
+  to_indent <- which(!tab$Covariate %in% nice_var_names )
+
+  tab[["p-value"]] <- formatp(tab[["p-value"]])
+  tab[["Global p-value"]] <- formatp(tab[["Global p-value"]])
+  if (HolmGlobalp){
+    tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
+  }
+
+  # If all outcomes are continunous (and so all p-values are NA), remove this column & rename Global p-value to p-value
+  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
+    tab <- tab[,-which(names(tab)=="p-value")]
+    names(tab) <- gsub('Global p-value','p-value',names(tab))
+  }
+
+  if (tableOnly){
+    if (nchar(cap_warn)>0) warning(cap_warn)
+    return(tab)
+  }
+  if(is.null(caption)){
+    if (length(response)==2) {outcome = 'survival'} else{ outcome = niceStr(response)}
+    caption = paste0('Univariate analysis of predictors of ',outcome,'.',cap_warn)
+  } else if (caption=='none' & identical(cap_warn,character(0))) {
+    caption=NULL
+  } else caption = paste0(caption,cap_warn)
+
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+}
+
+#' Output a multivariable model nicely in Rmarkdown
+#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
+#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#'
+#' @param model model fit
+#' @param data data that model was fit on
+#' @param caption table caption
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#' @export
+rm_mvsum <- function(model , data ,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALSE,chunk_label){
+
+  # get the table
+  tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T)
+
+
+  # Reduce the number of significant digits in p-values
+  p_val <-  formatp(tab$`p-value`)
+  g_p_val = formatp(tab$`Global p-value`)
+  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
+  if (HolmGlobalp){
+    gp <- p.adjust(tab$`Global p-value`,method='holm')
+  } else {
+    gp <- tab$`Global p-value`
+  }
+  to_bold <- which(as.numeric(gp)<0.05)
+  to_indent <- which(is.na(g_p_val))
+
+  tab$`p-value` <- p_val
+  tab$`Global p-value` <- g_p_val
+
+  # Reorder
+  if (HolmGlobalp){
+    tab$`Holm Adj p` <- formatp(gp)
+  }
+  # TO DO: possibly automate this... need to extract response from mvsum
+  # if(is.null(caption)){
+  #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
+  # } else if (caption=='none') {
+  #   caption=NULL
+  # }
+
+
+  # If all outcomes are contunous (and so all p-values are NA), remove this column
+  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
+
+  if (tableOnly){
+    return(tab)
+  }
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+
+}

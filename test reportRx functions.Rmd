@@ -1,18 +1,41 @@
 ---
 title: "Test ReportRx"
-output: pdf_document
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::word_document2:
+    reference_docx: 'wordTemplate.docx'
+    toc: yes
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+sansfont: Calibri Light
+mainfont: Calibri Light
+bibliography:
+  - packages.bib
+#csl: Vancouver.csl
+link-citations: yes
 ---
 
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(survival)
-library(myReportRx)
-#library(reportRx)
+library(reportRx)
 library(tidyverse)
+# To print nicely to Word un-comment the next line
+options("doc_type"='doc')
+
+# Uncomment to create the packages.bib file of R packages used
+#knitr::write_bib((.packages(all.available=T)),file ='packages.bib')
+
 ```
 
-Make some changes to the lung data
-```{r,eval=FALSE}
+# Introduction {-}
+
+This is an rMarkdown document to produce Word and Pdf files from the reportRx package [@R-reportRx]. 
+
+First, make some changes to the lung data.
+
+```{r echo=T}
 data(lung)
 lung <- lung %>%
   mutate(
@@ -26,32 +49,37 @@ lung <- lung %>%
 lung$x_null = rnorm(nrow(lung))
 lung$x_pred = c(rnorm(sum(lung$Status==0),0,1),
                 rnorm(sum(lung$Status==1),1,1))
+set.seed(1)
 test_data = tibble(
-  y= rnorm(100),
-  x0= geoR::rboxcox(100, lambda=0.5, mean=10, sd=2),
-  x1= x0*y
+  y= rnorm(1000),
+  x0= geoR::rboxcox(1000, lambda=.5, mean=10, sd=2),
+  x1= x0+y
 )
-save(lung,test_data,file='testData.R')
 ```
+
+# Numbered Heading
 
 ## Test covsum
 
 ```{r test-covsum-1}
-covsum(data=lung,
+rm_covsum(data=lung,
        covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor')
 )
 ```
 
 ```{r test-covsum-2}
-covsum(data=lung,
+
+rm_covsum(data=lung,
        covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
-       maincov = 'Sex'
-)
+       maincov = 'Sex')
 ```
 
 
 ## Test plotunivariate
-```{r test-plotunivariate}
+
+Figure \@ref(fig:test-plotunivariate) shows the bivariate relationships between the response and covariates. Figure referencing works only when a figure caption is provided in the chunk options. Note that underscores and not allowed in the chunk names, only hyphens.
+
+```{r test-plotunivariate, fig.cap= 'Associations between status and covariates in the lung data.'}
 plot_univariate(data=lung,
                 covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
                 response = 'Status',
@@ -59,94 +87,118 @@ plot_univariate(data=lung,
                 showN=T
 )
 ```
+
 ## Tests for uvsum
 
 ### Test logistic
 
-```{r test-uv-logistic}
-uvsum(response = 'Status',
-      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+Tables \@ref(tab:test-uv-logistic-1), \@ref(tab:test-uv-logistic-2) and \@ref(tab:test-uv-logistic-3) display the logistic regression results with different confidence interval widths. If the document in knit to pdf, the chank-lable option will not be used, instead the name of the chunk will be used in cross-referening. For Word tables the chunk label needs to be added into the function call.
+
+```{r test-uv-logistic-1}
+rm_uvsum(response = 'Status',
+      covs=c('age','Sex','wt.loss'),
       data=lung,
       type='logistic',
-      markup=F)
+      chunk_label = 'test-uv-logistic-1' )
 
-uvsum(response = 'Status',
-      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+
+```
+
+```{r test-uv-logistic-2}
+rm_uvsum(response = 'Status',
+      covs=c('age'),
       data=lung,
       type='logistic',
-      markup=F, 
-      CIwidth=.9)
+      CIwidth=.9,
+      chunk_label='test-uv-logistic-2')
 
 
-uvsum(response = 'Status',
-      covs=c('x_null','x_d_90','x_d_95','x_d_99'),
+
+```
+
+```{r test-uv-logistic-3}
+rm_uvsum(response = 'Status',
+      covs=c('age'),
       data=lung,
       type='logistic',
-      markup=F, 
-      CIwidth=.99)
+      CIwidth=.99,
+      chunk_label='test-uv-logistic-3')
+
+
 
 ```
 
 ### Test Linear
 ```{r test-uv-linear}
-uvsum(response = 'wt.loss',
+rm_uvsum(response = 'wt.loss',
       covs=c('Status','Sex','ph.ecog','meal.cal','age'),
       data=lung,
-      markup=F,
       CIwidth=.95)
-uvsum(response = 'wt.loss',
+rm_uvsum(response = 'wt.loss',
       covs=c('age'),
       data=lung,
-      markup=F,
       CIwidth=.90)
 
 ```
 
 ### Test coxph
 ```{r test-uv-coxph}
-uvsum(response = c('time','status'),
+rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
       data=lung,
-      markup=F,
       CIwidth=.95)
-uvsum(response = c('time','status'),
+rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
       data=lung,
-      markup=F,
       CIwidth=.90)
 
 ```
 
+
+\newpage
+
+# Unnumbered Heading {-}
+## Test mvsum
+
+```{r}
+m = glm(Status~wt.loss+Sex+AgeGroup,
+        data=lung,
+        family='binomial')
+rm_mvsum(m,data = lung,HolmGlobalp = T)
+```
+
+# References
+
+<!-- NOTE: This is a comment and will not appear in the final document -->
+
+<div id="refs"></div> <!-- This is only necessary if you need something after the Reference section -->
+
+\newpage
+
+# Appendix
+
+Other results can go here.
+
 ### Test crr
 ```{r test-uv-crr}
-uvsum(response = c('time','status'),
+rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
       data=lung,
-      markup=F,
       type='crr',
       CIwidth=.90)
 
-uvsum(response = c('time','status'),
+rm_uvsum(response = c('time','status'),
       covs=c('age'),
       data=lung,
-      markup=F,
       type='crr')
 
 ```
 
 ### Test boxcox
 ```{r test-uv-boxcox}
-uvsum(response = 'y',
+rm_uvsum(response = 'y',
       covs=c('x0','x1'),
       data=test_data,
-      markup=F,
       type='boxcox',
       CIwidth=.90)
 ```
-
-## Test mvsum
-
-```{r}
-
-```
-

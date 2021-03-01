@@ -360,3 +360,10 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
   }
   structure(fun, class = "labeller")
 }
+
+formatp<- function(pvalues,sigdigits=2){
+  p_out <- sapply(pvalues, function(x){
+    x <- signif(as.numeric(x),sigdigits)
+    x <- ifelse(is.na(x),NA_character_,ifelse(x<0.001,"<0.001",format(x)))})
+  return(p_out)
+}
