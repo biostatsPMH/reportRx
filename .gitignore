@@ -2,9 +2,8 @@
 .Rhistory
 .RData
 .Ruserdata
-.DS_Store
 *.pdf
 *.tar.gz
 *.Rproj
 /img
-/man
+.DS_Store
