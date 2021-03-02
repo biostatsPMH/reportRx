@@ -10,7 +10,8 @@ Author: Ryan Del Bel
     <rdelbel@gmail.com>,
     Wei Xu
     <wxu@uhnres.utoronto.ca>
-Maintainer: Ryan Del Bel <rdelbel@gmail.com>
+Maintainer: Department of Biostatistics, Princess Margaret Cancer Centre 
+            <biostatsPMH@gmail.com>
 Imports: survival, xtable, aod, cmprsk, geoR, stringr,
 Depends: reshape
 Collate: 'helper.R' 'main.R' 'misc.R'
