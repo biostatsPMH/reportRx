@@ -345,7 +345,7 @@ niceStr <- function (strings)
 
 wrp_lbl <- function(x,width = 10){
   x <- niceStr(x)
-  str_wrap(x,width = width)
+  stringr::str_wrap(x,width = width)
 }
 
 

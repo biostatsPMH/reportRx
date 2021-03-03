@@ -100,7 +100,7 @@ etsum<- function(data,response,group=1,times=c(12,24)){
     survtimes<-data.frame(strata=as.character(kfit$strata),kfit$time)
     minst<-round(as.numeric(by(survtimes,survtimes$strata,function(x) min (x[,2]))),1)
     maxst<-round(as.numeric(by(survtimes,survtimes$strata,function(x) max (x[,2]))),1)
-    tab<-cast(tab,strata ~ times)
+    tab<-reshape::cast(tab,strata ~ times)
     names<-names(tab)
     tab<-data.frame(tab)
     names(tab)<-names
@@ -506,7 +506,7 @@ uvsum<-function(response,covs,data,type=NULL,strata=1,markup=T,sanitize=T,nicena
         globalpvalue<-try(aod::wald.test(b=m2$coefficients[-1],Sigma=vcov(m2)[-1,-1],Terms=seq_len(length(m2$coefficients[-1])))$result$chi2[3]);
         if(class(globalpvalue) == "try-error") globalpvalue<-"NA"
 
-        T_mult = qt(1-(1-CIwidth)/2,m2$df.residual)
+        T_mult = stats::qt(1-(1-CIwidth)/2,m2$df.residual)
         hazardratio <- c("Reference", apply(cbind(m[-1,1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] +T_mult * m[-1, 2]), 1, psthr))
         pvalue<-c("",sapply(m[-1,4],lpvalue))
         title<-c(cov,"","",lpvalue(globalpvalue))
@@ -556,7 +556,7 @@ uvsum<-function(response,covs,data,type=NULL,strata=1,markup=T,sanitize=T,nicena
 
         m<-summary(m2)$coefficients
 
-        T_mult = qt(1-(1-CIwidth)/2,m2$df.residual)
+        T_mult = stats::qt(1-(1-CIwidth)/2,m2$df.residual)
         out <- matrix(c(cov, psthr(c(m[-1, 1], m[-1,1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * m[-1,2])), "", lpvalue(globalpvalue)), ncol = 4)
 
       }
@@ -1468,7 +1468,7 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
 #' @param na.rm boolean indicating whether na values should be shown or removed
 #' @param response_title character value with title of the plot
 #' @keywords plot
-#' @import ggplot2
+#' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
 #' @export
 plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL){
@@ -1483,17 +1483,17 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
     levels(data[[response]]) = niceStr(levels(data[[response]]))
     for (x_var in covs){
       # remove missing data, if requested
-      if (na.rm) pdata = na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
+      if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
 
       if (class(pdata[[x_var]])[1] =='numeric' ){
-        p <- ggplot(data=pdata, aes_string(y=response,x=x_var,fill=response)) +
+        p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
           geom_boxplot()
         if (showN){
           p=  p+
             stat_summary(geom='text',fun.data = lbl_count,vjust=-0.5,hjust=1)
         }
       } else {
-        p <- ggplot(data=pdata, aes_string(x=x_var,fill=response)) +
+        p <- ggplot(data=pdata, aes(x=.data[[x_var]],fill=.data[[response]])) +
           geom_bar(position='fill') +
           scale_x_discrete(labels= function(x) wrp_lbl(x))
         if (showN){
@@ -1515,13 +1515,13 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
   } else{
     for (x_var in covs){
       # remove missing data, if requested
-      if (na.rm) pdata = na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
+      if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
 
       if (class(pdata[[x_var]])[1] =='numeric' ){
-        p <- ggplot(data=pdata, aes_string(y=response,x=x_var)) +
+        p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]])) +
           geom_point()
       } else
-        p <- ggplot(data=pdata, aes_string(y=response,x=x_var,fill=response)) +
+        p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
           geom_boxplot() +
           scale_x_discrete(labels= function(x) wrp_lbl(x))
       if (showN){
@@ -1712,7 +1712,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,ta
 
   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
   if (HolmGlobalp){
-    p_sig <- p.adjust(tab$`Global p-value`,method='holm')
+    p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
     tab$"Holm Adj p" = p_sig
   } else {
     p_sig <- tab$`Global p-value`
@@ -1772,7 +1772,7 @@ rm_mvsum <- function(model , data ,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALS
   g_p_val = formatp(tab$`Global p-value`)
   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
   if (HolmGlobalp){
-    gp <- p.adjust(tab$`Global p-value`,method='holm')
+    gp <- stats::p.adjust(tab$`Global p-value`,method='holm')
   } else {
     gp <- tab$`Global p-value`
   }
