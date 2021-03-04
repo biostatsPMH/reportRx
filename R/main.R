@@ -1558,7 +1558,7 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
 #' @param ... other variables passed to covsum and the table output function
 #' @export
 outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label,...){
-
+  tab = as.data.frame(tab) #strips any tibble aspects 
   out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
   out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
   chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
