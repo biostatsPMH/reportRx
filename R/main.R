@@ -1540,7 +1540,7 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
     }
 
   }
-  ggarrange(plotlist=plist,
+  ggpubr::ggarrange(plotlist=plist,
             common.legend = T,
             ncol=2,
             nrow=ceiling(length(plist)/2))
@@ -1651,7 +1651,7 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,excludeLevels=NULL,sho
     p_vals <- tab[,ncol(tab)]
     new_p <- sapply(p_vals,formatp)
     tab[,ncol(tab)] <- new_p
-    to_bold <- which(as.numeric(new_p)<0.05)
+    to_bold <- which(as.numeric(p_vals)<0.05)
   } else {
     tab <- tab[,!names(tab) %in%'p-value']
   }
