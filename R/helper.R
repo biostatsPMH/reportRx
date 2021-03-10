@@ -1,3 +1,8 @@
+niceNum <- function(x,digits=2){
+  rndx = sapply(x, function(x) {format(round(as.numeric(x),digits),nsmall=digits)})
+  return(gsub(" ","",rndx))
+}
+
 #' Paste with parentheses
 #'
 #' Paste with parentheses

@@ -40,6 +40,29 @@ test_that("covsum calculates correctly with maincov", {
 
 })
 
+test_that("covsum rounds variables correctly", {
+  output = covsum(data=lung,
+                  covs=c('Status','Sex','wt.loss','OneLevelFactor','x_pred'),
+                  digits=3,
+                  digits.cat = 1,
+                  markup=F)
+  mean_sd = paste0(format(round(mean(lung$x_pred,na.rm = T),3),nsmall=3), " (",format(round(sd(lung$x_pred,na.rm = T),3),nsmall=3),")")
+  med_min_max = paste0(format(round(median(lung$x_pred,na.rm = T),3),nsmall=3), " (",format(round(min(lung$x_pred,na.rm = T),3),nsmall=3),",",format(round(max(lung$x_pred,na.rm = T),3),nsmall=3),")")
+  expect_equal(names(output) , c("Covariate",'n=228'))
+  expect_equal(output$Covariate , c("Status","0","1","Sex","Male","Female","wt loss","Mean (sd)","Median (Min,Max)","Missing","OneLevelFactor","one level","x pred","Mean (sd)",'Median (Min,Max)'))
+  expect_equal(output$`n=228`,c("","63 (27.6)","165 (72.4)","","138 (60.5)","90 (39.5)","","9.832 (13.140)","7 (-24,68)","14","","228 (100.0)","",mean_sd,med_min_max))
+  output = covsum(data=lung,
+                  covs=c('Status','Sex','wt.loss','OneLevelFactor','x_pred'),
+                  digits=3,
+                  digits.cat = 1,
+                  IQR = T,
+                  markup=F)
+  med_Q1_Q3 = paste0(format(round(median(lung$x_pred,na.rm = T),3),nsmall=3), " (",format(round(quantile(lung$x_pred,.25,na.rm = T),3),nsmall=3),",",format(round(quantile(lung$x_pred,.75,na.rm = T),3),nsmall=3),")")
+  expect_equal(names(output) , c("Covariate",'n=228'))
+  expect_equal(output$Covariate , c("Status","0","1","Sex","Male","Female","wt loss","Mean (sd)","Median (Q1,Q3)","Missing","OneLevelFactor","one level","x pred","Mean (sd)",'Median (Q1,Q3)'))
+  expect_equal(output$`n=228`,c("","63 (27.6)","165 (72.4)","","138 (60.5)","90 (39.5)","","9.832 (13.140)","7.000 (0.000,15.750)","14","","228 (100.0)","",mean_sd,med_Q1_Q3))
+  
+})
 
 test_that("uvsum logistic regression CIS are correct",{
   digits = 2 # TODO: add function flexibility

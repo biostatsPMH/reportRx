@@ -238,6 +238,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
 #'@param numobs named list overriding the number of people you expect to have the covariate
+#'@param digits number of digits for summarizing mean data
 #'@param markup boolean indicating if you want latex markup
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
@@ -248,7 +249,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
+covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
                  testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher')){
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
@@ -262,7 +263,9 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,ni
     addspace<-identity
     lpvalue<-identity
   }
+  digits <- as.integer(digits)
   digits.cat <- as.integer(digits.cat)
+  if( digits<0 ) stop("parameter 'digits' cannot be negative!")
   if( digits.cat<0 ) stop("parameter 'digits.cat' cannot be negative!")
   if(!sanitize) sanitizestr<-identity
   if(!nicenames) nicename<-identity
@@ -335,24 +338,36 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=TRUE,sanitize=TRUE,ni
           p <- NA
         p <- lpvalue(p)
       }
+
       #set up the main columns
       onetbl <- mapply(function(sublevel,N){
         missing <- NULL
         if(sublevel[1]!="NOMAINCOVNULLNA"){
           subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
         }else{subdata<-data}
-        summary<-round(summary(subdata[[cov]]),1)
-        meansd<-paste(summary[4]," (",round(sd(subdata[[cov]],na.rm=T),1),")",sep="")
-        mmm <- if( IQR ){ paste(summary[3]," (",summary[2],",",summary[5],")",sep = "")
-        }else paste(summary[3]," (",summary[1],",",summary[6],")",sep = "")
-
         #if there is a missing in the whole data
         if(ismiss){
           n<-sum(table(subdata[[cov]]))
           missing<-N-n
         }
-        tbl<-c(meansd,mmm,lbld(missing))
-
+        # Updated LA to remove NaN from tables
+        sumCov <-round(summary(subdata[[cov]]), digits)
+        if (sumCov[4]=="NaN"){
+          meansd <-''
+          mmm <-''
+        } else {
+          meansd <- paste(niceNum(sumCov["Mean"],digits), " (", niceNum(sd(subdata[[cov]], na.rm = T),digits), ")", sep = "")
+          mmm <- if (IQR) {
+            if(all(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."]) ==floor(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."])))){
+              paste(sumCov['Median'], " (", sumCov["1st Qu."], ",", sumCov["3rd Qu."],")", sep = "")
+            } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["1st Qu."],digits), ",", niceNum(sumCov["3rd Qu."],digits),")", sep = "")}
+          } else {
+            if(all(c(sumCov['Median'],sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov['Median'],sumCov["Min."],sumCov["Max."])))){
+              paste(sumCov["Median"], " (", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
+            } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")}
+          }}
+        tbl <- c(meansd, mmm, lbld(missing))
+        
         return(tbl)}
         ,levels,numobs[[cov]])}
 
