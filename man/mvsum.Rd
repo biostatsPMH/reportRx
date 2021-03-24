@@ -4,18 +4,30 @@
 \alias{mvsum}
 \title{Get multivariate summary dataframe}
 \usage{
-mvsum(model, data, markup = T, sanitize = T, nicenames = T)
+mvsum(
+  model,
+  data,
+  showN = T,
+  markup = T,
+  sanitize = T,
+  nicenames = T,
+  CIwidth = 0.95
+)
 }
 \arguments{
 \item{model}{fitted model object}
 
 \item{data}{dataframe containing data}
 
+\item{showN}{boolean indicating sample sizes should be shown for each comparison, can be useful for interactions}
+
 \item{markup}{boolean indicating if you want latex markup}
 
 \item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
 
 \item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
+
+\item{CIwidth}{width for confidence intervals, defaults to 0.95}
 }
 \description{
 Returns a dataframe corresponding to a univariate table

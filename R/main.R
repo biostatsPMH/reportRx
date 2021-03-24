@@ -613,165 +613,217 @@ puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=F){
 #'
 #'@param model fitted model object
 #'@param data dataframe containing data
+#'@param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
 #'@param markup boolean indicating if you want latex markup
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
+#'@param CIwidth width for confidence intervals, defaults to 0.95
 #'@keywords dataframe
 #'@export
-mvsum<-function(model,data,markup=T,sanitize=T,nicenames=T){
-  if(!markup){
-    lbld<-identity
-    addspace<-identity
-    lpvalue<-identity
+mvsum <-function(model, data, showN = T, markup = T, sanitize = T, nicenames = T,CIwidth=0.95)
+{
+  if (!markup) {
+    lbld <- identity
+    addspace <- identity
+    lpvalue <- identity
   }
-  if(!sanitize) sanitizestr<-identity
-  if(!nicenames) nicename<-identity
-
-  call<-paste(deparse(summary(model)$call),collapse="")
-  call<-unlist(strsplit(call,"~",fixed=T))[2]
-  call<-unlist(strsplit(call,",",fixed=T))[1]
-  if(substr(call,nchar(call),nchar(call))=="\"") call<-substr(call,1,nchar(call)-1)
-  call<-unlist(strsplit(call,"\"",fixed=T))[1]
-  call<-unlist(strsplit(call,"+",fixed=T))
-  call<-unlist(strsplit(call,"*",fixed=T))
-  call<-unique(call)
-  call<-call[which(is.na(sapply(call,function(cov){charmatch("strata(",cov)}))==T)]
-  call<-gsub("\\s","",call)
-  type<-class(model)[1]
-
-  if(type!="lme"){
-    betanames<-attributes(summary(model)$coef)$dimnames[[1]]
-  }else{
-    betanames<-names(model$coef$fixed)
+  if (!sanitize)
+    sanitizestr <- identity
+  if (!nicenames)
+    nicename <- identity
+  call <- paste(deparse(summary(model)$call), collapse = "")
+  call <- unlist(strsplit(call, "~", fixed = T))[2]
+  call <- unlist(strsplit(call, ",", fixed = T))[1]
+  if (substr(call, nchar(call), nchar(call)) == "\"")    call <- substr(call, 1, nchar(call) - 1)
+  call <- unlist(strsplit(call, "\"", fixed = T))[1]
+  call <- unlist(strsplit(call, "+", fixed = T))
+  call <- unlist(strsplit(call, "*", fixed = T))
+  call <- unique(call)
+  call <- call[which(is.na(sapply(call, function(cov) {charmatch("strata(", cov)})) == T)]
+  call <- gsub("\\s", "", call)
+  type <- class(model)[1]
+  
+  # THis needs to be changed for multinom
+  # Still to fix: doesn't work when interactions are specified as x1:x2 instead of x1*x2
+  if (type=='lm'){
+    betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
+    beta <- 'Estimate'
+    ss_data <- model$model
+  } else if (type=='polr'){
+    betanames <- names(model$coefficients)
+    beta <- "OR"
+    ss_data <- model$model
+  } else if (type=='lme'){
+    betanames <- names(model$coef$fixed)[-1]
+    beta <- 'Estimate'
+    ss_data <- model$data
+  } else if (type =='glm'){
+    if (model$family$link=='logit'){
+      beta <- "OR"
+      expnt = TRUE
+    } else if (model$family$link=='log') {
+      beta <- "RR"
+      expnt = TRUE
+    } else {
+      beta <- "Estimate"
+      expnt = FALSE
+    }
+    betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
+    ss_data <- model$model
+  } else if (type == "coxph" | type == "crr") {
+    beta <- "HR"
+    betanames <- attributes(summary(model)$coef)$dimnames[[1]]
+    ss_data <- model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data)))))
+  } else {
+    stop("type must be either polr, coxph, logistic, lm, crr, lme (or NULL)")
   }
-
-
-
-  if(type=="glm"){ beta<-"OR(95%CI)"
-  betanames<-betanames[-1]
-  }else if(type=="lm"|type=="lm"|type=="lme"){ beta<-"Estimate(95%CI)"
-  betanames<-betanames[-1]
-  }else if(type=="coxph"|type=="crr"){beta<-"HR(95%CI)"
-  }else{ stop("type must be either coxph,logistic,lm,crr,lme (or NULL)")}
-
-  ucall=unique(call)
-
-  #   indx<-as.vector(sapply(betanames,function(string){
-  #
-  #     indx<-which(sapply(call,function(cov){charmatch(cov,string)})==1)
-  #     if(length(indx)==1) return(indx)
-  #     #If one  facorname is a subset of another
-  #     indx2<-which.max(sapply(call[indx],nchar))
-  #     if(length(indx2)==1) return(indx[indx2])
-  #     indx3<-which(sapply(call[indx2],function(c){substr(betaname,1,nchar(c))==c}))
-  #     if(length(indx3)==1)  return(call[indx[indx2[indx3]]])
-  #     return(-1)
-  #   }))
-
-  indx=matchcovariate(betanames,ucall)
-  if(min(indx)==-1) stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
-
-
-
-
-
-  y<-betaindx(indx)
-  if(type%in%c("lm","glm","lm","lme")){
-    y<-lapply(y,function(x){ x+1})
-    betanames<-c("intercept",betanames)
+  
+  if (missing(data)) if(class(ss_data)=='data.frame') {data=ss_data} else{ stop('data can not be derived from model')}
+  
+  beta = betaWithCI(beta,CIwidth)
+  
+  ucall = unique(call)
+  indx = matchcovariate(betanames, ucall)
+  data = as.data.frame(data) # LA to enable tibbles to work
+  for (v in ucall[-1]){ if(class(data[[v]])[1]=='character') data[[v]]<-factor(data[[v]])} # LA change char to factor
+  if (min(indx) == -1)  stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
+  
+  y <- betaindx(indx)
+  if (type %in% c("lm", "glm", "lme")) {
+    y <- lapply(y, function(x) {x + 1 })
+    betanames <- c("intercept", betanames)
   }
-
-  out<-lapply(y,function(covariateindex){
-
-    #Get attribute names and split by ineractions
-    betaname<-betanames[covariateindex]
-    betaname<-strsplit(betaname,":",fixed=T)
-    #get the covariate names
-    oldcovname<-covnm(betaname[[1]],call)
-
-    #get the levelnames
-    levelnames<-unlist(lapply(betaname,function(level){
-      paste(mapply(function(lvl,cn){result<-unlist(strsplit(lvl,cn,fixed=T))[2]
-      out<-ifelse(is.na(result),cn,result)},level,oldcovname),collapse=":")}))
-    levelnames<-addspace(sanitizestr(nicename(levelnames)))
-    covariatename<-lbld(sanitizestr(nicename(paste(oldcovname,collapse=":"))))
-    reference=NULL
-    title=NULL
-    body=NULL
-    if(type=="lme"){
-      globalpvalue<-try(aod::wald.test(b=model$coef$fixed[covariateindex],Sigma=vcov(model)[covariateindex,covariateindex],Terms=seq_along(covariateindex))$result$chi2[3]);
+  
+  out <- lapply(y, function(covariateindex) {
+    #Get attribute names and split by interactions
+    betaname <- betanames[covariateindex]
+    betaname <- strsplit(betaname, ":", fixed = T)
+    # betaname <- gsub(' - ','-',betaname)  # Added LA, 14 Dec 2020
+    # betaname <- gsub(' + ','-',betaname)  # Added LA, 14 Dec 2020
+    # Get covariate names
+    oldcovname <- covnm(betaname[[1]], call)
+    oldcovname <- getvarname(oldcovname)
+    # # Changed Mar 2021 to enable sample size calculations
+    # levelnames <- unlist(lapply(betaname, function(level) {
+    #   paste(mapply(function(lvl, cn) {
+    #     # # Changed LA , Dec 15 for level names that also include the varname
+    #     #   result <- unlist(strsplit(lvl, cn, fixed = T))[2]
+    #     #   out <- ifelse(is.na(result), cn, result)
+    #     result <- ifelse(length(grep(paste0(cn,cn),lvl))>0, unlist(sub(paste0(cn,cn),cn,lvl)),unlist(sub(cn,'',lvl)))
+    #     out <- ifelse(result=='',cn,result)
+    #   }, level, oldcovname), collapse = ":")
+    # }))
+    levelnameslist <- lapply(betaname, function(level) {
+      mapply(function(lvl, cn) {
+        result <- ifelse(length(grep(paste0(cn,cn),lvl))>0, unlist(sub(paste0(cn,cn),cn,lvl)),unlist(sub(cn,'',lvl)))
+        out <- ifelse(result=='',cn,result)
+      }, level, oldcovname)
+    })
+    levelnames <-unlist(lapply(levelnameslist,function(x) paste(x,collapse=':'))    )
+    levelnames <- addspace(sanitizestr(nicename(levelnames)))
+    covariatename <- lbld(sanitizestr(nicename(paste(oldcovname,collapse = ":"))))
+    reference = NULL
+    title = NULL
+    body = NULL
+    if (type == "lme") {
+      globalpvalue <- try(aod::wald.test(b = model$coef$fixed[covariateindex],
+                                         Sigma = vcov(model)[covariateindex, covariateindex],
+                                         Terms = seq_along(covariateindex))$result$chi2[3])
+    } else if (type == "polr") {
+      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex],
+                                         Sigma = vcov(model)[covariateindex, covariateindex],
+                                         Terms = seq_along(covariateindex))$result$chi2[3])
+    } else if (type != "crr") {
+      globalpvalue <- try(aod::wald.test(b = coef(model)[covariateindex],
+                                         Sigma = vcov(model)[covariateindex, covariateindex],
+                                         Terms = seq_along(covariateindex))$result$chi2[3])
+    } else {
+      globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex],
+                                         Sigma = model$var[covariateindex, covariateindex],
+                                         Terms = seq_along(covariateindex))$result$chi2[3])
     }
-    else if(type!="crr"){
-      globalpvalue<-try(aod::wald.test(b=coef(model)[covariateindex],Sigma=vcov(model)[covariateindex,covariateindex],Terms=seq_along(covariateindex))$result$chi2[3]);
-    }else{
-      globalpvalue<-try(aod::wald.test(b=model$coef[covariateindex],Sigma=model$var[covariateindex,covariateindex],Terms=seq_along(covariateindex))$result$chi2[3]);
-
+    if (class(globalpvalue) == "try-error")
+      globalpvalue <- "NA"
+    globalpvalue <- lpvalue(globalpvalue)
+    if (type == "coxph" | type == "crr") {
+      hazardratio <- c(apply(matrix(summary(model,conf.int=CIwidth)$conf.int[covariateindex,c(1, 3, 4)], ncol = 3), 1, psthr))
+      pvalues <- c(sapply(summary(model)$coef[covariateindex,5], lpvalue))
+    } else if (type == "glm" & expnt) {
+      m <- summary(model,conf.int=CIwidth)$coefficients
+      Z_mult = qnorm(1-(1-CIwidth)/2)
+      hazardratio <- apply(cbind(exp(m[covariateindex,1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex,2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex,2])), 1, psthr)
+      pvalues <- c(sapply(m[covariateindex, 4], lpvalue))
+    } else if (type == "polr" ) {
+      m <- summary(model)$coefficients
+      Z_mult = qnorm(1-(1-CIwidth)/2)
+      hazardratio <- apply(cbind(exp(m[covariateindex,1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex,2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex,2])), 1, psthr)
+      pvalues =  pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, "Std. Error"]),lower.tail = FALSE) * 2
+      pvalues <- c(sapply(pvalues, lpvalue))
+    } else if (type == "lm" | type == "glm" & !expnt) {
+      T_mult = abs(qt((1-CIwidth)/2,model$df.residual))
+      m <- summary(model,conf.int=CIwidth)$coefficients
+      hazardratio <- apply(cbind(m[covariateindex, 'Estimate'],m[covariateindex, 'Estimate'] - T_mult * m[covariateindex,'Std. Error'], m[covariateindex, 'Estimate'] + T_mult * m[covariateindex,'Std. Error']), 1, psthr)
+      pvalues <- sapply(m[covariateindex, 4], lpvalue)
+    } else if (type == "lme") {
+      T_mult = abs(qt((1-CIwidth)/2,summary(model)$fixDF$X))[covariateindex]
+      m <- summary(model,conf.int=CIwidth)$tTable
+      hazardratio <- apply(cbind(m[covariateindex, 1],m[covariateindex, 1] - T_mult * m[covariateindex,2], m[covariateindex, 1] + T_mult * m[covariateindex,2]), 1, psthr)
+      pvalues <- c(sapply(m[covariateindex, 5], lpvalue))
     }
-    if(class(globalpvalue) == "try-error") globalpvalue<-"NA"
-    globalpvalue<-lpvalue(globalpvalue)
-
-    if(type=="coxph"|type=="crr"){
-      hazardratio<-c(apply(matrix(summary(model)$conf.int[covariateindex,c(1,3,4)],ncol=3),1,psthr))
-      pvalues<-c(sapply(summary(model)$coef[covariateindex,5],lpvalue))
-
-    }else if (type=="glm"){
-      m<-summary(model)$coefficients
-      hazardratio<-apply(cbind(exp(m[covariateindex,1]),exp(m[covariateindex,1]-1.96*m[covariateindex,2]),
-                               exp(m[covariateindex,1]+1.96*m[covariateindex,2])),1,psthr)
-      pvalues<-c(sapply(m[covariateindex,4],lpvalue))
-    }else if (type=="lm"|type=="lm"){
-      m<-summary(model)$coefficients
-
-      hazardratio<-apply(cbind(m[covariateindex,1],m[covariateindex,1]-1.96*m[covariateindex,2],
-                               m[covariateindex,1]+1.96*m[covariateindex,2]),1,psthr)
-      pvalues<-sapply(m[covariateindex,4],lpvalue)
-    }else if(type=="lme"){
-      m<-summary(model)$tTable
-      hazardratio<-apply(cbind(m[covariateindex,1],m[covariateindex,1]-1.96*m[covariateindex,2],
-                               m[covariateindex,1]+1.96*m[covariateindex,2]),1,psthr)
-
-      pvalues<-c(sapply(m[covariateindex,5],lpvalue))
-    }
-
-    #if not interaction
-
-    if(length(betaname[[1]])==1){
-      #if cts
-      if(!is.factor(data[,oldcovname])){
-
-        title<-c(nicename(covariatename),hazardratio,"",globalpvalue)
-      }else if(length(levelnames)==1){
-        title<-c(covariatename,"","",globalpvalue)
-        if(!is.null(data)) reference<-c(addspace(sanitizestr(names(table(data[,which(names(data)==oldcovname)]))[1])),"reference","","")
-        body<-c(levelnames,hazardratio,"","")
-
-
-      }else{
-        if(!is.null(data)) reference<-c(addspace(sanitizestr(names(table(data[,which(names(data)==oldcovname)]))[1])),"reference","","")
-        title<-c(covariatename,"","",globalpvalue)
-        body<-cbind(levelnames,hazardratio,pvalues,rep("",length(levelnames)))
-
-        #if interaction
-      }}else{
-        if(length(levelnames)!=1){
-          title<-c(covariatename,"","",globalpvalue)
-          body<-cbind(levelnames,hazardratio,pvalues,rep("",length(levelnames)))
-        }else{
-          title<-c(covariatename,hazardratio,"",globalpvalue)
+    if (length(betaname[[1]]) == 1) {
+      if (!is.factor(data[, oldcovname])) {
+        title <- c(nicename(covariatename), hazardratio,"", globalpvalue)
+      } else if (length(levelnames) == 1) {
+        title <- c(covariatename, "", "", globalpvalue)
+        if (!is.null(data))
+          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[1])),"reference", "", "")
+        body <- c(levelnames, hazardratio, "", "")
+      } else {
+        if (!is.null(data)){
+          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[1])),"reference", "", "")
         }
+        title <- c(covariatename, "", "", globalpvalue)
+        body <- cbind(levelnames, hazardratio, pvalues,rep("", length(levelnames)))
       }
-
-    out<-rbind(title,reference,body)
-    rownames(out)<-NULL
-    colnames(out)<-NULL
-    return(list(out,nrow(out)))
+    } else {
+      if (length(levelnames) != 1) {
+        title <- c(covariatename, "", "", globalpvalue)
+        body <- cbind(levelnames, hazardratio, pvalues,
+                      rep("", length(levelnames)))
+      } else {
+        title <- c(covariatename, hazardratio, "", globalpvalue)
+      }
+    }
+    out <- rbind(title, reference, body)
+    # New sample size work
+    if (out[1,2]=="") {
+      if (length(grep(':',title[1]))>0){
+        ss_N = c('',unlist(lapply(levelnameslist, function(level){
+          N<-mapply(function(cn,lvl){
+            if (cn==lvl) {nrow(ss_data)} else {sum(ss_data[[cn]]==lvl)}
+          },oldcovname,level)
+          return(min(N))
+        })))
+      } else{ss_N = c('',table(data[[oldcovname]]))}
+    } else {ss_N = nrow(ss_data)}
+    out <- cbind(out,ss_N)
+    #    print(out)
+    rownames(out) <- NULL
+    colnames(out) <- NULL
+    return(list(out, nrow(out)))
   })
-
+  table <- lapply(out, function(x) {
+    return(x[[1]])
+  })
+  index <- unlist(lapply(out, function(x) {
+    return(x[[2]])
+  }))
   table<-lapply(out,function(x){return(x[[1]])})
   index<-unlist(lapply(out,function(x){return(x[[2]])}))
   table<-do.call("rbind",lapply(table,data.frame,stringsAsFactors = FALSE))
-
-  colnames(table)<-sapply(c("Covariate",sanitizestr(beta),"p-value","Global p-value"),lbld)
+  colName = c("Covariate",sanitizestr(beta),"p-value","Global p-value")
+  if (!showN) {table <-table[,-5]} else {colName = c(colName,'N')}
+  colnames(table)<-sapply(colName,lbld)
   return(table)
 }
 
