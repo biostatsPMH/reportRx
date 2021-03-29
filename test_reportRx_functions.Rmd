@@ -21,8 +21,9 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(survival)
 library(reportRx)
 library(tidyverse)
-# To print nicely to Word un-comment the next line
-options("doc_type"='doc')
+
+# This will select pander tables for Word documents and kable + kableExtra for pdf/html documents
+if (knitr::pandoc_to("docx")) {options('doc_type'='doc')} else (options('doc_type'='pdf'))
 
 # Uncomment to create the packages.bib file of R packages used
 #knitr::write_bib((.packages(all.available=T)),file ='packages.bib')
