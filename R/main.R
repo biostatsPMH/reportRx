@@ -1766,69 +1766,75 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
 #' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
-#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#' @param chunk_label only used if out_fmt = doc to allow cross-referencing
 #' @param ... other variables passed to covsum and the table output function
 #' @export
 outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label,...){
-  tab = as.data.frame(tab) #strips any tibble aspects 
-  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
-  out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
-  chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
-
-  # set NA to empty in kable
-  options(knitr.kable.NA = '')
-
-  if (is.null(to_indent)) to_indent = numeric(0)
-  to_indent = as.vector(to_indent)
+  
+  # strip tibble aspects
+  tab=as.data.frame(tab)
   rownames(tab) <- NULL
-
-
-  if (out_fmt=='doc'){
-    caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
-    tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
-    tab[tab==''] <-'&nbsp;'
-
-    tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
-    if (length(to_bold)>0) {
-      pander::pander(tab,
-                     caption=caption,
-                     emphasize.strong.rows=to_bold,
-                     split.table=Inf, split.cells=15,
-                     justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
-
-    } else {
-      pander::pander(tab,
-                     caption=caption,
-                     split.table=Inf, split.cells=15,
-                     justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
-    }
-  } else {
-    if (nrow(tab)>30){
-      kout <- knitr::kable(tab, booktabs=TRUE,
-                           longtable=TRUE,
-                           linesep='',
-                           caption=caption,
-                           align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
-      if (ncol(tab)>4) {
-        kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
+  
+  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
+  if (out_fmt=='tblOnly'){
+    tab
+  } else{
+    
+    out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
+    chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
+    
+    if (is.null(to_indent)) to_indent = numeric(0)
+    to_indent = as.vector(to_indent)
+    
+    
+    if (out_fmt=='doc'){
+      caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
+      tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
+      tab[tab==''] <-'&nbsp;'
+      
+      tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
+      if (length(to_bold)>0) {
+        pander::pander(tab,
+                       caption=caption,
+                       emphasize.strong.rows=to_bold,
+                       split.table=Inf, split.cells=15,
+                       justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+        
       } else {
-        kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+        pander::pander(tab,
+                       caption=caption,
+                       split.table=Inf, split.cells=15,
+                       justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
       }
     } else {
-      kout <- knitr::kable(tab, booktabs=TRUE,
-                           longtable=FALSE,
-                           linesep='',
-                           caption=caption,
-                           align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
-      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
-    }
-    kout <- kableExtra::add_indent(kout,positions = to_indent)
-    if (length(to_bold)>0){
-      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
-    }
-    kout
-  }
-
+      # set NA to empty in kable
+      options(knitr.kable.NA = '')
+      if (nrow(tab)>30){
+        kout <- knitr::kable(tab, booktabs=TRUE,
+                             longtable=TRUE,
+                             linesep='',
+                             caption=caption,
+                             align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+        if (ncol(tab)>4) {
+          kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
+        } else {
+          kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+        }
+      } else {
+        kout <- knitr::kable(tab, booktabs=TRUE,
+                             longtable=FALSE,
+                             linesep='',
+                             caption=caption,
+                             align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+        if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
+      }
+      kout <- kableExtra::add_indent(kout,positions = to_indent)
+      if (length(to_bold)>0){
+        kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
+      }
+      kout
+    }}
+  
 }
 
 #'
