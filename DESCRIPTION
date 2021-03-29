@@ -23,9 +23,11 @@ Imports:
     gridExtra,
     geoR,
     pander,
+    reshape,
     knitr,
-    kableExtra
-Depends: reshape
+    kableExtra,
+    MASS,
+    Matrix
 Collate: 'helper.R' 'main.R' 'misc.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
 NeedsCompilation: no

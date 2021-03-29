@@ -620,7 +620,7 @@ puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=F){
 #'@param CIwidth width for confidence intervals, defaults to 0.95
 #'@keywords dataframe
 #'@export
-mvsum <-function(model, data, showN = T, markup = T, sanitize = T, nicenames = T,CIwidth=0.95)
+mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T,CIwidth=0.95)
 {
   if (!markup) {
     lbld <- identity
@@ -839,6 +839,151 @@ mvsum <-function(model, data, showN = T, markup = T, sanitize = T, nicenames = T
 pmvsum<-function(model,data){
   print.xtable(xtable(mvsum(model,data)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
 }
+
+#' Fit and format an ordinal logistic regression using polr from the {MASS} package. The parallel regression assumption can
+#' be tested using the Brant test (modfied from the the Brant package).
+#'@param data dataframe containing data [REQUIRED]
+#'@param covs character vector with the names of columns to include in table [REQUIRED]
+#'@param response ordinal outcome variable [REQUIRED]
+#'@param reflevel manual specification of the reference level, must match level exactly
+#'@param markup boolean indicating if you want latex markup
+#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
+#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
+#'@param excludeLevels a named list of levels to exclude from the response variable
+#'@param testPO logical, should the proportional odds (parallel regression) assumption be tested with the Brant test, defaults to TRUE, values greater than alpha are desirable.
+#'@param showN logical, should sample sizes be shown for each lvel, defaults to TRUE
+#'@param digits number of digits to display, defaults to
+#'@param CIwidth level of significance for computing the confidence intervals, default is 0.95
+#'@return A formatted table displaying the odds ratio associated with each covariate
+#'@keywords ordinal regression, Brant test
+#'@importFrom MASS polr
+#'@export
+#'
+ordsum  <- function(data, covs, response,reflevel,markup=FALSE,sanitize=TRUE,nicenames=TRUE,
+                    excludeLevels,testPO=TRUE,showN=TRUE,digits=1,CIwidth=0.95){
+  
+  if (!markup) {
+    lbld <- identity # not yet used
+    addspace <- identity  # not yet used
+    lpvalue <- identity
+  }
+  if (!sanitize)
+    sanitizestr <- identity
+  if (!nicenames)
+    nicename <- identity
+  
+  missing_covs = setdiff(covs,names(data))
+  if (length(missing_covs)>0) {
+    stop(paste('Check the covarariates, the following variables are not in the data:',missing_covs))
+  }
+  if (!class(data[[response]])[1] %in% c('factor','ordered')) {
+    warning('Response variable is not a factor, will be converted to an ordered factor')
+    data[[response]] <- factor(data[[response]],ordered=T)
+  }
+  if (!markup) {
+    lbld <- identity
+    addspace <- identity
+    lpvalue <- identity
+  }
+  if (!sanitize)
+    sanitizestr <- identity
+  if (!nicenames)
+    nicename <- identity
+  if (!missing(excludeLevels)){
+    if (response %in% names(excludeLevels)){
+      to_remove = sapply(data[[response]],function (x) {x %in% excludeLevels[[response]]})
+      data = data[!to_remove,]
+    }
+  }
+  if (!missing(reflevel)){
+    data[[response]] <- relevel(data[[response]], ref=reflevel)
+  }
+  for (v in covs) { if (class(data[[v]])[1] %in% c('character','ordered')) data[[v]] <- factor(data[[v]],ordered=F)}
+  out <- lapply(covs, function(x_var) {
+    polr.form = as.formula(paste(response,'~',x_var))
+    fit = MASS::polr(data=data,polr.form,method='logistic',Hess = TRUE)
+    brant_test = try(modified_brant(fit,by.var=T),silent = T)
+    if (class(brant_test)[1] == "try-error") {
+      po_test_omni = data.frame(Covariate = x_var,"PO Test" = 'Not Tested')
+      zero_counts <- NA
+    } else {
+      po_test_omni = data.frame(Covariate=rownames(brant_test$result),brant_test$result)
+      po_test_omni$"PO Test" = formatp(po_test_omni$probability)
+      zero_counts <-brant_test$zero_count_cells
+    }
+    coef_tbl <- data.frame(summary(fit)$coef)
+    coef_tbl <- coef_tbl[grep(x_var,rownames(summary(fit)$coef)),]
+    coef_tbl$p_value <- pnorm(abs(coef_tbl$"t.value"), lower.tail = FALSE) * 2
+    coef_tbl$"p-value" = sapply(coef_tbl$p_value,lpvalue)
+    coef_tbl$OR <- exp(coef_tbl$"Value")
+    qstdN <- qnorm(p=1-(1-CIwidth)/2)
+    coef_tbl$LB <- exp(coef_tbl$"Value"-qstdN*coef_tbl$"Std..Error")
+    coef_tbl$UB <- exp(coef_tbl$"Value"+qstdN*coef_tbl$"Std..Error")
+    coef_tbl$"OR_CI" = paste0(niceNum(coef_tbl$OR,digits = digits),
+                              ' (',niceNum(coef_tbl$LB,digits = digits),
+                              ',',niceNum(coef_tbl$UB,digits = digits),')')
+    tbl <- cbind(Covariate=rownames(coef_tbl),data.frame(coef_tbl[,c('OR_CI','p-value')]))
+    
+    if (class(data[[x_var]])[1] %in% c("ordered", "factor" )){
+      brant_test_level = try(modified_brant(model=fit,by.var=F),silent = T)
+      if (class(brant_test_level)[1] == "try-error") {
+        po_test_level = data.frame(Covariate = tbl,"PO Test" = 'NT')
+      } else {
+        po_test_level = data.frame(cbind(brant_test_level$result,Covariate=rownames(brant_test_level$result)))
+        po_test_level$"PO Test" <- formatp(po_test_level$probability)
+        #          po_test_level$"PO Test"[po_test_level$"PO Test"=='1'] <- 'NT' # WHY DID I ADD THIS?
+      }
+      
+      tbl$"PO Test" = sapply(tbl$Covariate, function(x) {po_test_level$"PO Test"[po_test_level$Covariate==x]})
+      tbl$Covariate = sub(x_var,'',tbl$Covariate)
+      reflevel=setdiff(levels(data[[x_var]]),c(excluded_xvar,tbl$Covariate))
+      tbl <- rbind(c(reflevel,"Reference","",""),tbl)
+      nterms=length(fit$coefficients)
+      globalp <- try(aod::wald.test(Sigma=vcov(fit)[1:nterms,1:nterms],
+                                    b=fit$coefficients,Terms=1:nterms)$result$chi2[3],silent = T)
+      if (class(globalp)[1]=='try-error') globalp <- NA
+      tbl$"globalPval" = ''
+      tbl <- rbind(c(x_var,"","",
+                     po_test_omni$"PO Test"[po_test_omni$Covariate==x_var],
+                     lpvalue(globalp)),tbl)
+      
+      n_by_level <- as.vector(sapply(tbl$Covariate[-1], function(x){ sum(fit$model[[x_var]]==x)}))
+      n_by_level <- c(sum(n_by_level),n_by_level)
+      tbl <- cbind(tbl,N=n_by_level)
+      
+      
+    } else {
+      tbl$"PO Test" = po_test_omni$"PO Test"[po_test_omni$Covariate==x_var]
+      tbl$"globalPval" = tbl$p.value
+      tbl$p.value <- ''
+      
+      tbl <- cbind(tbl,N=nrow(fit$fitted.values))
+      
+    }
+    tbl <- cbind(tbl,ZeroCount=c(zero_counts,rep(NA,nrow(tbl)-1)))
+    tbl <- tbl[,c("Covariate","N","OR_CI","globalPval","p.value","PO Test","ZeroCount")]
+    
+    names(tbl) <- c("Covariate","N","OR_CI","Global p-value","p-value","PO Test","ZeroCount")
+    return(tbl)
+  })
+  onetbl = do.call("rbind",out)
+  onetbl$Covariate <- nicename(onetbl$Covariate)
+  
+  if (sum(onetbl$ZeroCount>0,na.rm=T)!=0){    warning("Caution, proportional odds test performed with empty cells.")  }
+  
+  if (showN){
+    onetbl <- onetbl[,c("Covariate","N","OR_CI","Global p-value","p-value","PO Test")]
+  } else {     onetbl <- onetbl[,c("Covariate","OR_CI","Global p-value","p-value","PO Test")]}
+  if (sum(onetbl$`p-value`=='')==nrow(onetbl)) {
+    onetbl <- onetbl[,which(names(onetbl)=='p-value')]
+  }
+  
+  beta = sanitizestr(betaWithCI('OR',CIwidth))
+  names(onetbl) <- gsub('OR_CI',beta,names(onetbl))
+  rownames(onetbl) <- NULL
+  return(onetbl)
+}
+
 
 #' Convert .TeX to .docx
 #'
@@ -1816,6 +1961,59 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,ta
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
+
+
+#' Fit and format an ordinal logistic regression using polr from the {MASS} package. The parallel regression assumption can
+#' be tested using the Brant test in the Brant package and visually. Only logistic ordinal regression is supported currently.
+#'@param data dataframe containing data [REQUIRED]
+#'@param covs character vector with the names of columns to include in table [REQUIRED]
+#'@param response ordinal outcome variable [REQUIRED]
+#'@param reflevel manual specification of the reference level, must match level exactly
+#'@param caption Table caption
+#'@param showN logical, should sample sizes be shown for each lvel, defaults to TRUE
+#'@param excludeLevels a named list of levels to exclude from factor variables. Currently, this has only been implemented for the response variable.
+#'@param testPO logical, should the proportional odds (parallel regression) assumption be tested with the Brant test, defaults to TRUE
+#'@param digits number of digits to display, defaults to
+#'@param CIwidth level of significance for computing the confidence intervals, default is 0.95
+#'@param excludeLevels a named list of levels to exclude from the response variable
+#'@return A formatted table displaying the odds ratio associated with each covariate
+#'@keywords ordinal regression, Brant test
+#'@export
+#'
+rm_ordsum <- function(data, covs, response, reflevel,caption = NULL, showN=T,
+                      testPO=TRUE,digits=2,CIwidth=0.95,excludeLevels){
+  
+  
+  tab <- ordsum(data=data,
+                covs=covs,
+                response=response,
+                reflevel=reflevel,
+                markup=FALSE,
+                sanitize=FALSE,
+                nicenames=T,
+                testPO=testPO,
+                showN=showN,
+                digits = digits,
+                CIwidth=CIwidth,
+                excludeLevels=excludeLevels)
+  
+  if (is.null(caption))
+    caption = paste('Univariate ordinal logistic regression analysis of predictors of',nicename(response),'.')
+  
+  # format p-values nicely
+  tab$`Global p-value` <- sapply(tab$`Global p-value`,formatp)
+  if (length(which(names(tab)=='p-value'))>0)
+    tab[,which(names(tab)=='p-value')] <- sapply(tab[[which(names(tab)=='p-value')]],formatp)
+  
+  nice_var_names = gsub('_',' ',covs)
+  to_indent <- which(!tab$Covariate %in% nice_var_names )
+  to_bold <- which(as.numeric(tab[["Global p-value"]])<(1-CIwidth))
+  
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption)
+  
+}
+
 
 #' Output a multivariable model nicely in Rmarkdown
 #' The default output is a kable table for use in pdfs or html, but pander tables can be produced
