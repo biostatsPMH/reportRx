@@ -6,8 +6,14 @@
 The default output is a kable table for use in pdfs or html, but pander tables can be produced
 for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
 \usage{
-rm_mvsum(model, data, caption = NULL, tableOnly = FALSE,
-  HolmGlobalp = FALSE, chunk_label)
+rm_mvsum(
+  model,
+  data,
+  caption = NULL,
+  tableOnly = FALSE,
+  HolmGlobalp = FALSE,
+  chunk_label
+)
 }
 \arguments{
 \item{model}{model fit}

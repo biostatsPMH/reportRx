@@ -4,8 +4,7 @@
 \alias{citime}
 \title{Get CI cinfidence interval}
 \usage{
-citime(data, response, times, units = "Years", outcomes = NULL,
-  decimals = 2)
+citime(data, response, times, units = "Years", outcomes = NULL, decimals = 2)
 }
 \arguments{
 \item{data}{dataframe containing data}

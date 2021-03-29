@@ -6,8 +6,14 @@
 Table output defaults to kable, but the kableExtra package doesn't work well with Word.
 To export nice tables to Word use options('doc_type'='doc')}
 \usage{
-outTable(tab, to_indent = numeric(0), to_bold = numeric(0),
-  caption = NULL, chunk_label, ...)
+outTable(
+  tab,
+  to_indent = numeric(0),
+  to_bold = numeric(0),
+  caption = NULL,
+  chunk_label,
+  ...
+)
 }
 \arguments{
 \item{tab}{a table to format}

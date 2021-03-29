@@ -4,16 +4,44 @@
 \alias{ggsurv}
 \title{Plot KM and CI curves using ggplot2}
 \usage{
-ggsurv(response, cov = NULL, data, type = NULL, times = NULL,
-  table = TRUE, returns = FALSE, xlabs = "Time", ylabs = NULL,
-  main = NULL, ystratalabs = NULL, ystrataname = nicename(cov),
-  censor.marks = FALSE, HR = FALSE, HR.pval = FALSE,
-  conf.type = "none", fsize = 15, nsize = 4.5, lsize = 1.5,
-  psize = 4.5, ylims = c(0, 1), xlims = NULL, col = NULL,
-  linetype = NULL, legend.pos = NULL, pval = TRUE, pval.pos = NULL,
-  plot.event = 1, event = c("col", "linetype"), flip.CIF = FALSE,
-  cut = NULL, ticklabs = NULL, logse = FALSE, eventlabs = NULL,
-  event.name = NULL, ...)
+ggsurv(
+  response,
+  cov = NULL,
+  data,
+  type = NULL,
+  times = NULL,
+  table = TRUE,
+  returns = FALSE,
+  xlabs = "Time",
+  ylabs = NULL,
+  main = NULL,
+  ystratalabs = NULL,
+  ystrataname = nicename(cov),
+  censor.marks = FALSE,
+  HR = FALSE,
+  HR.pval = FALSE,
+  conf.type = "none",
+  fsize = 15,
+  nsize = 4.5,
+  lsize = 1.5,
+  psize = 4.5,
+  ylims = c(0, 1),
+  xlims = NULL,
+  col = NULL,
+  linetype = NULL,
+  legend.pos = NULL,
+  pval = TRUE,
+  pval.pos = NULL,
+  plot.event = 1,
+  event = c("col", "linetype"),
+  flip.CIF = FALSE,
+  cut = NULL,
+  ticklabs = NULL,
+  logse = FALSE,
+  eventlabs = NULL,
+  event.name = NULL,
+  ...
+)
 }
 \arguments{
 \item{response}{covariate to stratify table by}

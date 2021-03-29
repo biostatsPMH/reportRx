@@ -7,7 +7,7 @@
 mvsum(
   model,
   data,
-  showN = T,
+  showN = F,
   markup = T,
   sanitize = T,
   nicenames = T,

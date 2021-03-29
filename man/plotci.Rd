@@ -4,9 +4,17 @@
 \alias{plotci}
 \title{Plot CI curve}
 \usage{
-plotci(data, response, group = NULL, units = "months",
-  main = "Viral Infections", CI = F, legpos = "topleft",
-  xlim = NULL, outcomes = NULL)
+plotci(
+  data,
+  response,
+  group = NULL,
+  units = "months",
+  main = "Viral Infections",
+  CI = F,
+  legpos = "topleft",
+  xlim = NULL,
+  outcomes = NULL
+)
 }
 \arguments{
 \item{data}{dataframe containing data}

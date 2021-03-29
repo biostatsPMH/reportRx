@@ -4,8 +4,7 @@
 \alias{petsum}
 \title{Print LaTeX event time summary}
 \usage{
-petsum(data, response, group = 1, times = c(12, 14),
-  units = "months")
+petsum(data, response, group = 1, times = c(12, 14), units = "months")
 }
 \arguments{
 \item{data}{dataframe containing data}

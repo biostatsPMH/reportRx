@@ -4,8 +4,16 @@
 \alias{plotkm}
 \title{Plot KM curve}
 \usage{
-plotkm(data, response, group = 1, pos = "bottomleft",
-  units = "months", CI = F, legend = T, title = "")
+plotkm(
+  data,
+  response,
+  group = 1,
+  pos = "bottomleft",
+  units = "months",
+  CI = F,
+  legend = T,
+  title = ""
+)
 }
 \arguments{
 \item{data}{dataframe containing your data}

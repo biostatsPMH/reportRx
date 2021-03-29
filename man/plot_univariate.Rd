@@ -11,8 +11,14 @@ If response is a factor
   For a numeric predictor -> boxplot
   For a categorical predictor -> barplot}
 \usage{
-plot_univariate(response, covs, data, showN = FALSE, na.rm = TRUE,
-  response_title = NULL)
+plot_univariate(
+  response,
+  covs,
+  data,
+  showN = FALSE,
+  na.rm = TRUE,
+  response_title = NULL
+)
 }
 \arguments{
 \item{response}{character vector with names of columns to use for response}

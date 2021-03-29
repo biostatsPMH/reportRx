@@ -22,8 +22,8 @@ library(survival)
 library(reportRx)
 library(tidyverse)
 
-# This will select pander tables for Word documents and kable + kableExtra for pdf/html documents
-if (knitr::pandoc_to("docx")) {options('doc_type'='doc')} else (options('doc_type'='pdf'))
+# This will select pander tables for Word documents and kable + kableExtra for pdf/html documents and leave as is for chunk execution in Rstudio
+if (is.null(knitr::pandoc_to())){options('doc_type'='tblOnly')} else {if (knitr::pandoc_to("docx")) {options('doc_type'='doc')} else (options('doc_type'='pdf'))}
 
 # Uncomment to create the packages.bib file of R packages used
 #knitr::write_bib((.packages(all.available=T)),file ='packages.bib')

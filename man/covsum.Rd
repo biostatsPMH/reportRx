@@ -4,10 +4,20 @@
 \alias{covsum}
 \title{Get covariate summary dataframe}
 \usage{
-covsum(data, covs, maincov = NULL, numobs = NULL, markup = TRUE,
-  sanitize = TRUE, nicenames = TRUE, IQR = FALSE, digits.cat = 0,
-  testcont = c("rank-sum test", "ANOVA"), testcat = c("Chi-squared",
-  "Fisher"))
+covsum(
+  data,
+  covs,
+  maincov = NULL,
+  digits = 1,
+  numobs = NULL,
+  markup = TRUE,
+  sanitize = TRUE,
+  nicenames = TRUE,
+  IQR = FALSE,
+  digits.cat = 0,
+  testcont = c("rank-sum test", "ANOVA"),
+  testcat = c("Chi-squared", "Fisher")
+)
 }
 \arguments{
 \item{data}{dataframe containing data}
@@ -15,6 +25,8 @@ covsum(data, covs, maincov = NULL, numobs = NULL, markup = TRUE,
 \item{covs}{character vector with the names of columns to include in table}
 
 \item{maincov}{covariate to stratify table by}
+
+\item{digits}{number of digits for summarizing mean data}
 
 \item{numobs}{named list overriding the number of people you expect to have the covariate}
 

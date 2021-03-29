@@ -4,8 +4,15 @@
 \alias{forestplot}
 \title{Create a forest plot}
 \usage{
-forestplot(data, xlab = NULL, ylab = NULL, main = NULL, space = 0,
-  bool = F, xlim = NULL)
+forestplot(
+  data,
+  xlab = NULL,
+  ylab = NULL,
+  main = NULL,
+  space = 0,
+  bool = F,
+  xlim = NULL
+)
 }
 \arguments{
 \item{data}{dataframe containing data}

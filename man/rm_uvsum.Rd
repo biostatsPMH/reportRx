@@ -6,9 +6,19 @@
 The default output is a kable table for use in pdfs or html, but pander tables can be produced
 for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
 \usage{
-rm_uvsum(response, covs, data, caption = NULL, CIwidth = 0.95,
-  showP = T, tableOnly = FALSE, removeInf = T, HolmGlobalp = FALSE,
-  chunk_label, ...)
+rm_uvsum(
+  response,
+  covs,
+  data,
+  caption = NULL,
+  CIwidth = 0.95,
+  showP = T,
+  tableOnly = FALSE,
+  removeInf = T,
+  HolmGlobalp = FALSE,
+  chunk_label,
+  ...
+)
 }
 \arguments{
 \item{response}{string vector with name of response}

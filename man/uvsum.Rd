@@ -4,8 +4,18 @@
 \alias{uvsum}
 \title{Get univariate summary dataframe}
 \usage{
-uvsum(response, covs, data, type = NULL, strata = 1, markup = T,
-  sanitize = T, nicenames = T, CIwidth = 0.95, testing = F)
+uvsum(
+  response,
+  covs,
+  data,
+  type = NULL,
+  strata = 1,
+  markup = T,
+  sanitize = T,
+  nicenames = T,
+  CIwidth = 0.95,
+  testing = F
+)
 }
 \arguments{
 \item{response}{string vector with name of response}

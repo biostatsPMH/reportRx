@@ -4,8 +4,7 @@
 \alias{makedocx}
 \title{Convert .TeX to .docx}
 \usage{
-makedocx(dir, fname, pdwd = "C:/PROGRA~1/RStudio/bin/pandoc",
-  imwd = "")
+makedocx(dir, fname, pdwd = "C:/PROGRA~1/RStudio/bin/pandoc", imwd = "")
 }
 \arguments{
 \item{dir}{full path of .TeX file directory}

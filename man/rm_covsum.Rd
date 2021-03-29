@@ -6,9 +6,19 @@
 The default output is a kable table for use in pdfs or html, but pander tables can be produced
 for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
 \usage{
-rm_covsum(data, covs, maincov = NULL, caption = NULL,
-  excludeLevels = NULL, showP = TRUE, IQR = FALSE,
-  tableOnly = FALSE, covTitle = "Covariate", chunk_label, ...)
+rm_covsum(
+  data,
+  covs,
+  maincov = NULL,
+  caption = NULL,
+  excludeLevels = NULL,
+  showP = TRUE,
+  IQR = FALSE,
+  tableOnly = FALSE,
+  covTitle = "Covariate",
+  chunk_label,
+  ...
+)
 }
 \arguments{
 \item{data}{dataframe containing data}
