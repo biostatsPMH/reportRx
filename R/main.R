@@ -1979,7 +1979,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   
   # HR and p-val cox----------------------------------------------------------------------
   if(type=="KM" & multiple_lines & (HR|HR_pval)){
-    coxfit <- coxph(as.formula(paste(paste("Surv(", response[1],
+    coxfit <- survival::coxph(as.formula(paste(paste("Surv(", response[1],
                                            ",", response[2], ")", sep = ""), "~", cov,
                                      sep = "")), data = data)
     
