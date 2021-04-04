@@ -230,20 +230,25 @@ matchcovariate=function(betanames,ucall){
 
 # (ggsurv) ---------------------------------------------------------
 
+round_sprintf <- function(value,digits){
+  sprintf( paste0("%.",digits,"f"), round(value,digits))
+}
+
 pstprn0 <- function (x)
 {
   paste0(x[1], "(", paste0(x[-1], collapse = ","),
          ")", sep = "")
 }
 
-psthr0 <- function (x, y = 2)
+psthr0 <- function (x, digits = 2)
 {
   x <- sapply(x, function(x) {
     ifelse(abs(x) < 0.01 | abs(x) > 1000, format(x, scientific = TRUE,
-                                                 digits = y), round(x, y))
+                                                 digits = digits), round_sprintf(x, digits))
   })
   pstprn0(x)
 }
+
 break_function <- function(xmax){
 
   xmax_length <- ifelse(xmax>1,nchar(round(xmax)),round(abs(log10(xmax))))
@@ -256,13 +261,14 @@ break_function <- function(xmax){
   return(breaks)
 }
 
-lpvalue2 <- function (x)
+lpvalue2 <- function (x,digits)
 {
   if (is.na(x) | class(x) == "character")
     return(x)
-  else if (x <= 0.001)
-    return("<0.001")
-  else x = signif(x, 2)
+  else if (x < 10^-(digits))
+    return(paste0("p < ",10^-(digits)))
+  else return(paste0("p = ",round_sprintf(x, digits)))
+  
 }
 
 .extract_ggplot_colors <- function(p, grp.levels){
@@ -325,6 +331,23 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   }
   else stop("invalid conf.int type")
 }
+
+
+color_palette_surv_ggplot <- function(length){
+  if(length==1) return("black")
+  if(length==2) return(c("#D53E4F","#3288BD"))
+  if(length==3) return(c("#D53E4F","#ABDDA4","#3288BD"))
+  if(length==4) return(c("#D53E4F","#FDAE61","#ABDDA4","#3288BD"))
+  if(length==5) return(c("#D53E4F","#FDAE61","#FEE08B","#ABDDA4","#3288BD"))
+  if(length==6) return(c("#D53E4F","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD"))
+  if(length==7) return(c("#D53E4F","#F46D43","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD"))
+  if(length==8) return(c("#D53E4F","#F46D43","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD","#5E4FA2"))
+  if(length==9) return(c("#9E0142","#D53E4F","#F46D43","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD","#5E4FA2"))
+  if(length==10) return(c("black","#9E0142","#D53E4F","#F46D43","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD","#5E4FA2"))
+  if(length>10) {message("10 colours maximum in default")}
+  return(rep(c("black","#9E0142","#D53E4F","#F46D43","#FDAE61","#FEE08B","#ABDDA4","#66C2A5","#3288BD","#5E4FA2"),length.out=length))
+}
+
 
 # LA new 2021 ---------------------------------------------------------
 
