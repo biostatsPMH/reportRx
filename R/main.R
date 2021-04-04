@@ -1361,7 +1361,7 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
 
     if(!multiple_lines){
 
-      invisible(capture.output(fit <-  cuminc( data[,response[1]],data[,response[2]] )))
+      invisible(utils::capture.output(fit <-  cuminc( data[,response[1]],data[,response[2]] )))
       ystratalabs <- " "
       gsep = " "
 
@@ -1377,7 +1377,7 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     }else{
       newgpvar <- paste0(data[,cov],":")
       newgpvar <- factor(newgpvar, levels = paste0(levels(data[,cov]),":") )
-      invisible(capture.output(fit <- cuminc(data[,response[1]],data[,response[2]], newgpvar)))
+      invisible(utils::capture.output(fit <- cuminc(data[,response[1]],data[,response[2]], newgpvar)))
       gsep = ": "
 
       if(table){ #Sfit is for the numbers at risk so both events are counted the same way
@@ -2166,6 +2166,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     median.digits=3,set.time.digits=3,returns = FALSE,print.n.missing=T){
   event <- match.arg(event)
   
+  
+  
   ##Removing all missing data
   #rowSums(is.na(final[ , 5:6])) == 0,
   if(!is.null(cov)) remove <- rowSums(is.na(data[ ,c(response,cov)])) > 0
@@ -2235,7 +2237,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   
   # HR and p-val cox----------------------------------------------------------------------
   if(type=="KM" & multiple_lines & (HR|HR_pval)){
-    coxfit <- survival::coxph(as.formula(paste(paste("Surv(", response[1],
+    coxfit <- survival::coxph(as.formula(paste(paste("survival::(", response[1],
                                            ",", response[2], ")", sep = ""), "~", cov,
                                      sep = "")), data = data)
     
@@ -2270,7 +2272,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   if(type=="KM"){
     if(!multiple_lines){
       
-      sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
+      sfit <- survfit(as.formula(paste(paste("survival::Surv(", response[1],
                                              ",", response[2], ")", sep = ""), "~", 1,
                                        sep = "")), data = data,conf.type=conf.type)
       
@@ -2286,7 +2288,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
       stratalabs <- "All"
       
     }else{
-      sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
+      sfit <- survfit(as.formula(paste(paste("survival::Surv(", response[1],
                                              ",", response[2], ")", sep = ""), "~", cov,
                                        sep = "")), data = data,conf.type=conf.type)
       
@@ -2301,7 +2303,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         df_text$surv[df_text$time==0] <- -1
         
         
-        set.surv <- aggregate(df_text$surv~df_text$strat,FUN=max)[,2]
+        set.surv <- stats::aggregate(df_text$surv~df_text$strat,FUN=max)[,2]
         set.surv[set.surv<0] <- NA 
         
         if(!is.null(set.time.text)) stratalabs <- paste0(stratalabs,", ",set.time,"",set.time.text,"=",round_sprintf(set.surv,digits = set.time.digits))
@@ -2349,14 +2351,14 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     
     if(!multiple_lines){
       
-      invisible(capture.output(fit <-  cuminc( data[,response[1]],data[,response[2]] )))
+      invisible(utils::capture.output(fit <-  cuminc( data[,response[1]],data[,response[2]] )))
       stratalabs <- " "
       gsep = " "
       
       last_character <- substr(names(fit), nchar(names(fit)), nchar(names(fit)))
       get_values <- names(fit)[last_character %in% plot.event]
       if(median.lines==T|median.text==T) median_vals <- sapply(get_values, median_time_to_event)
-      if(!is.null(set.time.text)|set.time.line==T) set.surv <- timepoints(fit,times=set.time)$est[rownames(timepoints(fit,times=set.time)$est) %in% get_values,]
+      if(!is.null(set.time.text)|set.time.line==T) set.surv <- cmprsk::timepoints(fit,times=set.time)$est[rownames(cmprsk::timepoints(fit,times=set.time)$est) %in% get_values,]
       
       if(table){ #Sfit is for the numbers at risk so both events are counted the same way
         
@@ -2373,7 +2375,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     }else{
       newgpvar <- paste0(data[,cov],":")
       newgpvar <- factor(newgpvar, levels = paste0(levels(data[,cov]),":") )
-      invisible(capture.output(fit <- cuminc(data[,response[1]],data[,response[2]], newgpvar)))
+      invisible(utils::capture.output(fit <- cuminc(data[,response[1]],data[,response[2]], newgpvar)))
       gsep = ": "
       
       
@@ -2383,7 +2385,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
       if(median.lines==T|median.text==T) median_vals <- sapply(get_values, median_time_to_event)
       if(median.text==T & length(plot.event)==1) stratalabs <- paste(stratalabs,", Median=",round_sprintf(median_vals,digits=median.digits))
       
-      if(!is.null(set.time.text)|set.time.line==T) set.surv <- timepoints(fit,times=set.time)$est[rownames(timepoints(fit,times=set.time)$est) %in% get_values,]
+      if(!is.null(set.time.text)|set.time.line==T) set.surv <- cmprsk::timepoints(fit,times=set.time)$est[rownames(cmprsk::timepoints(fit,times=set.time)$est) %in% get_values,]
       if(!is.null(set.time.text)& length(plot.event)==1) stratalabs <- paste0(stratalabs,", ",set.time,"",set.time.text,"=",round_sprintf(set.surv,digits=set.time.digits))
       
       if(table){ #Sfit is for the numbers at risk so both events are counted the same way
