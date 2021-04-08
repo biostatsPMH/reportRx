@@ -1,3 +1,24 @@
+#' Retrieve columns number from Excel columns specified as unquoted letters
+#' @param excelColHeader unquoted excel column headers (i.e. excelCol(A,CG,AA))
+#' @importFrom rlang as_string
+#' @export
+excelCol<- function(...){
+  args <- as.list(match.call())[-1]
+  args <-unname(unlist(lapply(args,function(x) {rlang::as_string(x)})))
+  rtn<-sapply(args, function(x){
+    colHead <- toupper(x)
+    if (nchar(colHead)>1){
+      l1 = substr(colHead,1,1)
+      l2 = substr(colHead,2,2)
+      rtn <- 26*which(LETTERS==l1)+which(LETTERS==l2)
+    } else {
+      rtn <- which(LETTERS==colHead)
+    }
+  })
+  names(rtn) <- toupper(names(rtn))
+  return(rtn)
+}
+
 niceNum <- function(x,digits=2){
   rndx = sapply(x, function(x) {format(round(as.numeric(x),digits),nsmall=digits)})
   return(gsub(" ","",rndx))
