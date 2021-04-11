@@ -246,18 +246,22 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
 #'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
+#'@param print_missing prints the number of values of the maincov missing and excluded from the table
+#'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
-                 testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE){
+covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
+                  testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE,percentage=c('column','row')){
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
   if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
   for (v in c(maincov,covs)) if (class(data[[v]])[1]=='character') data[[v]] <- factor(data[[v]])
-
+  
   testcont <- match.arg(testcont)
   testcat <- match.arg(testcat)
+  percentage <- match.arg(percentage)
+  
   if(!markup){
     lbld<-identity
     addspace<-identity
@@ -271,9 +275,10 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
   if(!nicenames) nicename<-identity
   if(!is.null(maincov)){
     
-    ##JW April 11 Removes missing of maincov 
-    if(print_missing) {print(paste(sum(is.na(data[[maincov]])),"missing",maincov))}
+    ##JW Removes missing of maincov
+    if(print_missing==TRUE) print(paste(sum(is.na(data[[maincov]])),"missing",maincov))
     data <- data[!is.na(data[[maincov]]),]
+    
     
     levels<-names(table(data[[maincov]]))
     levels<-c(list(levels),as.list(levels))
@@ -290,7 +295,7 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
   out<-lapply(covs,function(cov){
     ismiss=F
     n<-sum(table(data[[cov]]))
-
+    
     #Set up the first coulmn
     factornames<-NULL
     if(is.null(numobs[[cov]]))  numobs[[cov]]<-nmaincov
@@ -307,10 +312,32 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
           p <- NA
         p <- lpvalue(p)
       }
-
-
+      
+      
       #set up the main columns
-      onetbl<-mapply(function(sublevel,N){
+      if (percentage == "column")   {
+        onetbl<-mapply(function(sublevel,N){
+          missing<-NULL
+          if(sublevel[1]!="NOMAINCOVNULLNA"){
+            subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
+          }else{
+            subdata<-data
+          }
+          table<-table(subdata[[cov]])
+          tbl<-table(subdata[[cov]])
+          n<-sum(tbl)
+          prop <- round(tbl/n,2+digits.cat)*100
+          prop <- sapply(prop,function(x){if(!is.nan(x)){x} else{0}})
+          prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+          tbl<-mapply(function(num,prop){paste(num," (",prop,")",sep="")},tbl,prop.fmt)
+          if(ismiss) missing<-N-n
+          tbl<-c(tbl,lbld(missing))
+          return(tbl)
+        },levels,numobs[[cov]])
+      }
+      
+      
+      if(percentage=='row') {onetbl<-mapply(function(sublevel,N){
         missing<-NULL
         if(sublevel[1]!="NOMAINCOVNULLNA"){
           subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
@@ -320,15 +347,29 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
         table<-table(subdata[[cov]])
         tbl<-table(subdata[[cov]])
         n<-sum(tbl)
-        prop <- round(tbl/n,2+digits.cat)*100
-        prop <- sapply(prop,function(x){if(!is.nan(x)){x} else{0}})
-        prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
-        tbl<-mapply(function(num,prop){paste(num," (",prop,")",sep="")},tbl,prop.fmt)
         if(ismiss) missing<-N-n
         tbl<-c(tbl,lbld(missing))
         return(tbl)
       },levels,numobs[[cov]])
-
+      
+      if(ismiss) onetbl[-nrow(onetbl),-1] <- t(apply(onetbl[-nrow(onetbl),-1],1,function(x){
+        x <- as.numeric(x)
+        prop <- round(x/sum(x),2+digits.cat)*100
+        
+        prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+        return(paste(x," (",prop.fmt,")",sep=""))
+      }))
+      if(!ismiss) onetbl[,-1] <- t(apply( onetbl[,-1],1,function(x){
+        x <- as.numeric(x)
+        prop <- round(x/sum(x),2+digits.cat)*100
+        
+        prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+        return(paste(x," (",prop.fmt,")",sep=""))
+      }))
+      
+      }
+      
+      
       #if the covariate is not a factor
     }else{
       #setup the first column
@@ -343,7 +384,7 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
           p <- NA
         p <- lpvalue(p)
       }
-
+      
       #set up the main columns
       onetbl <- mapply(function(sublevel,N){
         missing <- NULL
@@ -375,14 +416,14 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
         
         return(tbl)}
         ,levels,numobs[[cov]])}
-
+    
     #Add the first column to the main columns and get the matrix ready for later
     factornames<-addspace(sanitizestr(nicename(factornames)))
     # LA Added 20 Jan 2021 to deal with one-level factors
     if (is.null(nrow(onetbl))){onetbl <- matrix(data=onetbl,ncol=length(onetbl),nrow=1) }
-
+    
     onetbl<-cbind(factornames,onetbl)
-
+    
     if(!is.null(maincov)){
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),rep("",length(levels[[1]])+1)),onetbl)
       onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
@@ -402,11 +443,12 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
                               names(table(data[[maincov]])),table(data[[maincov]])),"p-value")
   }else{
     colnames(table)<-c("Covariate",paste("n=",N,sep=""))
-
+    
   }
   colnames(table)<-sanitizestr(colnames(table))
   return(table)
 }
+
 
 #'Print covariate summary Latex
 #'
