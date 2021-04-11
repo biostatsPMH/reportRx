@@ -250,7 +250,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
 covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
-                 testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher')){
+                 testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE){
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
   if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
@@ -270,6 +270,11 @@ covsum<-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitiz
   if(!sanitize) sanitizestr<-identity
   if(!nicenames) nicename<-identity
   if(!is.null(maincov)){
+    
+    ##JW April 11 Removes missing of maincov 
+    if(print_missing) {print(paste(sum(is.na(data[[maincov]])),"missing",maincov))}
+    data <- data[!is.na(data[[maincov]]),]
+    
     levels<-names(table(data[[maincov]]))
     levels<-c(list(levels),as.list(levels))
   }else{
