@@ -243,6 +243,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
 #'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param pvalue boolean indicating if you want p-values included in the table
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
 #'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
@@ -251,8 +252,9 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,digits.cat = 0,
-                  testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE,percentage=c('column','row')){
+covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,digits.cat = 0,
+                  testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE,percentage=c('column','row'))
+  {
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
   if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
@@ -306,11 +308,13 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
     if(is.factor(data[[cov]])){
       factornames<-c(levels(data[[cov]]),factornames)
       if (!is.null(maincov)) {
-        p <- if( testcat=='Fisher'){ try(fisher.test(data[[maincov]],data[[cov]])$p.value,silent=T)
-        } else try(chisq.test(data[[maincov]],data[[cov]])$p.value,silent=T)
-        if (class(p) == "try-error")
-          p <- NA
-        p <- lpvalue(p)
+        if(pvalue){
+          p <- if( testcat=='Fisher'){ try(fisher.test(data[[maincov]],data[[cov]])$p.value,silent=T)
+          } else try(chisq.test(data[[maincov]],data[[cov]])$p.value,silent=T)
+          if (class(p) == "try-error")
+            p <- NA
+          p <- lpvalue(p)
+        }
       }
       
       
@@ -407,16 +411,17 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
       #setup the first column
       factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
       if (!is.null(maincov)) {
-        p <- if( testcont=='rank-sum test'){
-          if( length(unique(data[[maincov]]))==2 ){
-            try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
-          } else try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
-        } else try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
-        if (class(p) == "try-error")
-          p <- NA
-        p <- lpvalue(p)
+        if(pvalue){
+          p <- if( testcont=='rank-sum test'){
+            if( length(unique(data[[maincov]]))==2 ){
+              try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
+            } else try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
+          } else try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
+          if (class(p) == "try-error")
+            p <- NA
+          p <- lpvalue(p)
+        }
       }
-      
       #set up the main columns
       onetbl <- mapply(function(sublevel,N){
         missing <- NULL
@@ -458,7 +463,7 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
     
     if(!is.null(maincov)){
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),rep("",length(levels[[1]])+1)),onetbl)
-      onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
+      if(pvalue) onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
     }else{
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),""),onetbl)
     }
@@ -472,7 +477,9 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
   if(!is.null(maincov)){
     colnames(table)<-c("Covariate",paste("Full Sample (n=",N,")",sep=""),
                        mapply(function(x,y){paste(x," (n=",y,")",sep="")},
-                              names(table(data[[maincov]])),table(data[[maincov]])),"p-value")
+                              names(table(data[[maincov]])),table(data[[maincov]])))
+    if(pvalue) colnames(table)[ncol(table)] <- "p-value"
+    
   }else{
     colnames(table)<-c("Covariate",paste("n=",N,sep=""))
     
