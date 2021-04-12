@@ -16,6 +16,12 @@ test_data = data.frame(
   y= rnorm(100),
   x0= geoR::rboxcox(100, lambda=0.5, mean=10, sd=2))
 test_data$x1=  test_data$x0*test_data$y
+
+
+
+test_row=data.frame(type=c(1,NA,1,1,2,2,2,2,3,3),age=c(5,4,10,24,35,12,45,34,2,12),group=c('A','A',NA,'A','A','B','I','C','A','B'),
+                group2=c('A','A','A','A','A','A','A','A','A','A'),group3=c('A','A','A','A','A','A','A','A','A',NA),group4=c('A','B','A','A','B','B','B','B',NA,NA))
+
 #-------------------------------------------------------------------------------------
 
 
@@ -63,6 +69,26 @@ test_that("covsum rounds variables correctly", {
   expect_equal(output$`n=228`,c("","63 (27.6)","165 (72.4)","","138 (60.5)","90 (39.5)","","9.832 (13.140)","7.000 (0.000,15.750)","14","","228 (100.0)","",mean_sd,med_Q1_Q3))
   
 })
+
+test_that("covsum calculates rows correctly", {
+  output = covsum(data=test_row,
+                  maincov='type',
+                  covs=c('group','group2','group3','group4'),
+                  markup=F,percentage = 'row',testcat = 'Fisher')
+  expect_equal(names(output) ,c("Covariate","Full Sample (n=9)","1 (n=3)","2 (n=4)",'3 (n=2)',"p-value") )
+  expect_equal(output$Covariate , c("group", "A", "B", "C", "I", "Missing", "group2", "A", "group3", 
+                                    "A", "Missing", "group4", "A", "B", "Missing"))
+  expect_equal(output[,3],c("", "2 (50)", "0 (0)", "0 (0)", "0 (0)", "1", "", "3 (33)", 
+                            "", "3 (38)", "0", "", "3 (100)", "0 (0)", "0"))
+  
+  expect_equal(output[,4],c("", "1 (25)", "1 (50)", "1 (100)", "1 (100)", "0", "", "4 (44)", 
+                            "", "4 (50)", "0", "", "0 (0)", "4 (100)", "0"))
+  expect_equal(output[,5],c("", "1 (25)", "1 (50)", "0 (0)", "0 (0)", "0", "", "2 (22)", 
+                            "", "1 (12)", "1", "", "0 (0)", "0 (0)", "2"))
+  
+})
+
+
 
 test_that("uvsum logistic regression CIS are correct",{
   digits = 2 # TODO: add function flexibility

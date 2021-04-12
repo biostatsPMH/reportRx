@@ -337,36 +337,68 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
       }
       
       
-      if(percentage=='row') {onetbl<-mapply(function(sublevel,N){
-        missing<-NULL
-        if(sublevel[1]!="NOMAINCOVNULLNA"){
-          subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
+      if(percentage=='row') {
+        onetbl<-mapply(function(sublevel,N){
+          missing<-NULL
+          if(sublevel[1]!="NOMAINCOVNULLNA"){
+            subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
+          }else{
+            subdata<-data
+          }
+          table<-table(subdata[[cov]])
+          tbl<-table(subdata[[cov]])
+          n<-sum(tbl)
+          if(ismiss) missing<-N-n
+          tbl<-c(tbl,lbld(missing))
+          return(tbl)
+        },levels,numobs[[cov]])
+        
+        if(ismiss){
+          #More than two rows with missing 
+          if(dim(onetbl)[1]>2){
+            onetbl[-nrow(onetbl),-1] <- t(apply(onetbl[-nrow(onetbl),-1],1,function(x){
+              x <- as.numeric(x)
+              prop <- round(x/sum(x),2+digits.cat)*100
+              
+              prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+              return(paste(x," (",prop.fmt,")",sep=""))
+            }))
+          }else{
+            #Only one row with missing 
+            onetbl[-nrow(onetbl),-1] <- (function(x){
+              x <- as.numeric(x)
+              prop <- round(x/sum(x),2+digits.cat)*100
+              
+              prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+              return(paste(x," (",prop.fmt,")",sep=""))
+            })( onetbl[-nrow(onetbl),-1])
+          }
+          
+          
         }else{
-          subdata<-data
+          #multiple rows and no missing
+          if(!is.null(dim(onetbl))){
+            onetbl[,-1] <- t(apply( onetbl[,-1],1,function(x){
+              x <- as.numeric(x)
+              prop <- round(x/sum(x),2+digits.cat)*100
+              
+              prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+              return(paste(x," (",prop.fmt,")",sep=""))
+            }))
+          }else{
+            #one row and no missing
+            onetbl[-1] <- (function(x){
+              x <- as.numeric(x)
+              prop <- round(x/sum(x),2+digits.cat)*100
+              
+              prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
+              return(paste(x," (",prop.fmt,")",sep=""))
+            })(onetbl[-1])
+          }
         }
-        table<-table(subdata[[cov]])
-        tbl<-table(subdata[[cov]])
-        n<-sum(tbl)
-        if(ismiss) missing<-N-n
-        tbl<-c(tbl,lbld(missing))
-        return(tbl)
-      },levels,numobs[[cov]])
-      
-      if(ismiss) onetbl[-nrow(onetbl),-1] <- t(apply(onetbl[-nrow(onetbl),-1],1,function(x){
-        x <- as.numeric(x)
-        prop <- round(x/sum(x),2+digits.cat)*100
         
-        prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
-        return(paste(x," (",prop.fmt,")",sep=""))
-      }))
-      if(!ismiss) onetbl[,-1] <- t(apply( onetbl[,-1],1,function(x){
-        x <- as.numeric(x)
-        prop <- round(x/sum(x),2+digits.cat)*100
         
-        prop.fmt <- sprintf(paste0("%.",digits.cat,"f"),prop)
-        return(paste(x," (",prop.fmt,")",sep=""))
-      }))
-      
+        
       }
       
       
@@ -448,8 +480,6 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
   colnames(table)<-sanitizestr(colnames(table))
   return(table)
 }
-
-
 #'Print covariate summary Latex
 #'
 #'Returns a dataframe corresponding to a descriptive table
