@@ -237,8 +237,8 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
-#'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param digits number of digits for summarizing mean data
+#'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param markup boolean indicating if you want latex markup
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
@@ -2224,14 +2224,14 @@ rm_mvsum <- function(model , data ,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALS
 #' @param cut numeric value indicating where to divide a continuous covariate (default is the median)
 #' @param eventlabs String corresponding to the event type names
 #' @param event.name String corresponding to the label of the event types
-
+#' @param Numbers_at_risk_text String for the label of the number at risk
 #' @param HR.digits Number of digits printed of the  hazard ratio
 #' @param HR.pval.digits Number of digits printed of the hazard ratio pvalue
 #' @param pval.digits Number of digits printed of the Gray's/log rank pvalue
 
 #' @param median.digits Number of digits printed of the median pvalue
 #' @param set.time.digits Number of digits printed of the probability at a specified time
-
+#' @param print.n.missing Logical, should the number of missing be shown !Needs to be checked
 
 #' @param returns Logical value returns a list with all ggplot objects in a list
 

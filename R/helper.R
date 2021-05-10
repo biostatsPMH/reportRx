@@ -1,5 +1,5 @@
 #' Retrieve columns number from Excel columns specified as unquoted letters
-#' @param excelColHeader unquoted excel column headers (i.e. excelCol(A,CG,AA))
+#' @param ... unquoted excel column headers (i.e. excelCol(A,CG,AA)) separated by commas
 #' @importFrom rlang as_string
 #' @export
 excelCol<- function(...){
@@ -371,6 +371,15 @@ color_palette_surv_ggplot <- function(length){
 
 
 # LA new 2021 ---------------------------------------------------------
+# New function to strip centering from a covariate
+getvarname = function(betaname){
+  sapply(betaname,function(x){
+    x = gsub('I[(]','',x)
+    x = gsub('[-+].*','',x)
+    x = trimws(x)
+    return(x)
+  })
+}
 
 lbl_count <- function(y){
   q75 <- summary(y)[5]

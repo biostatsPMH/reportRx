@@ -27,7 +27,8 @@ Imports:
     knitr,
     kableExtra,
     MASS,
-    Matrix
+    Matrix,
+    rlang
 Collate: 'helper.R' 'main.R' 'misc.R' 'globals.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
 NeedsCompilation: no

@@ -24,7 +24,7 @@ outTable(
 
 \item{caption}{table caption}
 
-\item{chunk_label}{only used if options("doc_type"='doc') to allow cross-referencing}
+\item{chunk_label}{only used if out_fmt = doc to allow cross-referencing}
 
 \item{...}{other variables passed to covsum and the table output function}
 }
