@@ -1843,6 +1843,79 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
 }
 
 # Rmarkdown Reporting --------------------------------------------------------------
+
+#' Generate a bibfile for an Rmd document from a master *.bib file
+#'
+#' This function will search through the current Rmd document for citations and
+#' extract these from a central bib file to save as a file-specific bibfile.
+#' It will also search through for citations to R packages and include those,
+#' which can be useful to keep track of which version of a package was used.
+#' @param bibfile a master bib file contianing all the references in the document (Zotero or Mendeley).
+#' @param outfile a filename to write the bibfile to. If missing this will be the rmd file name with a bib extension
+#' @importFrom bib2df df2bib
+#' @importFrom knitr write_bib
+#' @importFrom dplyr rbind
+#' @importFrom rstudioapi getSourceEditorContext
+#' @keywords citations
+#' @export
+rmdBibfile <- function(bibfile,outfile){
+  # First sanitise the specified bibfile
+  if (!file.exists(bibfile)) stop(paste(bibfile,'does not exist.'))
+  
+  if (file.access(bibfile)==0){
+    bib <- bib_ReadGatherTidy(bibfile)
+  } else stop(paste('Can not access',bibfile))
+  
+  # Replace some troublesome characters
+  bib$URL <- gsub("\\{\\\\_\\}","_", bib$URL)
+  
+  # remove abstract, keywords
+  rm <- c(which(names(bib)=='ABSTRACT'),which(names(bib)=='KEYWORDS'))
+  if (length(rm) >0) bib <- bib[,-rm]
+  
+  thisFile = rstudioapi::getSourceEditorContext()$path
+  if (thisFile=="") stop('Please save the current file before running writeBibFile.')
+  thisDir = dirname(thisFile)
+  
+  # open current file and search for [@xx] entries
+  fileWords = scan(thisFile,what='character')
+  refs = fileWords[grep("\\[@.*\\]",fileWords)]
+  stripped = gsub("\\[|\\].*","",refs)
+  rRefs = stripped[grep("R-",stripped)]
+  otherRefs = setdiff(stripped,rRefs)
+  Rpckgs = gsub("@R-","",rRefs)
+  sepRefs = unlist(strsplit(otherRefs,";"))
+  
+  tidyRefs <-gsub(".*@","",sepRefs)
+  tidyRefs <-gsub("[.]| .*|,","",tidyRefs)
+  libRefs = unique(tidyRefs)
+  
+  # Extract the references from the master library
+  paperBib <- NULL
+  for ( p in libRefs){
+    ind = which(bib$BIBTEXKEY==p)
+    if (length(ind)>0) {
+      paperBib <- rbind(paperBib,bib[ind,])
+    } else warning(paste(p,'not in',bibfile,'\n'))
+  }
+  
+  if (missing(outfile)){
+    bib_out = paste0(thisDir,gsub(".Rmd","",gsub(thisDir,"",thisFile)),".bib")
+  } else bib_out = paste0(thisDir,"/",gsub(".bib","",outfile),".bib")
+  
+  # write R packages to bibfile and append remaining references
+  if (length(Rpckgs)>0){
+    add = TRUE
+    knitr::write_bib(Rpckgs,file =bib_out)
+  } else {add=FALSE}
+  
+  if (!is.null(paperBib)){
+    bib2df::df2bib(paperBib,file = bib_out,append = add)
+  } else { if (add==FALSE) warning('No citations in current file to write')}
+  
+}
+
+
 #' The output function for the print methods
 #' Table output defaults to kable, but the kableExtra package doesn't work well with Word.
 #' To export nice tables to Word use options('doc_type'='doc')
