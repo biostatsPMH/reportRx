@@ -11,8 +11,7 @@ outTable(
   to_indent = numeric(0),
   to_bold = numeric(0),
   caption = NULL,
-  chunk_label,
-  ...
+  chunk_label
 )
 }
 \arguments{
@@ -25,8 +24,6 @@ outTable(
 \item{caption}{table caption}
 
 \item{chunk_label}{only used if out_fmt = doc to allow cross-referencing}
-
-\item{...}{other variables passed to covsum and the table output function}
 }
 \description{
 The output function for the print methods

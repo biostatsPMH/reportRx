@@ -1851,9 +1851,8 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
 #' @param chunk_label only used if out_fmt = doc to allow cross-referencing
-#' @param ... other variables passed to covsum and the table output function
 #' @export
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label,...){
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
