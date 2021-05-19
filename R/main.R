@@ -1880,9 +1880,10 @@ rmdBibfile <- function(bibfile,outfile){
   # open current file and search for [@xx] entries
   fileWords = scan(thisFile,what='character')
   refs = fileWords[grep("\\[@.*\\]",fileWords)]
-  stripped = gsub("\\[|\\].*","",refs)
-  rRefs = stripped[grep("R-",stripped)]
-  otherRefs = setdiff(stripped,rRefs)
+  stripped = gsub(".*\\[|\\].*","",refs)
+  allrefs = unique(unlist(strsplit(stripped,';')))
+  rRefs = allrefs[grep("R-",allrefs)]
+  otherRefs = setdiff(allrefs,rRefs)
   Rpckgs = gsub("@R-","",rRefs)
   sepRefs = unlist(strsplit(otherRefs,";"))
   
