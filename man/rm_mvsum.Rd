@@ -9,6 +9,8 @@ for Word documents by specifying options('doc_type'='doc') in the setup chunk of
 rm_mvsum(
   model,
   data,
+  showN = FALSE,
+  CIwidth = 0.95,
   caption = NULL,
   tableOnly = FALSE,
   HolmGlobalp = FALSE,
@@ -19,6 +21,10 @@ rm_mvsum(
 \item{model}{model fit}
 
 \item{data}{data that model was fit on}
+
+\item{showN}{boolean indicating sample sizes should be shown for each comparison, can be useful for interactions}
+
+\item{CIwidth}{width for confidence intervals, defaults to 0.95}
 
 \item{caption}{table caption}
 

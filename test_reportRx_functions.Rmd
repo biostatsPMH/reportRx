@@ -112,9 +112,6 @@ rm_uvsum(response = 'Status',
       type='logistic',
       CIwidth=.9,
       chunk_label='test-uv-logistic-2')
-
-
-
 ```
 
 ```{r test-uv-logistic-3}

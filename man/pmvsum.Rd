@@ -4,12 +4,16 @@
 \alias{pmvsum}
 \title{Print multivariate summary LaTeX table}
 \usage{
-pmvsum(model, data)
+pmvsum(model, data, showN = FALSE, CIwidth = 0.95)
 }
 \arguments{
 \item{model}{fitted model object}
 
 \item{data}{dataframe containing data}
+
+\item{showN}{boolean indicating sample sizes should be shown for each comparison, can be useful for interactions}
+
+\item{CIwidth}{width for confidence intervals, defaults to 0.95}
 }
 \description{
 Returns a LaTeX table of the multivariate summary.

@@ -12,7 +12,7 @@ rm_covsum(
   maincov = NULL,
   caption = NULL,
   excludeLevels = NULL,
-  showP = TRUE,
+  pvalue = TRUE,
   IQR = FALSE,
   tableOnly = FALSE,
   covTitle = "Covariate",
@@ -31,7 +31,7 @@ rm_covsum(
 
 \item{excludeLevels}{a named list of levels to exclude in the form list(varname =c('level1','level2')) these levels will be excluded from association tests}
 
-\item{showP}{boolean indicating if p values should be displayed (may only want corrected p-values)}
+\item{pvalue}{boolean indicating if p values should be displayed (may only want corrected p-values)}
 
 \item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
 

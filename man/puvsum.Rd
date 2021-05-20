@@ -4,7 +4,16 @@
 \alias{puvsum}
 \title{Print univariate summary LaTeX table}
 \usage{
-puvsum(response, covs, data, type = NULL, strata = 1, TeX = F)
+puvsum(
+  response,
+  covs,
+  data,
+  type = NULL,
+  strata = 1,
+  TeX = FALSE,
+  showN = FALSE,
+  CIwidth = 0.95
+)
 }
 \arguments{
 \item{response}{string vector with name of response}
@@ -18,6 +27,10 @@ puvsum(response, covs, data, type = NULL, strata = 1, TeX = F)
 \item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
 
 \item{TeX}{boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx}
+
+\item{showN}{boolean indicating if you want to show sample sizes}
+
+\item{CIwidth}{width of confidence interval, default is 0.95}
 }
 \description{
 Returns a LaTeX table of the univariate summary

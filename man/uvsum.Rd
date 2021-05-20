@@ -13,8 +13,9 @@ uvsum(
   markup = T,
   sanitize = T,
   nicenames = T,
-  CIwidth = 0.95,
-  testing = F
+  testing = F,
+  showN = T,
+  CIwidth = 0.95
 )
 }
 \arguments{
@@ -25,7 +26,7 @@ uvsum(
 \item{data}{dataframe containing data}
 
 \item{type}{string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-Options in clude "linear","logistic","coxph","crr","boxcox","logistic"}
+Options include "linear", "logistic", "coxph", "crr", "boxcox","logistic"}
 
 \item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
 
@@ -35,9 +36,11 @@ Options in clude "linear","logistic","coxph","crr","boxcox","logistic"}
 
 \item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
 
-\item{CIwidth}{width of confidence interval, default is 0.95}
+\item{testing}{boolean to indicate if you want to print out the covariates before the model fits.}
 
-\item{testing}{boolean to indicate if you want to print out the covariates before the model fits.
+\item{showN}{boolean indicating if you want to show sample sizes}
+
+\item{CIwidth}{width of confidence interval, default is 0.95
 This will allow you to see which model is not fitting if the function throws an error}
 }
 \description{

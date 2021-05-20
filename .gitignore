@@ -7,3 +7,4 @@
 *.Rproj
 /img
 .DS_Store
+inst/doc
