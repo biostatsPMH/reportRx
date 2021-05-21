@@ -19,8 +19,13 @@ test_data$x1=  test_data$x0*test_data$y
 
 
 
-test_row=data.frame(type=c(1,NA,1,1,2,2,2,2,3,3),age=c(5,4,10,24,35,12,45,34,2,12),group=c('A','A',NA,'A','A','B','I','C','A','B'),
+test_row=data.frame(type=c(1,NA,1,1,2,2,2,2,3,3),age=c(5,NA,10,24,35,12,45,34,NA,12),group=c('A','A',NA,'A','A','B','I','C','A','B'),
                 group2=c('A','A','A','A','A','A','A','A','A','A'),group3=c('A','A','A','A','A','A','A','A','A',NA),group4=c('A','B','A','A','B','B','B','B',NA,NA))
+
+lung_missing <- lung
+set.seed(123)
+lung_missing$ph.ecog[sample(c(1:228),50)] <- NA
+lung_missing$AgeGroup[sample(c(1:228),50)] <- NA
 
 #-------------------------------------------------------------------------------------
 
@@ -88,6 +93,40 @@ test_that("covsum calculates rows correctly", {
   
 })
 
+test_that("covsum includes missing correctly", {
+  output = covsum(data=lung_missing,maincov = 'ph.ecog',
+                  covs=c('Sex','AgeGroup','age','meal.cal'),include_missing = TRUE,pvalue = FALSE)
+  
+  expect_equal(names(output) ,c("Covariate", "Full Sample (n=228)", "0 (n=49)", "1 (n=86)", 
+                                "2 (n=41)", "3 (n=1)", "NA (n=51)") )
+
+  expect_equal(output[,2],c("", "138 (61)", "90 (39)", "", "2 (1)", "17 (10)", "58 (33)", 
+                            "65 (37)", "34 (19)", "2 (1)", "\\textbf{50}", "", "62.4 (9.1)", 
+                            "63 (39,82)", "", "928.8 (402.2)", "975 (96,2600)", "\\textbf{47}"))
+
+  expect_equal(output[,4],c("", "53 (62)", "33 (38)", "", "1 (1)", "6 (9)", "21 (31)", 
+                            "28 (42)", "11 (16)", "0 (0)", "\\textbf{19}", "", "61.7 (9.2)", 
+                            "64 (40,80)", "", "940.9 (343.6)", "975 (280,2450)", "\\textbf{21}"))
+  
+})
+
+test_that("covsum includes missing correctly when presenting row percentages", {
+  output = covsum(data=lung_missing,maincov = 'ph.ecog',
+                  covs=c('Sex','AgeGroup','age','meal.cal'),include_missing = TRUE,pvalue = FALSE,percentage = 'row',digits.cat = 3)
+  
+  expect_equal(names(output) ,c("Covariate", "Full Sample (n=228)", "0 (n=49)", "1 (n=86)", 
+                                "2 (n=41)", "3 (n=1)", "NA (n=51)") )
+  
+  expect_equal(output[,2],c("", "138", "90", "", "2", "17", "58", "65", "34", "2", "\\textbf{50}", 
+                            "", "62.4 (9.1)", "63 (39,82)", "", "928.8 (402.2)", "975 (96,2600)", 
+                            "\\textbf{47}"))
+  
+  expect_equal(output[,4],c("", "53 (38.406)", "33 (36.667)", "", "1 (50.000)", "6 (35.294)", 
+                            "21 (36.207)", "28 (43.077)", "11 (32.353)", "0 (0.000)", "\\textbf{19}", 
+                            "", "61.7 (9.2)", "64 (40,80)", "", "940.9 (343.6)", "975 (280,2450)", 
+                            "\\textbf{21}"))
+  
+})
 
 
 test_that("uvsum logistic regression CIS are correct",{

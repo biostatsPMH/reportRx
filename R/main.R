@@ -247,14 +247,14 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
 #'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
-#'@param print_missing prints the number of values of the maincov missing and excluded from the table
+#'@param include_missing Option to include NA values of maincov. NAs will not be included in statistical tests
 #'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,digits.cat = 0,
-                  testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),print_missing=FALSE,percentage=c('column','row'))
-  {
+covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,digits.cat = 0,
+                   testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
+{
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
   if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
@@ -278,18 +278,17 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
   if(!is.null(maincov)){
     
     ##JW Removes missing of maincov
-    if(print_missing==TRUE) print(paste(sum(is.na(data[[maincov]])),"missing",maincov))
-    data <- data[!is.na(data[[maincov]]),]
+    if(include_missing==FALSE)  data <- data[!is.na(data[[maincov]]),]
     
-    
-    levels<-names(table(data[[maincov]]))
+    #JW keeps the NAs
+    levels <- names(table(data[[maincov]],useNA = 'ifany'))
     levels<-c(list(levels),as.list(levels))
   }else{
     levels<-"NOMAINCOVNULLNA"
   }
   N=nrow(data)
   if(!is.null(maincov)){
-    nmaincov<-c(sum(table(data[[maincov]])),table(data[[maincov]]))
+    nmaincov<-c(sum(table(data[[maincov]],useNA = 'ifany')),table(data[[maincov]],useNA = 'ifany'))
   }else{
     nmaincov<-N
     p<-NULL
@@ -322,7 +321,7 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
       if (percentage == "column")   {
         onetbl<-mapply(function(sublevel,N){
           missing<-NULL
-          if(sublevel[1]!="NOMAINCOVNULLNA"){
+          if(is.na(sublevel[1])| sublevel[1]!="NOMAINCOVNULLNA"){
             subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
           }else{
             subdata<-data
@@ -344,7 +343,7 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
       if(percentage=='row') {
         onetbl<-mapply(function(sublevel,N){
           missing<-NULL
-          if(sublevel[1]!="NOMAINCOVNULLNA"){
+          if(is.na(sublevel[1])| sublevel[1]!="NOMAINCOVNULLNA"){
             subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
           }else{
             subdata<-data
@@ -425,7 +424,7 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
       #set up the main columns
       onetbl <- mapply(function(sublevel,N){
         missing <- NULL
-        if(sublevel[1]!="NOMAINCOVNULLNA"){
+        if(is.na(sublevel[1])| sublevel[1]!="NOMAINCOVNULLNA"){
           subdata<-subset(data,subset=data[[maincov]]%in%sublevel)
         }else{subdata<-data}
         #if there is a missing in the whole data
@@ -477,7 +476,7 @@ covsum <-function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,saniti
   if(!is.null(maincov)){
     colnames(table)<-c("Covariate",paste("Full Sample (n=",N,")",sep=""),
                        mapply(function(x,y){paste(x," (n=",y,")",sep="")},
-                              names(table(data[[maincov]])),table(data[[maincov]])))
+                              names(table(data[[maincov]],useNA='ifany')),table(data[[maincov]],useNA='ifany')))
     if(pvalue) colnames(table)[ncol(table)] <- "p-value"
     
   }else{
