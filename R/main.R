@@ -244,6 +244,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
 #'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
 #'@param pvalue boolean indicating if you want p-values included in the table
+#'@param full boolean indicating if you want the full sample included in the table
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
 #'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
@@ -252,7 +253,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,digits.cat = 0,
+covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,full=TRUE,digits.cat = 0,
                    testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
 {
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
@@ -280,7 +281,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     ##JW Removes missing of maincov
     if(include_missing==FALSE)  data <- data[!is.na(data[[maincov]]),]
     
-    #JW keeps the NAs
+    #JW May 2021 keeps the NAs (all instances of useNA = 'ifany' have been added) 
     levels <- names(table(data[[maincov]],useNA = 'ifany'))
     levels<-c(list(levels),as.list(levels))
   }else{
@@ -484,8 +485,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     
   }
   colnames(table)<-sanitizestr(colnames(table))
+  
+  #JW May 20 2021 adding option to remove full sample
+  if(!full) table <- table[,-2] 
   return(table)
 }
+
 #'Print covariate summary Latex
 #'
 #'Returns a dataframe corresponding to a descriptive table
