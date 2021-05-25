@@ -243,6 +243,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
 #'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param FullSum boolean indicating if all summary statistics (Q1,Q3 + min,max) should be displayed. Overrides IQR.
 #'@param pvalue boolean indicating if you want p-values included in the table
 #'@param full boolean indicating if you want the full sample included in the table
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
@@ -253,7 +254,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,pvalue=TRUE,full=TRUE,digits.cat = 0,
+covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,FullSum=FALSE,pvalue=TRUE,full=TRUE,digits.cat = 0,
                    testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
 {
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
@@ -409,7 +410,9 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
       #if the covariate is not a factor
     }else{
       #setup the first column
-      factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
+      #factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
+      if (FullSum) {factornames <- c("Mean (sd)", "Median (Q1,Q3)", "Range (min, max)", factornames)
+      } else factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
       if (!is.null(maincov)) {
         if(pvalue){
           p <- if( testcont=='rank-sum test'){
@@ -438,9 +441,10 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
         if (sumCov[4]=="NaN"){
           meansd <-''
           mmm <-''
+          if (FullSum) mmm=c('','')
         } else {
           meansd <- paste(niceNum(sumCov["Mean"],digits), " (", niceNum(sd(subdata[[cov]], na.rm = T),digits), ")", sep = "")
-          mmm <- if (IQR) {
+          mmm <- if (IQR |FullSum) {
             if(all(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."]) ==floor(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."])))){
               paste(sumCov['Median'], " (", sumCov["1st Qu."], ",", sumCov["3rd Qu."],")", sep = "")
             } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["1st Qu."],digits), ",", niceNum(sumCov["3rd Qu."],digits),")", sep = "")}
@@ -449,8 +453,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
               paste(sumCov["Median"], " (", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
             } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")}
           }}
+        if (FullSum) {
+          mmm <- c(mmm,if(all(c(sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov["Min."],sumCov["Max."])))){
+            paste("(", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
+          } else {paste("(", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")})
+        }
         tbl <- c(meansd, mmm, lbld(missing))
-        
         return(tbl)}
         ,levels,numobs[[cov]])}
     
@@ -2001,14 +2009,15 @@ rmdBibfile <- function(bibfile,outfile){
 }
 
 
-#' The output function for the print methods
-#' Table output defaults to kable, but the kableExtra package doesn't work well with Word.
-#' To export nice tables to Word use options('doc_type'='doc')
+#' Print tables to PDF/Latex HTML or Word
+#'
+#' Output the table nicely to whatever format is appropriate. 
+#' This is the output function used by the rm_* printing functions.
 #' @param tab a table to format
 #' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
-#' @param chunk_label only used if out_fmt = doc to allow cross-referencing
+#' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
 outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label){
   
@@ -2016,12 +2025,15 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,ch
   tab=as.data.frame(tab)
   rownames(tab) <- NULL
   
-  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
-  if (out_fmt=='tblOnly'){
-    tab
-  } else{
-    
-    out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
+#  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
+  out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
+                           ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
+                           ifelse(knitr::is_latex_output(),'latex','html')))
+  # if (out_fmt=='tblOnly'){
+  #   tab
+  # } else{
+  #   
+  #    out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
     chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
     
     if (is.null(to_indent)) to_indent = numeric(0)
@@ -2051,7 +2063,8 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,ch
       # set NA to empty in kable
       options(knitr.kable.NA = '')
       if (nrow(tab)>30){
-        kout <- knitr::kable(tab, booktabs=TRUE,
+        kout <- knitr::kable(tab, format = out_fmt,
+                             booktabs=TRUE,
                              longtable=TRUE,
                              linesep='',
                              caption=caption,
@@ -2062,7 +2075,8 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,ch
           kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
         }
       } else {
-        kout <- knitr::kable(tab, booktabs=TRUE,
+        kout <- knitr::kable(tab, format = out_fmt,
+                             booktabs=TRUE,
                              longtable=FALSE,
                              linesep='',
                              caption=caption,
@@ -2074,7 +2088,8 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,ch
         kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
       }
       kout
-    }}
+    }
+    # }
   
 }
 

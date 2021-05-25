@@ -2,9 +2,7 @@
 % Please edit documentation in R/main.R
 \name{outTable}
 \alias{outTable}
-\title{The output function for the print methods
-Table output defaults to kable, but the kableExtra package doesn't work well with Word.
-To export nice tables to Word use options('doc_type'='doc')}
+\title{Print tables to PDF/Latex HTML or Word}
 \usage{
 outTable(
   tab,
@@ -23,10 +21,9 @@ outTable(
 
 \item{caption}{table caption}
 
-\item{chunk_label}{only used if out_fmt = doc to allow cross-referencing}
+\item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 }
 \description{
-The output function for the print methods
-Table output defaults to kable, but the kableExtra package doesn't work well with Word.
-To export nice tables to Word use options('doc_type'='doc')
+Output the table nicely to whatever format is appropriate. 
+This is the output function used by the rm_* printing functions.
 }

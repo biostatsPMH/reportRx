@@ -56,7 +56,7 @@ psthr<- function (x, y = 2)
 }
 covnm<-function(betanames,call){
   sapply(betanames,function(betaname){
-
+    
     # indx<-which(sapply(call,function(cov){charmatch(cov,betaname)})==1)
     indx=which(sapply(call,function(cov)grepl(cov,betaname,fixed=TRUE))) ## changed on Feb 21, 2019 for checkings
     if(length(indx)==1) return(call[indx])
@@ -271,12 +271,12 @@ psthr0 <- function (x, digits = 2)
 }
 
 break_function <- function(xmax){
-
+  
   xmax_length <- ifelse(xmax>1,nchar(round(xmax)),round(abs(log10(xmax))))
-
+  
   byx <- if(xmax>1) {round(xmax/10,digits = 2-xmax_length)
   }else round(xmax/10,digits = xmax_length+1)
-
+  
   breaks <- seq(0,xmax,by=byx)
   if(max(breaks)<byx) breaks <- c(breaks,max(breaks)+byx)
   return(breaks)
@@ -314,7 +314,7 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   if (missing(selow)) scale <- 1.0
   else scale <- ifelse(selow==0, 1.0, selow/se)  # avoid 0/0 at the origin
   if (!logse) se <- ifelse(se==0, 0, se/p)   # se of log(survival) = log(p)
-
+  
   if (conf.type=='plain') {
     se2 <- se* p * zval  # matches equation 4.3.1 in Klein & Moeschberger
     if (ulimit) list(lower= pmax(p -se2*scale, 0), upper = pmin(p + se2, 1))
@@ -339,7 +339,7 @@ survfit_confint <- function(p, se, logse=TRUE, conf.type, conf.int=0.95,
   else if (conf.type=='logit') {
     xx <- ifelse(p==0, NA, p)  # avoid log(0) messages
     se2 <- zval * se *(1 + xx/(1-xx))
-
+    
     temp1 <- 1- 1/(1+exp(log(p/(1-p)) - se2*scale))
     temp2 <- 1- 1/(1+exp(log(p/(1-p)) + se2))
     list(lower = temp1, upper=temp2)
@@ -387,7 +387,7 @@ lbl_count <- function(y){
 }
 
 betaWithCI <-function(betaname,CIwidth=0.95){
-paste0(betaname,"(",100*CIwidth,"%CI)")
+  paste0(betaname,"(",100*CIwidth,"%CI)")
 }
 
 niceStr <- function (strings)
@@ -432,7 +432,7 @@ bib_ReadGatherTidy <- function(file){
   # changes have been made to enable the code to work outside the bib2df package.
   bib <- readLines(file)
   bib <- stringr::str_replace_all(bib, "[^[:graph:]]", " ")
-
+  
   from <- which( stringr::str_extract(bib, "[:graph:]") == "@")
   to <- c(from[-1] - 1, length(bib))
   if (!length(from)) {
@@ -517,3 +517,14 @@ bib_ReadGatherTidy <- function(file){
   return(bib)
 }
 
+
+
+checkOutput <- function(fmt){
+  if (missing(fmt)){
+    message(paste("Is Latex:", knitr::is_latex_output()))
+    message(paste("Is HTML:",    knitr::is_html_output()))
+    message(paste("Is HTML excl markdoen epub:",  knitr::is_html_output(excludes = c("markdown", "epub"))))
+  }
+  # Get current formats
+  message(paste('Pandoc To:',knitr::pandoc_to()))
+}

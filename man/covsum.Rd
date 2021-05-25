@@ -14,11 +14,13 @@ covsum(
   sanitize = TRUE,
   nicenames = TRUE,
   IQR = FALSE,
+  FullSum = FALSE,
   pvalue = TRUE,
+  full = TRUE,
   digits.cat = 0,
   testcont = c("rank-sum test", "ANOVA"),
   testcat = c("Chi-squared", "Fisher"),
-  print_missing = FALSE,
+  include_missing = FALSE,
   percentage = c("column", "row")
 )
 }
@@ -41,7 +43,11 @@ covsum(
 
 \item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
 
+\item{FullSum}{boolean indicating if all summary statistics (Q1,Q3 + min,max) should be displayed. Overrides IQR.}
+
 \item{pvalue}{boolean indicating if you want p-values included in the table}
+
+\item{full}{boolean indicating if you want the full sample included in the table}
 
 \item{digits.cat}{number of digits for the proportions when summarizing categorical data (default: 0)}
 
@@ -49,7 +55,7 @@ covsum(
 
 \item{testcat}{test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}}
 
-\item{print_missing}{prints the number of values of the maincov missing and excluded from the table}
+\item{include_missing}{Option to include NA values of maincov. NAs will not be included in statistical tests}
 
 \item{percentage}{choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}}
 }
