@@ -32,7 +32,7 @@ rm_mvsum(
 
 \item{HolmGlobalp}{boolean indicting if a Holm-corrected p-value should be presented}
 
-\item{chunk_label}{only used if options("doc_type"='doc') to allow cross-referencing}
+\item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \description{
 Output a multivariable model nicely in Rmarkdown

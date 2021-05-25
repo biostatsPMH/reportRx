@@ -15,7 +15,8 @@ rm_ordsum(
   testPO = TRUE,
   digits = 2,
   CIwidth = 0.95,
-  excludeLevels
+  excludeLevels = NULL,
+  chunk_label
 )
 }
 \arguments{
@@ -38,6 +39,8 @@ rm_ordsum(
 \item{CIwidth}{level of significance for computing the confidence intervals, default is 0.95}
 
 \item{excludeLevels}{a named list of levels to exclude from the response variable}
+
+\item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \value{
 A formatted table displaying the odds ratio associated with each covariate

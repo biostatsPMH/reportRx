@@ -11,9 +11,6 @@ rm_covsum(
   covs,
   maincov = NULL,
   caption = NULL,
-  excludeLevels = NULL,
-  pvalue = TRUE,
-  IQR = FALSE,
   tableOnly = FALSE,
   covTitle = "Covariate",
   chunk_label,
@@ -29,19 +26,13 @@ rm_covsum(
 
 \item{caption}{character containing table caption}
 
-\item{excludeLevels}{a named list of levels to exclude in the form list(varname =c('level1','level2')) these levels will be excluded from association tests}
-
-\item{pvalue}{boolean indicating if p values should be displayed (may only want corrected p-values)}
-
-\item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
-
 \item{tableOnly}{should a dataframe or a formatted print object be returned}
 
 \item{covTitle}{character with the names of the covariate column}
 
-\item{chunk_label}{only used if options("doc_type"='doc') to allow cross-referencing}
+\item{chunk_label}{only used if output is to Word to allow cross-referencing}
 
-\item{...}{other variables passed to covsum and the table output function}
+\item{...}{additional options passed to function  \code{\link{covsum}}}
 }
 \value{
 A formatted table displaying a summary of the covariates stratified by maincov

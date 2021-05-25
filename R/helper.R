@@ -370,6 +370,84 @@ color_palette_surv_ggplot <- function(length){
 }
 
 
+# (forestplot2) ---------------------------------------------------------
+format_glm = function(glm_fit,conf.level = 0.95,digits=c(2,3),orderByRisk=TRUE){
+  
+  if (! class(glm_fit)[1] %in% c('glm','polr')) stop('Only objects of class glm and polr are accepted.')
+  
+  #extracting ORs and p values
+  Z = qnorm(1-(1-conf.level)/2)
+  tab <- as.data.frame(summary(glm_fit)$coefficients)
+  names(tab) =  c("estimate",  "std.error" ,"statistic", "p.value")
+  tab <- cbind(term= rownames(tab),tab)
+  rownames(tab) <- NULL
+  tab$conf.low=exp(tab$estimate-Z*tab$std.error)
+  tab$conf.high=exp(tab$estimate+Z*tab$std.error)
+  tab$estimate = exp(tab$estimate)
+  tab$estimate.label = paste0(niceNum(tab$estimate), ' (',niceNum(tab$conf.low),', ',niceNum(tab$conf.high),')')
+  
+  if (class(glm_fit)[1]=='glm'){
+    tab = tab[-which(tab$term=='(Intercept)'),]
+  }  else {
+    tab$coef.type = ifelse(str_detect(rownames(tab),"[|]"),"scale","coefficient")
+    tab <- tab[tab$coef.type=='coefficient',]
+    tab$p.value = pnorm(abs(tab$`t value`),lower.tail = FALSE) * 2
+  }
+  
+
+  tab$p.label = ifelse(tab$p.value<0.001, '<0.001', niceNum(tab$p.value,digits[2]))
+  names(tab)[1] = 'variable'
+  
+  tab = tab[,c('variable', 'estimate', 'p.label', 'p.value', 'conf.low', 'conf.high')]
+  
+  
+  if (orderByRisk){
+    tab$var.order = rank(tab$estimate)
+  } else{
+    tab$var.order = 1:nrow(tab)
+  }
+  
+  # Extract the reference levels if needed
+  if (length(glm_fit$xlevels)!=0){
+    ref_levels <- NULL
+    for (i in seq_along(glm_fit$xlevels)){
+      ref_levels <- rbind(ref_levels,
+                          data.frame(var.name=rep(names(glm_fit$xlevels)[i],length(glm_fit$xlevels[[i]])+1),
+                                     level.name = c(names(glm_fit$xlevels)[i],glm_fit$xlevels[[i]]),
+                                     level.order=1:(length(glm_fit$xlevels[[i]])+1),
+                                     variable=paste0(names(glm_fit$xlevels)[i],c('',glm_fit$xlevels[[i]]))))
+    }
+    
+    
+    tab = merge(ref_levels, tab, by='variable',all = T)
+    
+    tab$estimate.label = ifelse(is.na(tab$estimate), '1.0 (Reference)',
+                                paste0(niceNum(tab$estimate), ' (',niceNum(tab$conf.low),', ',niceNum(tab$conf.high),')'))
+    
+    varOrders <- tapply(X = tab$var.order,
+                        INDEX=tab$var.name,
+                        FUN = function(x) min(x,na.rm=T))
+    varOrderLookup <- data.frame(var.name=names(varOrders),var.order=varOrders)
+    
+    
+    varOrderLookup <- stats::na.omit(tab[,c("var.name","var.order")])
+    
+    for (i in 1:nrow(varOrderLookup)){
+      tab$var.order[tab$var.name==varOrderLookup$var.name[i]] <- varOrderLookup$var.order[i]
+    }
+    
+    tab$estimate.label = ifelse(tab$level.name %in% names(glm_fit$xlevels),NA_character_,tab$estimate.label)
+    tab[order(tab$var.order,tab$level.order,decreasing=c(F,T)),]
+  } else {
+    tab$estimate.label = paste0(niceNum(tab$estimate), ' (',niceNum(tab$conf.low),', ',niceNum(tab$conf.high),')')
+    tab$level.order=1
+    tab$var.name=tab$variable
+    tab$level.name=tab$variable
+    tab[order(tab$var.order),]
+  }
+  
+}
+
 # LA new 2021 ---------------------------------------------------------
 # New function to strip centering from a covariate
 getvarname = function(betaname){
@@ -421,8 +499,9 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
 
 formatp<- function(pvalues,sigdigits=2){
   p_out <- sapply(pvalues, function(x){
-    x <- signif(as.numeric(x),sigdigits)
-    x <- ifelse(is.na(x),NA_character_,ifelse(x<0.001,"<0.001",format(x)))})
+    xsig <- suppressWarnings(signif(as.numeric(x),sigdigits))
+    x <- ifelse(x=='excl','excl',ifelse(is.na(xsig),NA_character_,ifelse(xsig<0.001,"<0.001",format(xsig))))})
+  p_out = unname(p_out)
   return(p_out)
 }
 

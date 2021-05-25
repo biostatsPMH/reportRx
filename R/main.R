@@ -230,9 +230,15 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
   })
 }
 
+
 #'Get covariate summary dataframe
 #'
-#'Returns a dataframe corresponding to a descriptive table
+#'Returns a dataframe corresponding to a descriptive table. 
+#'
+#'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
+#'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
+#'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
+#'The statistical test used can be displayed by specifying show.tests=TRUE.
 #'
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
@@ -243,8 +249,10 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@param nicenames booling indicating if you want to replace . and _ in strings with a space
 #'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
-#'@param FullSum boolean indicating if all summary statistics (Q1,Q3 + min,max) should be displayed. Overrides IQR.
+#'@param all.stats boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.
 #'@param pvalue boolean indicating if you want p-values included in the table
+#'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
 #'@param full boolean indicating if you want the full sample included in the table
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
@@ -254,8 +262,8 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@keywords dataframe
 #'@export
 #'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
-covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,FullSum=FALSE,pvalue=TRUE,full=TRUE,digits.cat = 0,
-                   testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
+covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,excludeLevels=NULL,full=TRUE,
+                   digits.cat = 0,testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
 {
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
@@ -266,6 +274,10 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   testcat <- match.arg(testcat)
   percentage <- match.arg(percentage)
   
+  if (!pvalue) {
+    show.tests<- FALSE
+    excludeLevels<- NULL
+    }
   if(!markup){
     lbld<-identity
     addspace<-identity
@@ -299,7 +311,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     ismiss=F
     n<-sum(table(data[[cov]]))
     
-    #Set up the first coulmn
+    # Exclude specified levels
+    if (!is.null(excludeLevels[[cov]])){
+      excludeLevel = excludeLevels[[cov]]
+    } else excludeLevel = ''
+    
+    # Set up the first column
     factornames<-NULL
     if(is.null(numobs[[cov]]))  numobs[[cov]]<-nmaincov
     if(numobs[[cov]][1]-n>0) {ismiss=T
@@ -310,10 +327,22 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
       factornames<-c(levels(data[[cov]]),factornames)
       if (!is.null(maincov)) {
         if(pvalue){
-          p <- if( testcat=='Fisher'){ try(fisher.test(data[[maincov]],data[[cov]])$p.value,silent=T)
-          } else try(chisq.test(data[[maincov]],data[[cov]])$p.value,silent=T)
-          if (class(p) == "try-error")
-            p <- NA
+          pdata = data[!(data[[cov]] %in% excludeLevel),]
+          # Check for low counts and if found perform Fisher test
+          if( testcat[1]=='Fisher' | sum(table(pdata[[maincov]], pdata[[cov]],exclude = excludeLevel)<5)>0){
+            p_type <- 'Fisher Exact'
+            p <- try(fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+            if (class(p)[1]=='try-error'){
+              p <- try(fisher.test(pdata[[maincov]], pdata[[cov]],simulate.p.value =  T)$p.value,silent=T)
+              p_type <- 'MC sim'
+            }
+          } else {
+            p_type = 'Chi Sq'
+            p = try(chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+          }
+          # p <- if( testcat=='Fisher' | sum(table(pdata[[maincov]], pdata[[cov]]))<5){ try(fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+          # } else try(chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+          if (class(p) == "try-error") p <- NA
           p <- lpvalue(p)
         }
       }
@@ -401,25 +430,39 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
             })(onetbl[-1])
           }
         }
-        
-        
-        
       }
-      
-      
+
       #if the covariate is not a factor
     }else{
       #setup the first column
       #factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
-      if (FullSum) {factornames <- c("Mean (sd)", "Median (Q1,Q3)", "Range (min, max)", factornames)
+      if (all.stats) {factornames <- c("Mean (sd)", "Median (Q1,Q3)", "Range (min, max)", factornames)
       } else factornames <- c("Mean (sd)",ifelse(IQR,"Median (Q1,Q3)","Median (Min,Max)"),factornames)
       if (!is.null(maincov)) {
         if(pvalue){
-          p <- if( testcont=='rank-sum test'){
+          # p <- if( testcont=='rank-sum test'){
+          #   if( length(unique(data[[maincov]]))==2 ){
+          #     try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
+          #   } else try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
+          # } else try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
+          #LA enable output of statistical tests
+          if( testcont=='rank-sum test'){
             if( length(unique(data[[maincov]]))==2 ){
-              try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
-            } else try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
-          } else try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
+              p_type = 'Wilcoxon Rank Sum'
+              p <- try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
+            } else {
+              p_type='Kruskal Wallis'
+              p <-try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
+            }
+          } else {
+            if( length(unique(data[[maincov]]))==2 ){
+              p_type = 't-test'
+              p <-try( t.test(data[[cov]] ~ data[[maincov]])$p.value )
+            } else {
+              p_type = 'ANOVA'
+              p <-try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
+            }}
+          
           if (class(p) == "try-error")
             p <- NA
           p <- lpvalue(p)
@@ -441,10 +484,10 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
         if (sumCov[4]=="NaN"){
           meansd <-''
           mmm <-''
-          if (FullSum) mmm=c('','')
+          if (all.stats) mmm=c('','')
         } else {
           meansd <- paste(niceNum(sumCov["Mean"],digits), " (", niceNum(sd(subdata[[cov]], na.rm = T),digits), ")", sep = "")
-          mmm <- if (IQR |FullSum) {
+          mmm <- if (IQR |all.stats) {
             if(all(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."]) ==floor(c(sumCov['Median'],sumCov["1st Qu."],sumCov["3rd Qu."])))){
               paste(sumCov['Median'], " (", sumCov["1st Qu."], ",", sumCov["3rd Qu."],")", sep = "")
             } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["1st Qu."],digits), ",", niceNum(sumCov["3rd Qu."],digits),")", sep = "")}
@@ -453,7 +496,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
               paste(sumCov["Median"], " (", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
             } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")}
           }}
-        if (FullSum) {
+        if (all.stats) {
           mmm <- c(mmm,if(all(c(sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov["Min."],sumCov["Max."])))){
             paste("(", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
           } else {paste("(", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")})
@@ -471,7 +514,13 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     
     if(!is.null(maincov)){
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),rep("",length(levels[[1]])+1)),onetbl)
-      if(pvalue) onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
+#      if(pvalue) onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
+      if (pvalue){
+        p_NA = rep("", nrow(onetbl) - 1)
+        p_NA[levels(data[[cov]]) %in% excludeLevel] <-'excl'
+        onetbl <- cbind(onetbl, c(p,p_NA))
+        if (show.tests) onetbl <- cbind(onetbl, c(p_type,rep("", nrow(onetbl) - 1)))
+      }
     }else{
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),""),onetbl)
     }
@@ -483,10 +532,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   table <- data.frame(apply(table,2,unlist),stringsAsFactors = FALSE)
   rownames(table)<-NULL
   if(!is.null(maincov)){
-    colnames(table)<-c("Covariate",paste("Full Sample (n=",N,")",sep=""),
+    colnm_table <- c("Covariate",paste("Full Sample (n=",N,")",sep=""),
                        mapply(function(x,y){paste(x," (n=",y,")",sep="")},
                               names(table(data[[maincov]],useNA='ifany')),table(data[[maincov]],useNA='ifany')))
-    if(pvalue) colnames(table)[ncol(table)] <- "p-value"
+    if(pvalue) colnm_table <- c(colnm_table,"p-value")
+    if (show.tests) colnm_table <- c(colnm_table,'StatTest')
+    colnames(table) <- colnm_table
     
   }else{
     colnames(table)<-c("Covariate",paste("n=",N,sep=""))
@@ -1369,6 +1420,102 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 }
 
 
+#' Create a forest plot using ggplot2
+#' 
+#'This function will accept a log or logistic regression fit from glm, and display the
+#'OR or RR for each variable on the appropriate log scale.
+#'
+#' @param glm_fit an object output from the glm function, must be from a logistic regression
+#' @param conf.level controls the width of the confidence interval
+#' @param orderByRisk logical, should the plot be ordered by risk
+#' @param colours can specify colours for risks less than, 1 and greater tham 1.0. Default is red, black, green
+#' @param showEst logical, should the risks be displayed on the plot in text
+#' @param rmRef logical, should the reference levels be removed for the plot?
+#' @param logScale logical, should OR/RR be shown on log scale, defaults to TRUE
+#' @param nxTicks Number of tick marks supplied to the log_breaks function to produce
+#' @import ggplot2
+#' @importFrom scales log_breaks
+#' @keywords plot
+#' @export
+#'
+forestplot2 = function(glm_fit,conf.level=0.95,orderByRisk=T,colours='default',showEst=TRUE,rmRef=FALSE,logScale=TRUE,nxTicks=5){
+  
+  if (class(glm_fit)[1]=='glm'){
+    if(glm_fit$family$link=='log'){
+      x_lab = 'Relative Risk'
+    } else if (glm_fit$family$link=='logit'){
+      x_lab='Odds Ratio'
+    } else stop('glm_fit must be a logit or log link fit')
+  } else {
+    x_lab='Odds Ratio'
+  }
+  
+  tab = format_glm(glm_fit,conf.level = conf.level,orderByRisk=orderByRisk)
+  if (rmRef) tab = tab[setdiff(1:nrow(tab),which(tab$estimate.label=='1.0 (Reference)')),]
+  
+  
+  yvals=1
+  for (i in 2:nrow(tab)) {
+    yvals = c(yvals, ifelse(tab$var.order[i]==tab$var.order[i-1],
+                            yvals[i-1]+.5,
+                            yvals[i-1]+1))
+  }
+  tab$estimate.label = ifelse(is.na(tab$estimate.label),'',tab$estimate.label)
+  tab$estimate.label = ifelse(tab$estimate.label == '1.0 (Reference)','(Reference)',tab$estimate.label)
+  
+  if (showEst){
+    yLabels = data.frame(y.pos=yvals,
+                         labels=ifelse(is.na(tab$level.name),
+                                       paste(tab$variable,tab$estimate.label),
+                                       paste(tab$level.name,tab$estimate.label)))
+  } else {
+    yLabels = data.frame(y.pos=yvals,
+                         labels=ifelse(is.na(tab$level.name),
+                                       tab$variable,
+                                       ifelse(tab$estimate.label == '(Reference)',
+                                              paste(tab$level.name,tab$estimate.label),
+                                              tab$level.name)
+                         ))
+  }
+  yLabels$labels <- gsub('_',' ',yLabels$labels)
+  yLabels <- yLabels[!is.na(yLabels$y.pos),]
+  # TODO: add indents using '  ' to category labels, omit RR estimates?, make hjust=0
+  
+  tab$x.val = ifelse(tab$estimate.label == '(Reference)',1,tab$estimate)
+  tab$y.val = yLabels$y.pos
+  
+  # set colours
+  tab$colour <- ifelse(tab$x.val<1,'a',ifelse(tab$x.val==1,'b','c'))
+  
+  if (colours=='default'){
+    colours = c(a='red',b='black',c='darkgreen')
+  }  else {
+    names(colours) = c('a','b','c')
+  }
+  
+  # ensure that colours are always red, black, green
+  colours <- colours[sort(unique(tab$colour))]
+  
+  p = ggplot(tab, aes_(x=~x.val,y=~y.val,colour=~colour))+
+    geom_point(na.rm=TRUE,size=2) +
+    geom_errorbarh(aes_(xmin = ~conf.low, xmax = ~conf.high),
+                   height  = 0,
+                   size   = 0.9,
+                   na.rm=TRUE) +
+    geom_vline(xintercept = 1.0) +
+    labs(y='',x=x_lab) +
+    guides(colour='none')+
+    scale_y_continuous(breaks = yLabels$y.pos,labels=yLabels$labels) +
+    scale_colour_manual(values=colours)+
+    theme_bw() +
+    theme(axis.text.y = element_text(hjust=0),
+          panel.grid.major.y = element_blank(),
+          panel.grid.minor.y = element_blank())
+  
+  
+  if (logScale) p + scale_x_log10(breaks=scales::log_breaks(n=nxTicks)) else p
+}
+
 #'Plot KM and CI curves using ggplot2
 #'
 #'Generates Kaplan-Meier and Cumulative Incidence plots including a numbers at risk table via ggplot2 with high level of customization.
@@ -1842,8 +1989,13 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
 
 }
 
-#' Plot univariate relationships all on one plot
-#' Need a hierarchy of how to display plots sensibly
+#' Plot bivariate relationships in a single plot
+#' 
+#' This function is designed to accompany \code{\link{uvsum}} as a means
+#' of visualising the results. It is not designed for publication, but rather
+#' to facilitate explanations of the uvsum output.
+#' 
+#' The following hierarchy of how to display plots is used:
 #' If response is continuous
 #'   For a numeric predictor -> scatterplot
 #'   For a categorical predictor -> boxplot
@@ -1894,6 +2046,7 @@ plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_t
         }
       }
       plist[[x_var]] <- p  +
+        theme_bw() +
         theme(axis.text.y=element_blank(),
               axis.ticks.y = element_blank(),
               legend.position = 'bottom',
@@ -2102,38 +2255,30 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,ch
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
 #'@param caption character containing table caption
-#'@param excludeLevels a named list of levels to exclude in the form list(varname =c('level1','level2')) these levels will be excluded from association tests
-#'@param pvalue boolean indicating if p values should be displayed (may only want corrected p-values)
-#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
 #'@param tableOnly should a dataframe or a formatted print object be returned
 #'@param covTitle character with the names of the covariate column
-#'@param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
-#'@param ... other variables passed to covsum and the table output function
+#'@param chunk_label only used if output is to Word to allow cross-referencing
+#'@param ... additional options passed to function  \code{\link{covsum}}
 #'@keywords dataframe
 #'@return A formatted table displaying a summary of the covariates stratified by maincov
 #'@export
 #'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
-rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,excludeLevels=NULL,pvalue=TRUE,IQR=FALSE,tableOnly=FALSE,covTitle='Covariate',
-                        chunk_label,...){
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',chunk_label,...){
 
-  tab <- covsum(data,covs,maincov,markup=FALSE,IQR=IQR,sanitize=FALSE,...)
-  if (is.null(maincov))
-    pvalue=FALSE
+  tab <- covsum(data,covs,maincov,markup=FALSE,sanitize=FALSE,...)
   to_bold = numeric(0)
-  if (pvalue) {
+  if ('p-value' %in% names(tab)) {
     # format p-values nicely
-    p_vals <- tab[,ncol(tab)]
+    p_vals <- tab[['p-value']]
     new_p <- sapply(p_vals,formatp)
-    tab[,ncol(tab)] <- new_p
-    to_bold <- which(as.numeric(p_vals)<0.05)
-  } else {
-    tab <- tab[,!names(tab) %in%'p-value']
-  }
+    tab[['p-value']] <- new_p
+    to_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
+  } 
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
-  if (IQR) {
-    tab$Covariate <- gsub('[(]Q1,Q3[)]','(IQR)',tab$Covariate)
-  }
+  # if (IQR) {
+  #   tab$Covariate <- gsub('[(]Q1,Q3[)]','(IQR)',tab$Covariate)
+  # }
   if (covTitle !='Covariate') names(tab[1]) <-covTitle
   if (tableOnly){
     return(tab)
@@ -2151,27 +2296,25 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,excludeLevels=NULL,pva
 
 }
 
-#' Output several univariate models nicely in a single table in Rmarkdown
-#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
-#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#' Output several univariate models nicely in a single table
+#' 
+#' Wrapper for the uvsum function for use with Rmarkdown.
 #'
 #' @param response string vector with name of response
 #' @param covs character vector with the names of columns to fit univariate models to
 #' @param data dataframe containing data
 #' @param caption table caption
-#' @param CIwidth width of confidence interval, default is 0.95
-#' @param showP boolean indicating if p-values should be shown (may only want to show holm-corrected values)
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param removeInf boolean indicating if infinite estimates should be removed from the table
 #' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
-#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
-#' @param ... other variables passed to uvsum and the table output functions
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#'@param ... additional options passed to function  \code{\link{uvsum}}
 #' @export
 #'
-rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
+rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
 
   # get the table
-  tab <- uvsum(response,covs,data,CIwidth=CIwidth,markup = FALSE,sanitize=FALSE,...)
+  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
 
   cap_warn <- character(0)
   if (removeInf){
@@ -2192,7 +2335,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,ta
     p_sig <- tab$`Global p-value`
   }
 
-  to_bold <- which(as.numeric(p_sig)<0.05)
+  to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
 
@@ -2202,7 +2345,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,ta
     tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
   }
 
-  # If all outcomes are continunous (and so all p-values are NA), remove this column & rename Global p-value to p-value
+  # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
     tab <- tab[,-which(names(tab)=="p-value")]
     names(tab) <- gsub('Global p-value','p-value',names(tab))
@@ -2238,12 +2381,13 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,CIwidth=0.95,showP=T,ta
 #'@param digits number of digits to display, defaults to
 #'@param CIwidth level of significance for computing the confidence intervals, default is 0.95
 #'@param excludeLevels a named list of levels to exclude from the response variable
+#'@param chunk_label only used if output is to Word to allow cross-referencing
 #'@return A formatted table displaying the odds ratio associated with each covariate
 #'@keywords ordinal regression, Brant test
 #'@export
 #'
 rm_ordsum <- function(data, covs, response, reflevel,caption = NULL, showN=T,
-                      testPO=TRUE,digits=2,CIwidth=0.95,excludeLevels){
+                      testPO=TRUE,digits=2,CIwidth=0.95,excludeLevels=NULL,chunk_label){
   
   
   tab <- ordsum(data=data,
@@ -2272,7 +2416,8 @@ rm_ordsum <- function(data, covs, response, reflevel,caption = NULL, showN=T,
   to_bold <- which(as.numeric(tab[["Global p-value"]])<(1-CIwidth))
   
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
-           caption=caption)
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
 }
 
@@ -2288,7 +2433,7 @@ rm_ordsum <- function(data, covs, response, reflevel,caption = NULL, showN=T,
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
-#' @param chunk_label only used if options("doc_type"='doc') to allow cross-referencing
+#' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @export
 rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALSE,chunk_label){
 
@@ -2400,7 +2545,7 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
     }
     
     
-    out<-paste0('**',sanitizestr(nicename(strta[i])),'**'," There are ",t[i,1]," patients. There were ",t[i,2],
+    out<-paste0(ifelse(strta[i]=='','',paste('**',sanitizestr(nicename(strta[i])),'**'))," There are ",t[i,1]," patients. There were ",t[i,2],
                 " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times is ",
                 t[i,6]," (",t[i,7],"-",t[i,8],") ",units,". ",km,flet,ps,sep="")
     cat("\n",out,"\n")

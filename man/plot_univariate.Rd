@@ -2,14 +2,7 @@
 % Please edit documentation in R/main.R
 \name{plot_univariate}
 \alias{plot_univariate}
-\title{Plot univariate relationships all on one plot
-Need a hierarchy of how to display plots sensibly
-If response is continuous
-  For a numeric predictor -> scatterplot
-  For a categorical predictor -> boxplot
-If response is a factor
-  For a numeric predictor -> boxplot
-  For a categorical predictor -> barplot}
+\title{Plot bivariate relationships in a single plot}
 \usage{
 plot_univariate(
   response,
@@ -34,8 +27,12 @@ plot_univariate(
 \item{response_title}{character value with title of the plot}
 }
 \description{
-Plot univariate relationships all on one plot
-Need a hierarchy of how to display plots sensibly
+This function is designed to accompany \code{\link{uvsum}} as a means
+of visualising the results. It is not designed for publication, but rather
+to facilitate explanations of the uvsum output.
+}
+\details{
+The following hierarchy of how to display plots is used:
 If response is continuous
   For a numeric predictor -> scatterplot
   For a categorical predictor -> boxplot

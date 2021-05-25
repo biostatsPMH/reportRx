@@ -14,8 +14,10 @@ covsum(
   sanitize = TRUE,
   nicenames = TRUE,
   IQR = FALSE,
-  FullSum = FALSE,
+  all.stats = FALSE,
   pvalue = TRUE,
+  show.tests = FALSE,
+  excludeLevels = NULL,
   full = TRUE,
   digits.cat = 0,
   testcont = c("rank-sum test", "ANOVA"),
@@ -43,9 +45,13 @@ covsum(
 
 \item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
 
-\item{FullSum}{boolean indicating if all summary statistics (Q1,Q3 + min,max) should be displayed. Overrides IQR.}
+\item{all.stats}{boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.}
 
 \item{pvalue}{boolean indicating if you want p-values included in the table}
+
+\item{show.tests}{boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.}
+
+\item{excludeLevels}{a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.}
 
 \item{full}{boolean indicating if you want the full sample included in the table}
 
@@ -60,7 +66,13 @@ covsum(
 \item{percentage}{choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}}
 }
 \description{
-Returns a dataframe corresponding to a descriptive table
+Returns a dataframe corresponding to a descriptive table.
+}
+\details{
+Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
+test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
+If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
+The statistical test used can be displayed by specifying show.tests=TRUE.
 }
 \seealso{
 \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}

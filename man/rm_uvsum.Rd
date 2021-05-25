@@ -2,17 +2,13 @@
 % Please edit documentation in R/main.R
 \name{rm_uvsum}
 \alias{rm_uvsum}
-\title{Output several univariate models nicely in a single table in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
+\title{Output several univariate models nicely in a single table}
 \usage{
 rm_uvsum(
   response,
   covs,
   data,
   caption = NULL,
-  CIwidth = 0.95,
-  showP = T,
   tableOnly = FALSE,
   removeInf = T,
   HolmGlobalp = FALSE,
@@ -29,22 +25,16 @@ rm_uvsum(
 
 \item{caption}{table caption}
 
-\item{CIwidth}{width of confidence interval, default is 0.95}
-
-\item{showP}{boolean indicating if p-values should be shown (may only want to show holm-corrected values)}
-
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
 \item{removeInf}{boolean indicating if infinite estimates should be removed from the table}
 
 \item{HolmGlobalp}{boolean indicting if a Holm-corrected p-value should be presented}
 
-\item{chunk_label}{only used if options("doc_type"='doc') to allow cross-referencing}
+\item{chunk_label}{only used if output is to Word to allow cross-referencing}
 
-\item{...}{other variables passed to uvsum and the table output functions}
+\item{...}{additional options passed to function  \code{\link{uvsum}}}
 }
 \description{
-Output several univariate models nicely in a single table in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+Wrapper for the uvsum function for use with Rmarkdown.
 }
