@@ -1,5 +1,5 @@
 ---
-title: "Test ReportRx"
+title: "reportRx Demo"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::word_document2:
@@ -10,7 +10,7 @@ output:
 sansfont: Calibri Light
 mainfont: Calibri Light
 bibliography:
-  - packages.bib
+  - bibfile.bib
 #csl: Vancouver.csl
 link-citations: yes
 ---
@@ -22,17 +22,13 @@ library(survival)
 library(reportRx)
 library(tidyverse)
 
-# This will select pander tables for Word documents and kable + kableExtra for pdf/html documents and leave as is for chunk execution in Rstudio
-if (is.null(knitr::pandoc_to())){options('doc_type'='tblOnly')} else {if (knitr::pandoc_to("docx")) {options('doc_type'='doc')} else (options('doc_type'='pdf'))}
-
 # Uncomment to create the packages.bib file of R packages used
-#knitr::write_bib((.packages(all.available=T)),file ='packages.bib')
-
+#reportRx::rmdBibfile(bibfile = 'masterfile.bib',outfile = 'bibfile.bib')
 ```
 
 # Introduction {-}
 
-This is an rMarkdown document to produce Word and Pdf files from the reportRx package [@R-reportRx]. 
+This is an rMarkdown document to produce Word and PDF files from the reportRx package [@R-reportRx] in the R statistical programming language [@R-base]. 
 
 First, make some changes to the lung data.
 
@@ -139,24 +135,25 @@ rm_uvsum(response = 'wt.loss',
 
 ```
 
-### Test coxph
+### Test coxph & ggsurv
 ```{r test-uv-coxph}
 rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
       data=lung,
-      CIwidth=.95)
-rm_uvsum(response = c('time','status'),
-      covs=c('Sex','ph.ecog','meal.cal','age'),
-      data=lung,
-      CIwidth=.90)
+      CIwidth=.99)
 
 ```
 
+\newpage
+
+```{r}
+ggsurv(c("time","status"),"Sex", data=lung,fsize=8,nsize=3)
+```
 
 \newpage
 
 # Unnumbered Heading {-}
-## Test mvsum
+## Test mvsum & forestplot2
 
 ```{r}
 m = glm(Status~wt.loss+Sex+AgeGroup,
@@ -164,6 +161,14 @@ m = glm(Status~wt.loss+Sex+AgeGroup,
         family='binomial')
 rm_mvsum(m,data = lung,HolmGlobalp = T)
 ```
+
+\newpage
+
+```{r}
+forestplot2(m)
+```
+
+\newpage
 
 # References
 

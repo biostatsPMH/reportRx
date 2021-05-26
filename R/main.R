@@ -2622,9 +2622,8 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #' @param median.digits Number of digits printed of the median pvalue
 #' @param set.time.digits Number of digits printed of the probability at a specified time
 #' @param print.n.missing Logical, should the number of missing be shown !Needs to be checked
-
 #' @param returns Logical value returns a list with all ggplot objects in a list
-
+#'@export
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=F,HR_pval=F, conf.type = "none",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
                     main = NULL,stratalabs = NULL,strataname = nicename(cov),
@@ -3227,7 +3226,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
 #'
 #'
 #' @param list_gg list containing the results of ggkmcif
-
+#'@export
 modify_ggkmcif <- function(list_gg){
   gA <- ggplotGrob(list_gg[[1]])
   gB <- ggplotGrob(list_gg[[2]])
