@@ -2012,7 +2012,7 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
 #' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
 #' @export
-plot_univariate <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL){
+plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL){
   for (v in c(response,covs)){
     if (class(data[[v]])=='character') data[[v]] <- factor(data[[v]])
   }

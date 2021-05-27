@@ -24,6 +24,7 @@ library(tidyverse)
 
 # Uncomment to create the packages.bib file of R packages used
 #reportRx::rmdBibfile(bibfile = 'masterfile.bib',outfile = 'bibfile.bib')
+
 ```
 
 # Introduction {-}
@@ -65,18 +66,32 @@ rm_covsum(data=lung,
 ```
 
 ```{r test-covsum-2}
-
 rm_covsum(data=lung,
        covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
        maincov = 'Sex')
 ```
 
 
-## Test plotunivariate
+If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table, which is on the todo list!
 
-Figure \@ref(fig:test-plotunivariate) shows the bivariate relationships between the response and covariates. Figure referencing works only when a figure caption is provided in the chunk options. Note that underscores and not allowed in the chunk names, only hyphens.
+```{r results='asis',echo=T}
 
-```{r test-plotunivariate, fig.cap= 'Associations between status and covariates in the lung data.'}
+pander::panderOptions('knitr.auto.asis', FALSE)
+
+for (v in names(lung)[1:2]){
+    cat("\n")
+    print(rm_covsum(data=lung,covs=v))
+    cat("\n")
+}
+
+pander::panderOptions('knitr.auto.asis', TRUE)
+```
+
+## Test plotuv
+
+Figure \@ref(fig:test-plotuv) shows the bivariate relationships between the response and covariates. Figure referencing works only when a figure caption is provided in the chunk options. Note that underscores and not allowed in the chunk names, only hyphens.
+
+```{r test-plotuv, fig.cap= 'Associations between status and covariates in the lung data.'}
 plot_univariate(data=lung,
                 covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
                 response = 'Status',
