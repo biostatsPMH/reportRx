@@ -874,6 +874,7 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
   if (type=='lm'){
     betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
     beta <- 'Estimate'
+    expnt = FALSE
     ss_data <- model$model
   } else if (type=='polr'){
     betanames <- names(model$coefficients)
