@@ -24,6 +24,27 @@ niceNum <- function(x,digits=2){
   return(gsub(" ","",rndx))
 }
 
+#' Return a data frame of codes
+#' 
+#' Accepts a string input in the form "code1=label1,code2=label2,.." and 
+#' returns a data frame with a column of codes and a column of labels
+#' 
+#' @param labelStr in the format code1=label1,code2=label2
+#' @param delim delimeter separating codes in labelStr, defaults to ','
+#' @param codeName column name for codes, defaults to code
+#' @param lblName column name for labels, defaults to label
+#' @export
+importCodes<-function(labelStr,delim=',',codeName='code',lblName='label'){
+  x=strsplit(labelStr,split=delim)[[1]]
+  codeLst=strsplit(x,"=")
+  tbl <- NULL
+  for (i in seq_along(codeLst)) tbl<-rbind(tbl,cbind(code=codeLst[[i]][1],label=codeLst[[i]][2]))
+  tbl <- as.data.frame(tbl)
+  if (isTRUE(all.equal(as.character(suppressWarnings(as.numeric(tbl[[1]]))),tbl[[1]]))) tbl[[1]] <- as.numeric(tbl[[1]])
+  names(tbl)=c(codeName,lblName)
+  return(tbl)
+}
+
 #' Paste with parentheses
 #'
 #' Paste with parentheses
