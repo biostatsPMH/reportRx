@@ -298,6 +298,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     levels <- names(table(data[[maincov]],useNA = 'ifany'))
     levels<-c(list(levels),as.list(levels))
   }else{
+    full = TRUE # don't allow users to specify full = FALSE when there is no main covariate
     levels<-"NOMAINCOVNULLNA"
   }
   N=nrow(data)
@@ -346,8 +347,6 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
           p <- lpvalue(p)
         }
       }
-      
-      
       #set up the main columns
       if (percentage == "column")   {
         onetbl<-mapply(function(sublevel,N){
@@ -369,7 +368,6 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
           return(tbl)
         },levels,numobs[[cov]])
       }
-      
       
       if(percentage=='row') {
         onetbl<-mapply(function(sublevel,N){
