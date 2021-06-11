@@ -253,7 +253,7 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #'@param pvalue boolean indicating if you want p-values included in the table
 #'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
 #'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
-#'@param full boolean indicating if you want the full sample included in the table
+#'@param full boolean indicating if you want the full sample included in the table, ignored if maincov is NULL
 #'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
 #'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
 #'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
