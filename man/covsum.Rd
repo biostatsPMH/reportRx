@@ -53,7 +53,7 @@ covsum(
 
 \item{excludeLevels}{a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.}
 
-\item{full}{boolean indicating if you want the full sample included in the table}
+\item{full}{boolean indicating if you want the full sample included in the table, ignored if maincov is NULL}
 
 \item{digits.cat}{number of digits for the proportions when summarizing categorical data (default: 0)}
 
