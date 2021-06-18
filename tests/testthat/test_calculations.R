@@ -237,3 +237,4 @@ test_that("mvsum outputs glm poisson models correctly",{
 
 # TODO: test_that('CI works correctly ')
 
+

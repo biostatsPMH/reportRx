@@ -875,10 +875,12 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     expnt = FALSE
     ss_data <- model$model
   } else if (type=='polr'){
+    expnt = TRUE # not used but req'd for conditional statements
     betanames <- names(model$coefficients)
     beta <- "OR"
     ss_data <- model$model
   } else if (type=='lme'){
+    expnt = FALSE # not used but req'd for conditional statements
     betanames <- names(model$coef$fixed)[-1]
     beta <- 'Estimate'
     ss_data <- model$data
@@ -897,6 +899,7 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     ss_data <- model$model
   } else if (type == "coxph" | type == "crr") {
     beta <- "HR"
+    expnt = TRUE # not used but req'd for conditional statements
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
     ss_data <- model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data)))))
   } else {
