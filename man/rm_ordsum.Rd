@@ -12,7 +12,6 @@ rm_ordsum(
   reflevel,
   caption = NULL,
   showN = T,
-  testPO = TRUE,
   digits = 2,
   CIwidth = 0.95,
   excludeLevels = NULL,
@@ -31,8 +30,6 @@ rm_ordsum(
 \item{caption}{Table caption}
 
 \item{showN}{logical, should sample sizes be shown for each lvel, defaults to TRUE}
-
-\item{testPO}{logical, should the proportional odds (parallel regression) assumption be tested with the Brant test, defaults to TRUE}
 
 \item{digits}{number of digits to display, defaults to}
 

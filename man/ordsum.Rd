@@ -14,7 +14,6 @@ ordsum(
   sanitize = TRUE,
   nicenames = TRUE,
   excludeLevels,
-  testPO = TRUE,
   showN = TRUE,
   digits = 1,
   CIwidth = 0.95
@@ -36,8 +35,6 @@ ordsum(
 \item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
 
 \item{excludeLevels}{a named list of levels to exclude from the response variable}
-
-\item{testPO}{logical, should the proportional odds (parallel regression) assumption be tested with the Brant test, defaults to TRUE, values greater than alpha are desirable.}
 
 \item{showN}{logical, should sample sizes be shown for each lvel, defaults to TRUE}
 

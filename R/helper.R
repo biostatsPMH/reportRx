@@ -373,29 +373,30 @@ color_palette_surv_ggplot <- function(length){
 
 # (forestplot2) ---------------------------------------------------------
 format_glm = function(glm_fit,conf.level = 0.95,digits=c(2,3),orderByRisk=TRUE){
-  
   if (! class(glm_fit)[1] %in% c('glm','polr')) stop('Only objects of class glm and polr are accepted.')
   
   #extracting ORs and p values
   Z = qnorm(1-(1-conf.level)/2)
   tab <- as.data.frame(summary(glm_fit)$coefficients)
-  names(tab) =  c("estimate",  "std.error" ,"statistic", "p.value")
-  tab <- cbind(term= rownames(tab),tab)
+  tab <- cbind(variable= rownames(tab),tab)
   rownames(tab) <- NULL
+  
+  if (class(glm_fit)[1]=='glm'){
+    names(tab) =  c("variable","estimate",  "std.error" ,"statistic", "p.value")
+    tab = tab[-which(tab$variable=='(Intercept)'),]
+  }  else {
+    names(tab) =  c("variable","estimate",  "std.error" ,"statistic")
+    tab$coef.type = ifelse(grepl("[|]",tab$variable),"scale","coefficient")
+    tab <- tab[tab$coef.type=='coefficient',]
+    tab$p.value = pnorm(abs(tab$statistic),lower.tail = FALSE) * 2
+  }
+
   tab$conf.low=exp(tab$estimate-Z*tab$std.error)
   tab$conf.high=exp(tab$estimate+Z*tab$std.error)
   tab$estimate = exp(tab$estimate)
   tab$estimate.label = paste0(niceNum(tab$estimate), ' (',niceNum(tab$conf.low),', ',niceNum(tab$conf.high),')')
   
-  if (class(glm_fit)[1]=='glm'){
-    tab = tab[-which(tab$term=='(Intercept)'),]
-  }  else {
-    tab$coef.type = ifelse(str_detect(rownames(tab),"[|]"),"scale","coefficient")
-    tab <- tab[tab$coef.type=='coefficient',]
-    tab$p.value = pnorm(abs(tab$`t value`),lower.tail = FALSE) * 2
-  }
   
-
   tab$p.label = ifelse(tab$p.value<0.001, '<0.001', niceNum(tab$p.value,digits[2]))
   names(tab)[1] = 'variable'
   

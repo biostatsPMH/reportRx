@@ -27,60 +27,6 @@ library(tidyverse)
 
 ```
 
-# 11 Jun 2021
-
-## Comments from Katherine to fix
-## Reproducible example:
-
-```{r, echo=T}
-rm(list=ls())
-library(reportRx) #development version
-library(survival)
-library(dplyr)
-
-data(lung)
-
-# create variable with empty levels:
-lung$Sex <- recode(lung$sex, `1`="Male",`2`="Female")
-lung$Sex <- factor(lung$Sex, levels=c("","Empty level","Male","Female"))
-
-#linear model: no issue
-summary(lm(time~Sex, data=lung))
-rm_uvsum(response="time",covs="Sex",data=lung)
-
-```
-
-
-```{r,echo=T}
-# survival model: rm_uvsum duplicates variable levels in tables
-coxph(Surv(time, status)~Sex, data=lung)
-rm_uvsum(data=lung, response=c("time","status"),covs="Sex")
-
-```
-
-
-```{r}
-# logistic: missing p-value
-lung$binaryvar <- rbinom(nrow(lung), 1, 0.5)
-summary(glm(binaryvar~Sex, data=lung, family=binomial(link="logit")))
-rm_uvsum(data=lung, response="binaryvar",covs="Sex")
-
-```
-
-
-## Comment from Osvaldo
-
-rm_covsum and pcovsum throw an error if maincov=NULL and full=FALSE
-
-**fixed**
-
-```{r}
-rm_covsum(data=lung,
-       covs=c('Sex','age'),full=FALSE)
-
-```
-
-
 
 \newpage
 # Introduction {-}
@@ -276,3 +222,13 @@ rm_uvsum(response = 'y',
       type='boxcox',
       CIwidth=.90)
 ```
+
+
+```{r}
+# load('../Giuliani/CAPCR_20-5589/ord_fit_info_source.R')
+# reportRx::rm_mvsum(ord_fit_info_source$Q24_Use_Cncr_Cent)
+# 
+# reportRx::forestplot2(ord_fit_info_source[['Q24_Use_Print_News']])
+
+```
+
