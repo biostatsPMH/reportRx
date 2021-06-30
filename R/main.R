@@ -2241,6 +2241,7 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
     } else {
       # set NA to empty in kable
       options(knitr.kable.NA = '')
+      if(!is.null(caption)) caption <- sanitize(caption)
       if (nrow(tab)>30){
         kout <- knitr::kable(tab, format = out_fmt,
                              booktabs=TRUE,

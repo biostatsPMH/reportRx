@@ -2,11 +2,11 @@
 title: "reportRx Demo"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
   bookdown::word_document2:
     reference_docx: 'wordTemplate.docx'
     toc: yes
-  bookdown::pdf_document2:
-    latex_engine: xelatex
 sansfont: Calibri Light
 mainfont: Calibri Light
 bibliography:
@@ -63,8 +63,9 @@ test_data = tibble(
 
 ```{r test-covsum-1}
 rm_covsum(data=lung,
-       covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor')
-)
+       covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+              caption='Test Special characters in caption 80% $100.')
+
 ```
 
 ```{r test-covsum-2}
@@ -176,7 +177,7 @@ ggsurv(c("time","status"),"Sex", data=lung,fsize=8,nsize=3)
 m = glm(Status~wt.loss+Sex+AgeGroup,
         data=lung,
         family='binomial')
-rm_mvsum(m,data = lung,HolmGlobalp = T)
+rm_mvsum(model=m,data = lung,HolmGlobalp = T)
 ```
 
 \newpage
