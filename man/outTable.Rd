@@ -9,6 +9,7 @@ outTable(
   to_indent = numeric(0),
   to_bold = numeric(0),
   caption = NULL,
+  digits,
   chunk_label
 )
 }
@@ -20,6 +21,8 @@ outTable(
 \item{to_bold}{numeric vector the length of nrow(tab) indicating which rows to bold}
 
 \item{caption}{table caption}
+
+\item{digits}{number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns}
 
 \item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 }

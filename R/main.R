@@ -2185,14 +2185,25 @@ rmdBibfile <- function(bibfile,outfile){
 #' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
+#' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,chunk_label){
+#' 
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,chunk_label){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
   rownames(tab) <- NULL
   
+  # round and format numeric columns if digits is specified
+  if (!missing(digits)){
+    coltypes <- unlist(lapply(tab, class))
+    numCols <- names(coltypes)[coltypes=='numeric']
+    colRound <- cbind(numCols,digits)
+    colDigits <- as.numeric(colRound[,2])
+    names(colDigits) <- colRound[,1]
+    for (v in numCols) tab[[v]] <- sapply(tab[[v]],function(x) niceNum(x,digits=colDigits[v]))
+  }
 #  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
   out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
                            ifelse(knitr::pandoc_to(c('doc','docx')),'doc',

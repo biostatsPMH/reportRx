@@ -19,8 +19,12 @@
 ## outTable()
 
 * Can now auto-detect output and print accordingly (25 May, 2021)
+* Can now specify digits for rounding (28 June, 2021)
 
 ## rm_covsum(), rm_uvsum(), rm_mvsum()
 
 - removed documentation and changed to optional arguments to better match p* functions (25 May, 2021)
 
+## forestplot2
+
+* now works correctly with ordinal models from MASS::polr (20 June 2021)
