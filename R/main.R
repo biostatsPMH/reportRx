@@ -913,13 +913,18 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     sanitizestr <- identity
   if (!nicenames)
     nicename <- identity
-  call <- paste(deparse(summary(model)$call), collapse = "")
+  # call <- paste(deparse(summary(model)$call), collapse = "")
+  # Retrieving call as below is more robust than previously as it now allows for flexible specification of the formula, e.g. using paste and as.formula. OEG
+  if( class(model)[1] %in% c("lm","multinom","survreg") ){
+    call <- Reduce(paste, deparse(formula(model$terms), width.cutoff = 500))
+  }else call<-paste(deparse(model$formula),collapse="")
   call <- unlist(strsplit(call, "~", fixed = T))[2]
   call <- unlist(strsplit(call, ",", fixed = T))[1]
   if (substr(call, nchar(call), nchar(call)) == "\"")    call <- substr(call, 1, nchar(call) - 1)
   call <- unlist(strsplit(call, "\"", fixed = T))[1]
   call <- unlist(strsplit(call, "+", fixed = T))
   call <- unlist(strsplit(call, "*", fixed = T))
+  call <- unlist(strsplit(call,":", fixed=T)) # addedd this to parse interactions with : alone, still not sure if will work. OEG
   call <- unique(call)
   call <- call[which(is.na(sapply(call, function(cov) {charmatch("strata(", cov)})) == T)]
   call <- gsub("\\s", "", call)
@@ -953,7 +958,8 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
       beta <- "Estimate"
       expnt = FALSE
     }
-    betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
+    # betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
+    betanames <- names(model$coef) ### obtain the names from the initial fit and not the summary since summary might get rid of NA's if present due to convergence issues. OEG
     ss_data <- model$model
   } else if (type == "coxph" | type == "crr") {
     beta <- "HR"
