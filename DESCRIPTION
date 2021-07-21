@@ -23,7 +23,6 @@ Imports:
     gridExtra,
     geoR,
     pander,
-    reshape,
     knitr,
     kableExtra,
     MASS,

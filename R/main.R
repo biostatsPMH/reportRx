@@ -70,50 +70,75 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
 #'etsum(lung,c("time","status"))
 #'etsum(lung,c("time","status"),"sex",c(1,2,3))
 etsum<- function(data,response,group=1,times=c(12,24)){
+  if ( (class(group)=="numeric" & group!=1) | (class(group)!="numeric" & !is.factor(data[,group])) ) 
+    stop("group variable must be factor or leave unspecified for no group")
+  
   if(class(group)=="numeric"){
-    kfit<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
-    maxtime=max(kfit$time)
-    times[times>maxtime]=maxtime
-    kfit2<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep="")) ,data=data),times=times)
-    tab<-as.data.frame(cbind(strata=as.character(kfit2$strata),times=kfit2$time,SR=paste(round(kfit2$surv*100,0)," (",round(kfit2$lower*100,0),"-",round(kfit2$upper*100,0),")",sep="")))
-    tbl<-kfit2$table
+    kfit <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
+    maxtime = max(kfit$time)
+    times[times>maxtime] = maxtime
+    kfit2 <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep="")) ,data=data),times=times)
+    tab <- as.data.frame(cbind(strata=as.character(kfit2$strata), times=kfit2$time, SR=paste(round(kfit2$surv*100,0)," (",round(kfit2$lower*100,0),"-",round(kfit2$upper*100,0),")",sep="")))
+    tab$times = round(as.numeric(as.character(tab$times)),1)
+    tbl <- kfit2$table
   }else{
     if(class(data[,group])!="factor")
       stop("group variable must be factor or leave unspecified for no group")
-    tab<-lapply(levels(data[,group]),function(level){
-      subdata<-subset(data,data[,group]==level)
-      kfit<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep=""))  ,data=subdata))
-      maxtime=max(kfit$time)
-      times[times>maxtime]=maxtime
-      kfit2<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep="")) ,data=subdata),times=times)
+    tab <- lapply(levels(data[,group]),function(level){
+      # subdata <- subset(data,data[,group]==level)
+      subdata <- data[data[,group]==level,]
+      # kfit<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep=""))  ,data=subdata))
+      # maxtime=max(kfit$time)
+      # times[times>maxtime]=maxtime
+      kfit2 <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep="")) ,data=subdata),times=times, extend=TRUE)
       list(cbind(strata=paste0(group,"=",level),times=kfit2$time,SR=paste(round(kfit2$surv*100,0)," (",round(kfit2$lower*100,0),"-",round(kfit2$upper*100,0),")",sep="")),kfit2$table)})
-    tbl=t(sapply(tab,"[[",2))
-    rownames(tbl)=sapply(levels(data[,group]),function(level)paste0(group,"=",level))
-    tab=do.call(rbind.data.frame,lapply(tab,"[[",1))
+    tbl = t(sapply(tab,"[[",2))
+    rownames(tbl) = sapply(levels(data[,group]),function(level)paste0(group,"=",level))
+    tab = do.call(rbind.data.frame,lapply(tab,"[[",1))
+    tab$times = round(as.numeric(as.character(tab$times)),1)
+    tab = unique(tab)
   }
-
+  
   if(class(group)!="numeric"){
-    kfit<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
-    med=by(data,data[,group],function(x) median(x[,response[1]],na.rm=T))
-    min=by(data,data[,group],function(x) min(x[,response[1]],na.rm=T))
-    max=by(data,data[,group],function(x) max(x[,response[1]],na.rm=T))
-    survtimes<-data.frame(strata=as.character(kfit$strata),kfit$time)
-    minst<-round(as.numeric(by(survtimes,survtimes$strata,function(x) min (x[,2]))),1)
-    maxst<-round(as.numeric(by(survtimes,survtimes$strata,function(x) max (x[,2]))),1)
-    tab<-reshape::cast(tab,strata ~ times)
-    names<-names(tab)
-    tab<-data.frame(tab)
-    names(tab)<-names
-    tab[,1]<-levels(data[,group])
+    
+    kfit <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
+    med = by(data,data[,group],function(x) median(x[,response[1]],na.rm=T))
+    min = by(data,data[,group],function(x) min(x[,response[1]],na.rm=T))
+    max = by(data,data[,group],function(x) max(x[,response[1]],na.rm=T))
+    
+    ### compute med, min, max follow up times among the non-events
+    if( sum(data[,response[2]]!=0,na.rm = TRUE)!=nrow(data) ){
+      data_noev = data[data[,response[2]]==0,]
+      med_nonev = by(data_noev, data_noev[ , group], function(x) median(x[, 
+                                                                          response[1]], na.rm = T))
+      min_nonev = by(data_noev, data_noev[ , group], function(x) min(x[, 
+                                                                       response[1]], na.rm = T))
+      max_nonev = by(data_noev, data_noev[ , group], function(x) max(x[, 
+                                                                       response[1]], na.rm = T))
+    }else med_nonev = min_nonev = max_nonev = NA
+    
+    survtimes <- data.frame(strata=as.character(kfit$strata),kfit$time)
+    minst <- round(as.numeric(by(survtimes,survtimes$strata,function(x) min(x[,2]))),1)
+    maxst <- round(as.numeric(by(survtimes,survtimes$strata,function(x) max(x[,2]))),1)
+    
+    # tab <- reshape::cast(tab, strata ~ times, value="SR")
+    ### avoid the 'reshape' package dependency with rshape function
+    tab <- reshape(tab[,c("strata","times","SR")], v.names="SR", timevar="times", idvar="strata", direction="wide")
+    names(tab) <- gsub("SR[.]","",names(tab))
+    
+    names <- names(tab)
+    tab <- data.frame(tab)
+    names(tab) <- names
+    tab[,1] <- levels(data[,group]) # assumes order in tab is the same as the levels, which seems safe given that tab was generated using lapply on each level
     if(length(times)>1){
-      indx<-c(0,sapply(sort(as.numeric(names(tab)[-1])),function(x){which(as.numeric(names(tab)[-1])==x)}))+1
-      tab<-tab[,indx]
-      tab<-tab[c(2:length(tab),1)]
+      indx <- c(0,sapply(sort(as.numeric(names(tab)[-1])),function(x){which(as.numeric(names(tab)[-1])==x)}))+1
+      tab <- tab[,indx]
+      tab <- tab[c(2:length(tab),1)]
     }else{
-      tab<-tab[c(2:length(tab),1)]
+      tab <- tab[c(2:length(tab),1)]
     }
-    noeventsindx<-ifelse(length(which(tbl[,4]==0))!=0,
-                         which(tbl[,4]==0),NA)
+    noeventsindx <- ifelse(length(which(tbl[,"events"]==0))!=0,
+                           which(tbl[,"events"]==0),NA)
     if(!is.na(noeventsindx)){
       for(i in noeventsindx){
         if(i==1){
@@ -126,32 +151,58 @@ etsum<- function(data,response,group=1,times=c(12,24)){
           minst<-c(minst[1:i-1],0,minst[i:length(minst)])
           maxst<-c(maxst[1:i-1],0,maxst[i:length(maxst)])
         }}}
-
-
-    tab<-cbind("n"=tbl[,1],"Events"=tbl[,4],"MedKM"=round(tbl[,5],1),
-               "LCI"=round(tbl[,6],1),"UCI"=round(tbl[,7],1),
+    
+    
+    tab<-cbind("n"=tbl[,"records"],
+               "Events"=tbl[,"events"],
+               "MedKM"= round(tbl[,"median"],1),
+               "LCI"=round(tbl[,"0.95LCL"],1),
+               "UCI"=round(tbl[,"0.95UCL"],1),
                "MedFU"=round(as.numeric(med),1),
-               "MinFU"=round(as.numeric(min),1),"MaxFU"=round(as.numeric(max),1),
-               "MinET"=minst,"MaxET"=maxst,tab)
-    rownames(tab)<-NULL
+               "MinFU"=round(as.numeric(min),1),
+               "MaxFU"=round(as.numeric(max),1),
+               "MinET"=minst,"MaxET"=maxst,
+               MedFU.nonev = round(as.numeric(med_nonev), 1), 
+               MinFU.nonev = round(as.numeric(min_nonev), 1), 
+               MaxFU.nonev = round(as.numeric(max_nonev), 1),
+               tab)
+    rownames(tab) <- NULL
+    
   }else{
-    med=median(data[,response[1]],na.rm=T)
-    min=min(data[,response[1]],na.rm=T)
-    max=max(data[,response[1]],na.rm=T)
+    med = median(data[,response[1]],na.rm=T)
+    min = min(data[,response[1]],na.rm=T)
+    max = max(data[,response[1]],na.rm=T)
+    
+    ### compute med, min, max follow up times among the non-events
+    if( sum(data[,response[2]]!=0,na.rm=TRUE)!=nrow(data) ){
+      med_nonev = median(data[data[,response[2]]==0, response[1]], na.rm = T)
+      min_nonev = min(data[data[,response[2]]==0, response[1]], na.rm = T)
+      max_nonev = max(data[data[,response[2]]==0, response[1]], na.rm = T)
+    }else med_nonev = min_nonev = max_nonev = NA
+    
     if(length(times)>1){
-      tab<-data.frame(t(tab))
-      rownames(tab)<-NULL
-      names(tab)<-as.numeric(as.matrix(tab[1,]))
-      tab<-tab[-1,]
+      tab <- data.frame(t(tab))
+      rownames(tab) <- NULL
+      names(tab) <- as.numeric(as.matrix(tab[1,]))
+      tab <- tab[-1,]
     }else{
-      rownames(tab)<-NULL
-      names(tab)[2]<-times
-      tab<-tab[-1]
+      rownames(tab) <- NULL
+      names(tab)[2] <- round(as.numeric(as.character(times)),1)
+      tab <- tab[-1]
     }
-    tab<-cbind("n"=tbl[1],"Events"=tbl[4],"MedKM"=round(tbl[5],1),"LCI"=round(tbl[6],1),"UCI"=round(tbl[7],1),
-               "MedFU"=round(as.numeric(med),1),"MinFU"=round(as.numeric(min),1),"MaxFU"=round(as.numeric(max),1),
-               "MinET"=round(min(kfit$time),1),"MaxET"=round(max(kfit$time),1),tab)
-    rownames(tab)<-NULL
+    tab<-cbind("n"=tbl[["records"]],
+               "Events"=tbl[["events"]],
+               "MedKM"=round(tbl[["median"]],1),
+               "LCI"=round(tbl[["0.95LCL"]],1),
+               "UCI"=round(tbl[["0.95UCL"]],1),
+               "MedFU"=round(as.numeric(med),1),
+               "MinFU"=round(as.numeric(min),1),
+               "MaxFU"=round(as.numeric(max),1),
+               "MinET"=round(min(kfit$time),1),"MaxET"=round(max(kfit$time),1),
+               MedFU.nonev = round(as.numeric(med_nonev), 1), 
+               MinFU.nonev = round(as.numeric(min_nonev), 1), 
+               MaxFU.nonev = round(as.numeric(max_nonev), 1),tab)
+    rownames(tab) <- NULL
   }
   return(tab)
 }
@@ -175,9 +226,9 @@ etsum<- function(data,response,group=1,times=c(12,24)){
 #'petsum(lung,c("time","status"),"sex",c(1,2,3),"months")
 petsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
-
+  
   #plotkm(nona,response,group)
-
+  
   names<-names(t)
   if("strata"%in% names){
     strta<-sapply(t[,"strata"],function(x) paste(x,": ",sep=""))
@@ -188,28 +239,31 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
     offset<-1
     ofst<-0
   }
-
-
+  
+  
   out<-sapply(seq_len(nrow(t)),function(i){
-
-    if(is.na(t[i,3])) {km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
-    }else if (!is.na(t[i,5])){km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
-    }else{km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
-
+    
+    if(is.na(t[i,3])) {
+      km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
+    }else if (!is.na(t[i,5])){
+      km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
+    }else{
+      km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
+    
     # if at least one event
     if(t[i,2]!=0){
       flet<-paste(" The first and last event times occurred at ",t[i,9],
                   " and ",t[i,10]," ",units," respectively. ",sep="")
-
-      psindex=11:(ncol(t)-ofst)
+      
+      psindex=14:(ncol(t)-ofst)
       psindex=psindex[which(!is.na(t[i,psindex]))]
       if(length(psindex)>1){
         lastindex=psindex[length(psindex)]
         firstindex=psindex[-length(psindex)]
-        ps<-paste("The ",paste(names[firstindex],collapse=",")," and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
+        ps<-paste("The ",paste(names[firstindex],collapse=", "),", and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
                   " probabilities of 'survival' and their 95",sanitizestr("%")," confidence intervals are ",
-                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=",")," and ",t[i,lastindex]," percent.",sep="")
-
+                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=", "),", and ",t[i,lastindex]," percent.",sep="")
+        
       }else{
         ps<-paste("The ",names[psindex]," ",substring(units,1,nchar(units)-1),
                   " probability of 'survival' and 95",sanitizestr("%")," confidence interval is ",
@@ -221,11 +275,15 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
       ps=""
       flet=""
     }
-
-
-    out<-paste(lbld(sanitizestr(nicename(strta[i])))," There are ",t[i,1]," patients. There were ",t[i,2],
-               " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times is ",
-               t[i,6]," (",t[i,7],"-",t[i,8],") ",units,". ",km,flet,ps,sep="")
+    
+    
+    out<-paste(lbld(sanitizestr(nicename(strta[i])))," There are ",t[i,1]," subjects There were ",t[i,2],
+               " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times among events and non-events is ",
+               t[i,6]," (",t[i,7],"-",t[i,8],") ",units,
+               ". The median and range of the follow-up times among non-events only is ", 
+               ifelse(is.na(t[i, 11]), "not computable (there were only events)", 
+                      paste0(t[i, 11], " (", t[i, 12], "-", t[i, 13], ") ", units)),      
+               ". ",km,flet,ps,sep="")
     cat("\n",out,"\n")
   })
 }
