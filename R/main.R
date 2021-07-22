@@ -3261,7 +3261,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   }
 
   if (tableOnly){
-    if (nchar(cap_warn)>0) warning(cap_warn)
+    if (length(cap_warn)>0) warning(cap_warn)
     return(tab)
   }
   if(is.null(caption)){

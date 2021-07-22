@@ -25,6 +25,7 @@
 ## rm_covsum(), rm_uvsum(), rm_mvsum()
 
 - removed documentation and changed to optional arguments to better match p* functions (25 May, 2021)
+- fixed bug in rm_uvsum where tableOnly=T returned an error (22 July, 2021)
 
 ## forestplot2
 
