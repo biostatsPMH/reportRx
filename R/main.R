@@ -3002,6 +3002,7 @@ modify_ggkmcif <- function(list_gg){
 #' @export
 rmdBibfile <- function(bibfile,outfile){
   # First sanitise the specified bibfile
+  
   if (!file.exists(bibfile)) stop(paste(bibfile,'does not exist.'))
   
   if (file.access(bibfile)==0){
@@ -3024,37 +3025,46 @@ rmdBibfile <- function(bibfile,outfile){
   refs = fileWords[grep("\\[@.*\\]",fileWords)]
   stripped = gsub(".*\\[|\\].*","",refs)
   allrefs = unique(unlist(strsplit(stripped,';')))
-  rRefs = allrefs[grep("R-",allrefs)]
-  otherRefs = setdiff(allrefs,rRefs)
-  Rpckgs = gsub("@R-","",rRefs)
-  sepRefs = unlist(strsplit(otherRefs,";"))
   
-  tidyRefs <-gsub(".*@","",sepRefs)
-  tidyRefs <-gsub("[.]| .*|,","",tidyRefs)
-  libRefs = unique(tidyRefs)
-  
-  # Extract the references from the master library
-  paperBib <- NULL
-  for ( p in libRefs){
-    ind = which(bib$BIBTEXKEY==p)
-    if (length(ind)>0) {
-      paperBib <- rbind(paperBib,bib[ind,])
-    } else warning(paste(p,'not in',bibfile,'\n'))
+  if (is.null(allrefs)){
+    message('No citations in current file to write. Try saving file and re-running.')
+    
+  } else {
+    rRefs = allrefs[grep("R-",allrefs)]
+    otherRefs = setdiff(allrefs,rRefs)
+    Rpckgs = gsub("@R-","",rRefs)
+    paperBib <- NULL
+    if (!is.null(otherRefs)) {
+      sepRefs = unlist(strsplit(otherRefs,";")) 
+      
+      tidyRefs <-gsub(".*@","",sepRefs)
+      tidyRefs <-gsub("[.]| .*|,","",tidyRefs)
+      libRefs = unique(tidyRefs)
+      
+      # Extract the references from the master library
+      
+      for ( p in libRefs){
+        ind = which(bib$BIBTEXKEY==p)
+        if (length(ind)>0) {
+          paperBib <- rbind(paperBib,bib[ind,])
+        } else warning(paste(p,'not in',bibfile,'\n'))
+      }
+    }
+    
+    if (missing(outfile)){
+      bib_out = paste0(thisDir,gsub(".Rmd","",gsub(thisDir,"",thisFile)),".bib")
+    } else bib_out = paste0(thisDir,"/",gsub(".bib","",outfile),".bib")
+    
+    # write R packages to bibfile and append remaining references
+    if (length(Rpckgs)>0){
+      add = TRUE
+      knitr::write_bib(Rpckgs,file =bib_out)
+    } else {add=FALSE}
+    
+    if (!is.null(paperBib)){
+      bib2df::df2bib(paperBib,file = bib_out,append = add)
+    } else { if (add==FALSE) warning('No citations in current file to write')}
   }
-  
-  if (missing(outfile)){
-    bib_out = paste0(thisDir,gsub(".Rmd","",gsub(thisDir,"",thisFile)),".bib")
-  } else bib_out = paste0(thisDir,"/",gsub(".bib","",outfile),".bib")
-  
-  # write R packages to bibfile and append remaining references
-  if (length(Rpckgs)>0){
-    add = TRUE
-    knitr::write_bib(Rpckgs,file =bib_out)
-  } else {add=FALSE}
-  
-  if (!is.null(paperBib)){
-    bib2df::df2bib(paperBib,file = bib_out,append = add)
-  } else { if (add==FALSE) warning('No citations in current file to write')}
   
 }
 

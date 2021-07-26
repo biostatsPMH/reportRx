@@ -30,3 +30,7 @@
 ## forestplot2
 
 * now works correctly with ordinal models from MASS::polr (20 June 2021)
+
+## rmdBibfile
+
+* bug fix and improved messages and warnings
