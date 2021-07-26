@@ -959,7 +959,8 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
       expnt = FALSE
     }
     # betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
-    betanames <- names(model$coef) ### obtain the names from the initial fit and not the summary since summary might get rid of NA's if present due to convergence issues. OEG
+    # betanames <- names(model$coef) ### obtain the names from the initial fit and not the summary since summary might get rid of NA's if present due to convergence issues. OEG
+    betanames <- names(model$coef)[-1]  ### fix to above LA
     ss_data <- model$model
   } else if (type == "coxph" | type == "crr") {
     beta <- "HR"
