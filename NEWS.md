@@ -18,9 +18,10 @@
 
 ## outTable()
 
-* Can now auto-detect output and print accordingly (25 May, 2021)
-* Can now specify digits for rounding (28 June, 2021)
+* Added an argument align to control column alignment (29 Jul 2021)
 * Fixed bug with special characters in caption breaking Latex
+* Can now specify digits for rounding (28 June, 2021)
+* Can now auto-detect output and print accordingly (25 May, 2021)
 
 ## rm_covsum(), rm_uvsum(), rm_mvsum()
 

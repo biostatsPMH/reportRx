@@ -3079,15 +3079,28 @@ rmdBibfile <- function(bibfile,outfile){
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
 #' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
+#' @param align string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
 #' 
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,chunk_label){
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
   rownames(tab) <- NULL
   
+  # define column alignment
+  if (missing(align)){
+    alignSpec = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep='')
+  } else{
+    alignSpec = gsub('[^lrc]+','',paste(align,collapse=''))
+    alignSpec = substr(alignSpec,1,ncol(tab))
+    if (nchar(alignSpec)<ncol(tab)) {
+      lastchar = substr(alignSpec,nchar(alignSpec),nchar(alignSpec))
+      alignSpec <- paste0(alignSpec,paste(rep(lastchar,ncol(tab)-nchar(alignSpec)),collapse=''))
+    }
+    if (!identical(alignSpec, align)){ warning(paste0('Argument align did not conform to expectations, align="',alignSpec,'" used instead'))}
+  }
   # round and format numeric columns if digits is specified
   if (!missing(digits)){
     coltypes <- unlist(lapply(tab, class))
@@ -3097,15 +3110,10 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
     names(colDigits) <- colRound[,1]
     for (v in numCols) tab[[v]] <- sapply(tab[[v]],function(x) niceNum(x,digits=colDigits[v]))
   }
-#  out_fmt = ifelse(is.null(getOption('doc_type')),'pdf',getOption('doc_type'))
   out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
                            ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
                            ifelse(knitr::is_latex_output(),'latex','html')))
-  # if (out_fmt=='tblOnly'){
-  #   tab
-  # } else{
-  #   
-  #    out_fmt =ifelse(out_fmt%in%c('doc','docx'),'doc','pdf')
+
     chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
     
     if (is.null(to_indent)) to_indent = numeric(0)
@@ -3123,13 +3131,13 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                        caption=caption,
                        emphasize.strong.rows=to_bold,
                        split.table=Inf, split.cells=15,
-                       justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+                       justify = alignSpec)
         
       } else {
         pander::pander(tab,
                        caption=caption,
                        split.table=Inf, split.cells=15,
-                       justify = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+                       justify = alignSpec)
       }
     } else {
       # set NA to empty in kable
@@ -3141,7 +3149,7 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                              longtable=TRUE,
                              linesep='',
                              caption=caption,
-                             align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+                             align =alignSpec)
         if (ncol(tab)>4) {
           kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
         } else {
@@ -3153,7 +3161,7 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                              longtable=FALSE,
                              linesep='',
                              caption=caption,
-                             align = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep=''))
+                             align = alignSpec)
         if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
       }
       kout <- kableExtra::add_indent(kout,positions = to_indent)
