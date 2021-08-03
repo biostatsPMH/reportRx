@@ -18,6 +18,10 @@ knitr::opts_chunk$set(
 <!-- badges: end -->
 This is a revisited version of the original reportRx package described [here](https://github.com/rdelbel/reportRx).
 
+## Documentation
+
+Details and examples of using reportRx can be found in the [Intro To reportRx](https://biostatspmh.github.io/IntroToReportRx/reportrx.html) repository.
+
 ## Installation
 
 You can install the current versions of reportRx from [GitHub](https://github.com) using:
