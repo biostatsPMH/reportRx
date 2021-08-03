@@ -1,7 +1,7 @@
 #-------------------------------------------------------------------------------------
 # Data Definition
-library(survival)
-data(lung)
+data(cancer, package='survival')
+lung <- cancer
 lung$Status=factor(lung$status-1)
 lung$Sex = factor(lung$sex,labels = c('Male','Female'))
 lung$AgeGroup = factor(cut(lung$age, breaks=seq(0,100,10)), labels = c('30s','40s','50s','60s','70s','80s'))

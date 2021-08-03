@@ -10,6 +10,7 @@ outTable(
   to_bold = numeric(0),
   caption = NULL,
   digits,
+  align,
   chunk_label
 )
 }
@@ -23,6 +24,8 @@ outTable(
 \item{caption}{table caption}
 
 \item{digits}{number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns}
+
+\item{align}{string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns}
 
 \item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 }

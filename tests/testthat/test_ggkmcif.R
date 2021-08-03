@@ -1,5 +1,9 @@
-library(survival)
-data('lung')
+# library(survival)
+# data('lung')
+# This is required in updated R
+data(cancer, package='survival')
+lung <- cancer
+
 lung$status <- lung$status-1 
 lung$sex <- ifelse(lung$sex==1,"F","M")
 

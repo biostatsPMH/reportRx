@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2021.6.29)  30 JUN 2021 16:23
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2021.6.29)  3 AUG 2021 14:38
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1222,9 +1222,9 @@ LaTeX Font Info:    Font shape `TU/latinmodern-math.otf(3)/m/n' will be
 
 ]
 LaTeX Font Info:    Font shape `TU/CalibriLight(0)/b/n' will be
-(Font)              scaled to size 12.0pt on input line 201.
+(Font)              scaled to size 12.0pt on input line 203.
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10> not available
-(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 282.
+(Font)              Font shape `TU/lmtt/b/n' tried instead on input line 284.
 File: test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf Graphic file
  (type pdf)
 <use test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf>
@@ -1236,24 +1236,24 @@ file (type pdf)
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-5-1.pdf Graphic 
 file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-5-1.pdf>
-[10]
+[10] [11]
 LaTeX Font Info:    Font shape `TU/CalibriLight(0)/m/it' will be
-(Font)              scaled to size 10.0pt on input line 490.
-[11] [12] (./test_reportRx_functions.aux)
+(Font)              scaled to size 10.0pt on input line 525.
+[12] [13] (./test_reportRx_functions.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
 Package rerunfilecheck Info: File `test_reportRx_functions.out' has not changed
 .
-(rerunfilecheck)             Checksum: 22BC01FE64DD7C6FF192F4BF8E8F093D;1101.
+(rerunfilecheck)             Checksum: A5E9581284DE2419F635493820EBD76B;1324.
  ) 
 Here is how much of TeX's memory you used:
- 18146 strings out of 478451
- 323540 string characters out of 5857206
- 816852 words of memory out of 5000000
- 38197 multiletter control sequences out of 15000+600000
+ 18147 strings out of 478451
+ 323573 string characters out of 5857206
+ 816916 words of memory out of 5000000
+ 38198 multiletter control sequences out of 15000+600000
  407579 words of font info for 78 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  87i,15n,122p,447b,527s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on test_reportRx_functions.pdf (12 pages).
+Output written on test_reportRx_functions.pdf (13 pages).

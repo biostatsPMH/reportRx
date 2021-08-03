@@ -23,10 +23,21 @@
 * Can now specify digits for rounding (28 June, 2021)
 * Can now auto-detect output and print accordingly (25 May, 2021)
 
-## rm_covsum(), rm_uvsum(), rm_mvsum()
+## nestTable() 
 
+- new function to combine two columns into a single column with one column serving as header rows
+
+## rm_covsum() 
 - removed documentation and changed to optional arguments to better match p* functions (25 May, 2021)
+
+## rm_uvsum()
+
 - fixed bug in rm_uvsum where tableOnly=T returned an error (22 July, 2021)
+
+## mvsum()
+
+- bug fix to handle empty factor levels (3 Aug 2021)
+- functionality to allow for interaction terms
 
 ## forestplot2
 

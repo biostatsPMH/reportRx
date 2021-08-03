@@ -2,11 +2,11 @@
 title: "reportRx Demo"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  bookdown::pdf_document2:
-    latex_engine: xelatex
   bookdown::word_document2:
     reference_docx: 'wordTemplate.docx'
     toc: yes
+  bookdown::pdf_document2:
+    latex_engine: xelatex
 sansfont: Calibri Light
 mainfont: Calibri Light
 bibliography:
@@ -18,7 +18,7 @@ link-citations: yes
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-library(survival)
+#library(survival)
 library(reportRx)
 library(tidyverse)
 
@@ -36,7 +36,9 @@ This is an rMarkdown document to produce Word and PDF files from the reportRx pa
 First, make some changes to the lung data.
 
 ```{r echo=T}
-data(lung)
+data(cancer, package='survival')
+lung <- cancer
+
 lung <- lung %>%
   mutate(
     Status=factor(status-1),
@@ -164,8 +166,11 @@ rm_uvsum(response = c('time','status'),
 
 \newpage
 
+# KM plit with confidence intervals
 ```{r}
-ggsurv(c("time","status"),"Sex", data=lung,fsize=8,nsize=3)
+ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
+        set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE)
+
 ```
 
 \newpage
@@ -184,6 +189,31 @@ rm_mvsum(model=m,data = lung,HolmGlobalp = T)
 
 ```{r}
 forestplot2(m)
+```
+
+\newpage
+## Combining Tables with nestTable
+
+```{r}
+m1 = glm(Status~wt.loss+Sex,
+        data=lung,
+        family='binomial')
+tab1 <- rm_mvsum(model=m1,data = lung,HolmGlobalp = T,tableOnly = T,showN=T)
+m2 = glm(Status~wt.loss+Sex+AgeGroup,
+        data=lung,
+        family='binomial')
+tab2 <- rm_mvsum(model=m2,data = lung,HolmGlobalp = T,tableOnly = T,showN = T)
+
+tab1$Model = 'Model 1'
+tab1$`p-value` = NA # necessary to make the columns match
+tab2$Model = 'Model 2'
+
+nestTable(data=rbind(tab1,tab2),
+              head_col = 'Model',to_col = 'Covariate')
+
+
+
+
 ```
 
 \newpage

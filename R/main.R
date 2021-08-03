@@ -1063,17 +1063,18 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
       hazardratio <- apply(cbind(m[covariateindex, 1],m[covariateindex, 1] - T_mult * m[covariateindex,2], m[covariateindex, 1] + T_mult * m[covariateindex,2]), 1, psthr)
       pvalues <- c(sapply(m[covariateindex, 5], lpvalue))
     }
+    # Update 3 Aug 2021 to work with empty factor levels
     if (length(betaname[[1]]) == 1) {
       if (!is.factor(data[, oldcovname])) {
         title <- c(nicename(covariatename), hazardratio,"", globalpvalue)
       } else if (length(levelnames) == 1) {
         title <- c(covariatename, "", "", globalpvalue)
         if (!is.null(data))
-          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[1])),"reference", "", "")
+          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[which(table(data[,which(names(data) == oldcovname)])>0)[1]])),"reference", "", "")
         body <- c(levelnames, hazardratio, "", "")
       } else {
         if (!is.null(data)){
-          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[1])),"reference", "", "")
+          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[which(table(data[,which(names(data) == oldcovname)])>0)[1]])),"reference", "", "")
         }
         title <- c(covariatename, "", "", globalpvalue)
         body <- cbind(levelnames, hazardratio, pvalues,rep("", length(levelnames)))
@@ -1089,6 +1090,7 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     }
     out <- rbind(title, reference, body)
     # New sample size work
+    # Updated 3 Aug 2021 to work with empty factor levels
     if (out[1,2]=="") {
       if (length(grep(':',title[1]))>0){
         ss_N = c('',unlist(lapply(levelnameslist, function(level){
@@ -1097,7 +1099,8 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
           },oldcovname,level)
           return(min(N))
         })))
-      } else{ss_N = c('',table(data[[oldcovname]]))}
+      } else{ss_N = c('',table(data[[oldcovname]])[out[-1,1]])}
+      
     } else {ss_N = nrow(ss_data)}
     out <- cbind(out,ss_N)
     #    print(out)
@@ -2202,11 +2205,11 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
 
 #' @param median.text boolean to specify if you want the median values added to the legend (or as added text if there are no covariates), for KM only
 #' @param median.lines boolean to specify if you want the median values added as lines to the plot, for KM only
-#' @param median.CI boolean to specify if you want the 95% confidence interval with the median text (Only for KM)
+#' @param median.CI boolean to specify if you want the 95\% confidence interval with the median text (Only for KM)
 #' @param set.time.text string for the text to add survival at a specified time (eg. year OS)
 #' @param set.time.line boolean to specify if you want the survival added as lines to the plot at a specified point
-#' @param set.time Numeric values of the specific time of intrest, default is 5 (Multiple values can be entered)
-#' @param set.time.CI boolean to specify if you want the 95% confidence interval with the set time text
+#' @param set.time Numeric values of the specific time of interest, default is 5 (Multiple values can be entered)
+#' @param set.time.CI boolean to specify if you want the 95\% confidence interval with the set time text
 
 
 
@@ -3172,6 +3175,58 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
     }
     # }
   
+}
+
+#' Combine two table columns into a single column with levels of one nested within levels of the other.
+#' 
+#' This function accepts a data frame (via the data argument) and combines two columns into
+#' a single column with values from the head_col serving as headers and values of the to_col displayed
+#' underneath each header. The resulting table is then passed to outTable for printing and output, to use the 
+#' grouped table as a data frame specify tblOnly=TRUE.
+#' By default the headers will be bolded and the remaining columns indented.  
+#' 
+#' @param data dataframe
+#' @param head_col character value specifying the column name with the headers
+#' @param to_col character value specifying the column name to add the headers into
+#' @param caption table caption
+#' @param indent Boolean should the original values in the to_col be indented
+#' @param boldheaders Boolean should the header column values be bolded
+#' @param hdr_prefix character value that will prefix headers
+#' @param hdr_suffix character value that will suffix headers
+#' @param tblOnly boolean indicating if the table should be formatted for printing or returned as a data frame
+#'@export
+nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=T,hdr_prefix='',hdr_suffix='',tblOnly=FALSE){
+  data[[to_col]] <- as.character(data[[to_col]])
+  new_row = data[1,]
+  for (i in 1:ncol(new_row)) new_row[1,i] <- NA
+  new_headers = unique(data[[head_col]])
+  repeat{
+    header_index = which(!duplicated(data[[head_col]]) & !is.na(data[[head_col]]))[1]
+    new_row[[to_col]] <- data[[head_col]][header_index]
+    
+    #    data <- tibble::add_row(data,new_row, .before = header_index)
+    if (header_index>1){
+      data = rbind(data[1:(header_index-1),],new_row,data[(header_index+1):nrow(data),])
+    } else {
+      data = rbind(new_row,data)
+    }
+    
+    data[[head_col]][data[[head_col]]==new_row[[to_col]]] <- NA
+    if (sum(is.na(data[[head_col]]))==nrow(data)) break
+  }
+  header_rows <- which(data[[to_col]] %in% new_headers)
+  to_indent <- which(!(data[[to_col]] %in% new_headers) )
+  
+  data[[to_col]][header_rows] <- paste0(hdr_prefix,data[[to_col]][header_rows],hdr_suffix)
+  
+  # data <- dplyr::select(data,-all_of(head_col))
+  data <- data[,setdiff(names(data),head_col)]
+  
+  if (tblOnly){
+    return(data)
+  }
+  if (boldheaders) to_bold = header_rows else to_bold=numeric(0)
+  outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
 }
 
 #'

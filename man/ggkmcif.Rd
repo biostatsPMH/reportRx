@@ -10,9 +10,10 @@ ggkmcif(
   data,
   type = NULL,
   pval = TRUE,
-  HR = F,
-  HR_pval = F,
-  conf.type = "none",
+  HR = FALSE,
+  HR_pval = FALSE,
+  conf.curves = FALSE,
+  conf.type = "log",
   table = TRUE,
   times = NULL,
   xlab = "Time",
@@ -22,11 +23,13 @@ ggkmcif(
   strataname = nicename(cov),
   stratalabs.table = NULL,
   strataname.table = strataname,
-  median.text = F,
-  median.lines = F,
+  median.text = FALSE,
+  median.lines = FALSE,
+  median.CI = FALSE,
   set.time.text = NULL,
   set.time.line = F,
   set.time = 5,
+  set.time.CI = FALSE,
   censor.marks = TRUE,
   censor.size = 3,
   censor.stroke = 1.5,
@@ -78,6 +81,8 @@ Options include "KM", and ,"CIF"}
 
 \item{HR_pval}{boolean to specify if you want HR p-values in the plot}
 
+\item{conf.curves}{boolean to specify if you want confidence interval bands}
+
 \item{conf.type}{One of "none"(the default), "plain", "log" , "log-log" or "logit". Only enough of the string to uniquely identify it is necessary. The first option causes confidence intervals not to be generated. The second causes the standard intervals curve +- k *se(curve), where k is determined from conf.int. The log option calculates intervals based on the cumulative hazard or log(survival). The log-log option bases the intervals on the log hazard or log(-log(survival)), and the logit option on log(survival/(1-survival)).}
 
 \item{table}{Logical value. If TRUE, includes the number at risk table}
@@ -98,15 +103,19 @@ Options include "KM", and ,"CIF"}
 
 \item{strataname.table}{String of the covariate name for the number at risk table default is  nicename(cov)}
 
-\item{median.text}{boolean to specify if you want the median values added to the legend (or as added text if there are no covariates)}
+\item{median.text}{boolean to specify if you want the median values added to the legend (or as added text if there are no covariates), for KM only}
 
-\item{median.lines}{boolean to specify if you want the median values added as lines to the plot}
+\item{median.lines}{boolean to specify if you want the median values added as lines to the plot, for KM only}
 
-\item{set.time.text}{string for the text to add survival at a specified time (eg. 5year OS)}
+\item{median.CI}{boolean to specify if you want the 95\% confidence interval with the median text (Only for KM)}
+
+\item{set.time.text}{string for the text to add survival at a specified time (eg. year OS)}
 
 \item{set.time.line}{boolean to specify if you want the survival added as lines to the plot at a specified point}
 
-\item{set.time}{Numeric values of the specific time of intrest, default is 5}
+\item{set.time}{Numeric values of the specific time of interest, default is 5 (Multiple values can be entered)}
+
+\item{set.time.CI}{boolean to specify if you want the 95\% confidence interval with the set time text}
 
 \item{censor.marks}{logical value. If TRUE, includes censor marks (only for KM curves)}
 
