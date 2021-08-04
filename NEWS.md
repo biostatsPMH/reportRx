@@ -45,4 +45,4 @@
 
 ## rmdBibfile
 
-* bug fix and improved messages and warnings
+* bug fix with EOF within quoted string and improved messages and warnings (5 Aug 2021)
