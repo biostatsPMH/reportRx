@@ -70,8 +70,23 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
 #'etsum(lung,c("time","status"))
 #'etsum(lung,c("time","status"),"sex",c(1,2,3))
 etsum<- function(data,response,group=1,times=c(12,24)){
+  
+  ### coerse data into a data.frame in case isn't
+  if( class(data)[1]!="data.frame") data <- data.frame(data)
+  
   if ( (class(group)=="numeric" & group!=1) | (class(group)!="numeric" & !is.factor(data[,group])) ) 
     stop("group variable must be factor or leave unspecified for no group")
+  
+  if( length(response)>2 ) 
+    stop("'response' must be a vector of length 2, etsum does not work for interval censored data yet.")
+  
+  if( !class(data[,response[2]]) %in% c("numeric","integer") ) stop("Status indicator (variable ",response[2],") must be numeric/integer for etsum to work properly. See ?Surv for more info.")
+  
+  # check for status indicator (2 for typical survival, will stop if there are more than two levels)
+  if( length(unique(data[,response[2]]))>2 ){
+    stop("There are more than two status indicators, etsum does not work for summarizing competing risk data.")
+  }
+  stind <- as.matrix(Surv(data[,response[1]], data[,response[2]]))[,2] # This variable is needed to later create a subset across non-events (or censored to be more precise, i.e. stind==0)
   
   if(class(group)=="numeric"){
     kfit <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
@@ -107,8 +122,8 @@ etsum<- function(data,response,group=1,times=c(12,24)){
     max = by(data,data[,group],function(x) max(x[,response[1]],na.rm=T))
     
     ### compute med, min, max follow up times among the non-events
-    if( sum(data[,response[2]]!=0,na.rm = TRUE)!=nrow(data) ){
-      data_noev = data[data[,response[2]]==0,]
+    if( sum(stind!=0,na.rm = TRUE)!=nrow(data) ){
+      data_noev = data[stind==0,]
       med_nonev = by(data_noev, data_noev[ , group], function(x) median(x[, 
                                                                           response[1]], na.rm = T))
       min_nonev = by(data_noev, data_noev[ , group], function(x) min(x[, 
@@ -174,10 +189,10 @@ etsum<- function(data,response,group=1,times=c(12,24)){
     max = max(data[,response[1]],na.rm=T)
     
     ### compute med, min, max follow up times among the non-events
-    if( sum(data[,response[2]]!=0,na.rm=TRUE)!=nrow(data) ){
-      med_nonev = median(data[data[,response[2]]==0, response[1]], na.rm = T)
-      min_nonev = min(data[data[,response[2]]==0, response[1]], na.rm = T)
-      max_nonev = max(data[data[,response[2]]==0, response[1]], na.rm = T)
+    if( sum(stind!=0,na.rm=TRUE)!=nrow(data) ){
+      med_nonev = median(data[stind==0, response[1]], na.rm = T)
+      min_nonev = min(data[stind==0, response[1]], na.rm = T)
+      max_nonev = max(data[stind==0, response[1]], na.rm = T)
     }else med_nonev = min_nonev = max_nonev = NA
     
     if(length(times)>1){
