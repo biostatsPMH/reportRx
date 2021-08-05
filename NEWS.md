@@ -4,6 +4,7 @@
 
 ## covsum()
 
+* bug fix to allow all values of cov in a level of maincov to be missing (5 Aug 2021)
 * Specify the number of digits for continuous covariates with `digits` (March 10, 2021)
 * Display percentages by row with the argument `percentage`  (April 11, 2021)
 * Specify if NAs from the main covariate are included with `include_missing` (May 20, 2021)
