@@ -25,7 +25,7 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
     sk<-summary(kfit)$table
     levelnames<-paste("N=",sk[1],",Events=",sk[4]," (",round(sk[4]/sk[1],2)*100,"%)",sep="")
     if(title=="")  title<-paste("KM-Curve for ",nicename(response[2]),sep="")
-
+    
   }else if(length(group)>1){
     return("Currently you can only stratify by 1 variable")
   }else{
@@ -37,15 +37,15 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
     kfit<-survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
     if(title=="") title<-paste("KM-Curve for ",nicename(response[2])," stratified by ",nicename(group),sep="")
     levelnames<-sapply(1:length(levelnames),function(x){paste(levelnames[x]," n=",lr$n[x],sep="")})
-
+    
   }
-
-
+  
+  
   plot(kfit,mark.time=T,lty=1:length(levelnames),xlab=paste("Time (",cap(units),")",sep=""),
        ylab="Suvival Probability ",cex=1.1,conf.int=CI,
        main=title)
-
-
+  
+  
   if(legend){
     if(class(group)=="numeric"){legend(pos,levelnames,lty=1:length(levelnames),bty="n")
     }else{ legend(pos,c(levelnames,paste("p-value=",pvalue(lrpv)," (Log Rank)",sep="")),
@@ -350,7 +350,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   if (!pvalue) {
     show.tests<- FALSE
     excludeLevels<- NULL
-    }
+  }
   if(!markup){
     lbld<-identity
     addspace<-identity
@@ -502,7 +502,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
           }
         }
       }
-
+      
       #if the covariate is not a factor
     }else{
       #setup the first column
@@ -517,21 +517,21 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
           #   } else try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
           # } else try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
           #LA enable output of statistical tests
-          if( testcont=='rank-sum test'){
+          if( testcont[1]=='rank-sum test'){
             if( length(unique(data[[maincov]]))==2 ){
               p_type = 'Wilcoxon Rank Sum'
-              p <- try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value )
+              p <- try( wilcox.test(data[[cov]] ~ data[[maincov]])$p.value,silent=T )
             } else {
               p_type='Kruskal Wallis'
-              p <-try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value )
+              p <-try( kruskal.test(data[[cov]] ~ data[[maincov]])$p.value,silent=T )
             }
           } else {
             if( length(unique(data[[maincov]]))==2 ){
               p_type = 't-test'
-              p <-try( t.test(data[[cov]] ~ data[[maincov]])$p.value )
+              p <-try( t.test(data[[cov]] ~ data[[maincov]])$p.value ,silent=T)
             } else {
               p_type = 'ANOVA'
-              p <-try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1])
+              p <-try(anova(lm(data[[cov]] ~ data[[maincov]]))[5][[1]][1],silent=T)
             }}
           
           if (class(p) == "try-error")
@@ -566,12 +566,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
             if(all(c(sumCov['Median'],sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov['Median'],sumCov["Min."],sumCov["Max."])))){
               paste(sumCov["Median"], " (", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
             } else {paste(niceNum(sumCov['Median'],digits), " (", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")}
+          }
+          if (all.stats) {
+            mmm <- c(mmm,if(all(c(sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov["Min."],sumCov["Max."])))){
+              paste("(", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
+            } else {paste("(", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")})
           }}
-        if (all.stats) {
-          mmm <- c(mmm,if(all(c(sumCov["Min."],sumCov["Max."]) ==floor(c(sumCov["Min."],sumCov["Max."])))){
-            paste("(", sumCov["Min."], ",",sumCov["Max."], ")", sep = "")
-          } else {paste("(", niceNum(sumCov["Min."],digits), ",", niceNum(sumCov["Max."],digits),")", sep = "")})
-        }
         tbl <- c(meansd, mmm, lbld(missing))
         return(tbl)}
         ,levels,numobs[[cov]])}
@@ -585,7 +585,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
     
     if(!is.null(maincov)){
       onetbl<-rbind(c(lbld(sanitizestr(nicename(cov))),rep("",length(levels[[1]])+1)),onetbl)
-#      if(pvalue) onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
+      #      if(pvalue) onetbl<-cbind(onetbl,c(p,rep("",nrow(onetbl)-1)))
       if (pvalue){
         p_NA = rep("", nrow(onetbl) - 1)
         p_NA[levels(data[[cov]]) %in% excludeLevel] <-'excl'
@@ -604,8 +604,8 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   rownames(table)<-NULL
   if(!is.null(maincov)){
     colnm_table <- c("Covariate",paste("Full Sample (n=",N,")",sep=""),
-                       mapply(function(x,y){paste(x," (n=",y,")",sep="")},
-                              names(table(data[[maincov]],useNA='ifany')),table(data[[maincov]],useNA='ifany')))
+                     mapply(function(x,y){paste(x," (n=",y,")",sep="")},
+                            names(table(data[[maincov]],useNA='ifany')),table(data[[maincov]],useNA='ifany')))
     if(pvalue) colnm_table <- c(colnm_table,"p-value")
     if (show.tests) colnm_table <- c(colnm_table,'StatTest')
     colnames(table) <- colnm_table
@@ -636,7 +636,7 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
   if(!TeX){
     print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{
-
+    
     print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }}
 
@@ -900,7 +900,7 @@ puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIw
   }else{
     print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }
-
+  
 }
 
 # TODO: Add support for svyglm and svycoxph functions. May need to check the feasibility of the global p-value here
@@ -1332,7 +1332,7 @@ makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
     fname <- gsub(" ","-",fname)
     warning("Your fname has spaces,the new filename is: ",fname)
   }
-
+  
   if(imwd!="" & dir.exists(paste0(dir,"/figure"))){
     setwd(imwd)
     if( grepl("*ImageMagick-6[.]*",imwd) ){
@@ -1340,7 +1340,7 @@ makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
     }else if ( grepl("*ImageMagick-7[.]*",imwd) ){
       exec <- "magick mogrify"
     }else warning("The installation path for ImageMagick has an unrecognized format.")
-
+    
     command <- paste0(exec,' -path "',dir,'/figure/" ','-format png "',dir,'/figure/*.pdf"')
     shell(command)
   }
@@ -1356,7 +1356,7 @@ makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
   zz <- file(paste0(fname,'_cp.tex'),"wb")
   writeLines(tx2,con=zz)
   close(zz)
-
+  
   command <- paste0('"',pdwd,'/pandoc" -o ',fname,'.docx ',fname,'_cp.tex ',
                     "--default-image-extension=png ")
   shell(command)
@@ -1400,20 +1400,20 @@ plotci<-function (data,response,group=NULL,units = "months",main="Viral Infectio
     }
     if(CI){
       plot(fita[[1]]$time,sapply(fita[[1]]$est + 1.96 * sqrt(fita[[1]]$var),
-                                  function(x) min(x,1)),type = "l",lty = 2,main = paste("CI plot for ",
-                                                                                            sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
-                                                                                                                                                        cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
-                                                                                                                                                                                                                 sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
-
+                                 function(x) min(x,1)),type = "l",lty = 2,main = paste("CI plot for ",
+                                                                                       sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+                                                                                                                                                 cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+                                                                                                                                                                                                     sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+      
       lines(fita[[1]]$time,fita[[1]]$est)
       lines(fita[[1]]$time,sapply(fita[[1]]$est - 1.96 * sqrt(fita[[1]]$var),
-                                   function(x) max(x,0)),lty = 2)
+                                  function(x) max(x,0)),lty = 2)
     }else{
       plot(fita[[1]]$time,fita[[1]]$est,
            type = "l", main = paste("CI plot for ",
-                                     sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
-                                                                                                 cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
-                                                                                                                                                          sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+                                    sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+                                                                                              cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+                                                                                                                                                  sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
       numoutcomes<-length(fita)-1
       if(numoutcomes>1){
         for (i in 2:numoutcomes){
@@ -1422,7 +1422,7 @@ plotci<-function (data,response,group=NULL,units = "months",main="Viral Infectio
         legend(legpos,outcomes,lty = 1:numoutcomes,bty = "n",lwd=2)
       }
     }
-
+    
   }else{
     d<-lapply(response,function(respons){
       fita <- cuminc(data[,respons[1]],data[,respons[2]])
@@ -1434,7 +1434,7 @@ plotci<-function (data,response,group=NULL,units = "months",main="Viral Infectio
       lines(d[[i]][[1]],d[[i]][[2]],lty=i,lwd=2)
     }
     legend(legpos,sapply(response,function(x) x[2]) ,col =rep(1,length(response)),lty = 1:length(response),bty = "n",lwd=2)
-
+    
   }
 }
 
@@ -1668,21 +1668,21 @@ forestplot2 = function(glm_fit,conf.level=0.95,orderByRisk=T,colours='default',s
 ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TRUE, returns = FALSE, xlabs = "Time", ylabs=NULL, main = NULL, ystratalabs = NULL, ystrataname = nicename(cov), censor.marks = FALSE, HR = FALSE, HR.pval= FALSE, conf.type = "none", fsize = 15, nsize = 4.5, lsize = 1.5, psize = 4.5, ylims=c(0,1), xlims=NULL, col=NULL, linetype=NULL, legend.pos = NULL, pval = TRUE, pval.pos=NULL, plot.event=1, event=c("col","linetype"), flip.CIF = FALSE, cut=NULL, ticklabs=NULL, logse=FALSE, eventlabs=NULL, event.name=NULL,...){
   print("This function has been deprecated, use ggkmcif instead")
   
-
+  
   event <- match.arg(event)
   if (!is.factor(data[,cov])  & !is.numeric(data[,cov]) & !is.null(cov)){ message("Coercing the cov variable to factor"); data[,cov] <- factor(data[,cov])}
-
-
+  
+  
   if (is.numeric(data[,cov])){
     numeric = T
     if(is.null(cut)) cut <- median(data[,cov],na.rm = T)
     data[,cov] <- factor(ifelse(data[,cov]<=cut,paste0("<=",round(cut,2)),paste0(">",round(cut,2))),levels = c(paste0("<=",round(cut,2)),paste0(">",round(cut,2))))
     if(is.null(ystratalabs)) ystratalabs <- levels(data[,cov])
   }
-
+  
   # Specifing the type of plot ----------------------------------------------
-
-
+  
+  
   #Specifying KM or CIF & is.null(type)
   if (length(unique(data[, response[2]]))< 3 & is.null(type)) type = "KM"
   if (length(unique(data[, response[2]]))>= 3 & is.null(type)) type = "CIF"
@@ -1695,52 +1695,52 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     if(is.null(main)) main <- "Cumulative Incidence Plot"
     if(is.null(ylabs)) ylabs = "Probability of an event"
   }else(stop("Type must be either KM or CIF"))
-
-
+  
+  
   # Labels ------------------------------------------------------------------
-
+  
   multiple_lines <- !is.null(cov)
-
+  
   if(is.null(ystratalabs) & multiple_lines) ystratalabs <- nicename(levels(factor(data[, cov])))
   if(is.null(ticklabs)) ticklabs <- ystratalabs
-
+  
   # HR and p-val cox----------------------------------------------------------------------
   if(type=="KM" &multiple_lines & (HR|HR.pval)){
     coxfit <- coxph(as.formula(paste(paste("Surv(", response[1],
                                            ",", response[2], ")", sep = ""), "~", cov,
                                      sep = "")), data = data)
-
-
+    
+    
     HR_vals <- paste0("HR=",sapply(seq(length(ystratalabs)-1),function(i){
       return(psthr0(summary(coxfit)$conf.int[i,c(1, 3, 4)]))
     }))
-
+    
     if(HR)ystratalabs[-1] <- paste(ystratalabs[-1],HR_vals)
     if(HR.pval) ystratalabs[-1] <- paste(ystratalabs[-1],"p=",sapply(summary(coxfit)$coef[,5],lpvalue2))
     ystratalabs[1] <- paste(ystratalabs[1],"REF")
   }
-
-
+  
+  
   # HR and p-val crr --------------------------------------------------------
   if(type=="CIF" & multiple_lines & (HR|HR.pval)&length(plot.event==1) & plot.event[1]==1){
     crrfit <- crrRx(as.formula(paste(paste(response,
                                            collapse = "+"), "~", cov, sep = "")),
                     data = data)
-
+    
     HR_vals <- paste0("HR=",sapply(seq(length(ystratalabs)-1),function(i){
       return(psthr0(summary(crrfit)$conf.int[i,c(1, 3, 4)]))
     }))
-
+    
     if(HR)ystratalabs[-1] <- paste(ystratalabs[-1],HR_vals)
     if(HR.pval) ystratalabs[-1] <- paste(ystratalabs[-1],"p=",sapply(summary(crrfit)$coef[,5],lpvalue2))
     ystratalabs[1] <- paste(ystratalabs[1],"REF")
-
+    
   }
   # Model fitting KM and creating a dataframe of times--------------------------------------------------------
-
+  
   if(type=="KM"){
     if(!multiple_lines){
-
+      
       sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
                                              ",", response[2], ")", sep = ""), "~", 1,
                                        sep = "")), data = data,conf.type=conf.type)
@@ -1750,9 +1750,9 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
                                              ",", response[2], ")", sep = ""), "~", cov,
                                        sep = "")), data = data,conf.type=conf.type)
     }
-
-
-
+    
+    
+    
     df <- NULL
     df <- data.frame(time = sfit$time,
                      n.risk = sfit$n.risk,  n.censor = sfit$n.censor,
@@ -1773,48 +1773,48 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
                         }else factor("All"),
                         upper = 1, lower = 1)
     df <- plyr::rbind.fill(zeros, df) # Forcing the curves to start at 1
-
+    
     df$strata <- factor(df$strata,levels=ystratalabs)
   }
-
-
+  
+  
   # Model fitting CIF -------------------------------------------------------
   if(type=="CIF"){
-
-
-
+    
+    
+    
     if(!multiple_lines){
-
+      
       invisible(utils::capture.output(fit <-  cuminc( data[,response[1]],data[,response[2]] )))
       ystratalabs <- " "
       gsep = " "
-
+      
       if(table){ #Sfit is for the numbers at risk so both events are counted the same way
-
+        
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
                                                ",", response[2], ")", sep = ""), "~", 1,
                                          sep = "")), data = temp)
       }
-
+      
     }else{
       newgpvar <- paste0(data[,cov],":")
       newgpvar <- factor(newgpvar, levels = paste0(levels(data[,cov]),":") )
       invisible(utils::capture.output(fit <- cuminc(data[,response[1]],data[,response[2]], newgpvar)))
       gsep = ": "
-
+      
       if(table){ #Sfit is for the numbers at risk so both events are counted the same way
-
+        
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
                                                ",", response[2], ")", sep = ""), "~", cov,
                                          sep = "")), data = temp)
       }
-
+      
     }
-
+    
     ##Setting up the data frame
     if (!is.null(fit$Tests)){
       test <- fit$Test
@@ -1822,52 +1822,52 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     }
     fit2 <- lapply(fit, `[`, 1:3)
     gnames <- names(fit2)
-
+    
     fit2_list <- lapply(seq_along(gnames), function(ind) {
       df <- as.data.frame(fit2[[ind]])
       df$name <- gnames[ind]
       df
     })
-
+    
     df <- do.call(rbind, fit2_list)
     df$event <- sapply(strsplit(df$name, split = gsep), `[`, 2)
     df$strata <- sapply(strsplit(df$name, split = gsep), `[`, 1)
     df$strata <- factor(df$strata, levels = levels(data[,cov]) )
     levels(df$strata) <- ystratalabs
-
+    
     if(multiple_lines){df$strata <- factor(df$strata,levels=ystratalabs)
     }else df$strata <- "ALL"
-
+    
     df$std <- std <- sqrt(df$var)
-
+    
     names(df)[names(df)=="est"] <- 'surv'
-
+    
     df <- df[df$event %in% plot.event,]
     df$upper <- NA
     df$lower <- NA
-
-
-
+    
+    
+    
     if(conf.type!="none") {
       CIF_confint <- survfit_confint(p=df$surv, se=df$std, conf.type=conf.type, conf.int=0.95,ulimit=TRUE,logse=logse)
       df$upper <- CIF_confint$upper
       df$lower <- CIF_confint$lower
     }
-
-
+    
+    
     if(flip.CIF) {
       df$surv <- 1-df$surv
       df$upper <- 1-df$upper
       df$lower <- 1-df$lower
     }
-
+    
     if(!is.null(eventlabs)) {
       df$event <- factor(df$event)
       levels(df$event) <- eventlabs
     }
   }
-
-
+  
+  
   # axis and legend positions --------------------------------------------------------------------
   m <- max(nchar(ystratalabs))
   maxxval = max(df$time,times[length(times)])
@@ -1877,28 +1877,28 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     if( length(xlims)!=2 | !is.numeric(xlims) ) stop("xlims must be a numeric vector of length 2.")
     maxxlim = xlims[2]
   }
-
-
+  
+  
   linetype_name <- col_name <- ystrataname
-
+  
   leg.pos <- legend.pos
   d <- length(levels(df$strata))
-
-
+  
+  
   if(!multiple_lines & (type=="KM" | (type=="CIF" & length(plot.event)==1))){
     leg.pos <- 'none'
   }else if(is.null(legend.pos)) {
     if(type=="CIF" & flip.CIF==F){ leg.pos <- c(min(0.05+m/200,0.5), 0.95-d*0.05)
     }else leg.pos <- c(min(0.05+m/200,0.5), 0.05+d*0.05)
   }
-
-
+  
+  
   #leg.pos <- if(){ "none" }else leg.pos ## don't plot if no strata and only one
-
+  
   if(is.null(times)) times <- break_function(maxxlim)
-
+  
   # plotting ----------------------------------------------------------------
-
+  
   if(type=="CIF" & length(plot.event)>1){
     if(is.null(event.name)) event.name <- 'event'
     if(event=='linetype') {p <- ggplot(df)+ geom_step( aes(time, surv, color = strata,linetype=event),size = lsize); linetype_name = event.name}
@@ -1906,31 +1906,31 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
   }else{
     p <- ggplot(df) + geom_step(aes(time, surv, group = strata,linetype = strata, col=strata), size = lsize)
   }
-
-
+  
+  
   # Confidence intervals to the plot ----------------------------------------
-
-
+  
+  
   if(conf.type!="none" ){
     if(type=="KM")p <- p +  geom_ribbon(data=df[!is.na(df$upper) & !is.na(df$lower),], aes(x=time, fill=strata, ymin = lower, ymax = upper), inherit.aes = FALSE, alpha = 0.2, show.legend = F)
-
+    
     if(type=="CIF" & event == "linetype"){
       for( evnt in unique(df$event) ){
         p <- p + geom_ribbon(data=df[!is.na(df$upper) & !is.na(df$lower) & df$event == evnt,], aes(x=time, fill=strata, ymin = lower, ymax = upper), inherit.aes = FALSE, alpha = 0.2, show.legend = F)
       }
     }
-
+    
     if(type=="CIF" & event == "col" & length(plot.event)>1){
       for( stra in unique(df$strata) ){
         p <- p + geom_ribbon(data=df[!is.na(df$upper) & !is.na(df$lower) & df$strata == stra,], aes(x=time, fill=event, ymin = lower, ymax = upper), inherit.aes = FALSE, alpha = 0.2, show.legend = F)
       }
     }
-
+    
   }
-
+  
   # Modyfing axis, titles, fonts, and theming -------------------------------
-
-
+  
+  
   p <- p+
     theme_classic() +
     theme(axis.title.x = element_text(vjust = 0.5)) +
@@ -1946,16 +1946,16 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     labs(linetype = linetype_name, col=col_name) +
     ggtitle(main) + theme(plot.title = element_text(face="bold",hjust = 0.5))+
     theme(legend.position = leg.pos)
-
-
+  
+  
   # censoring ---------------------------------------------------------------
-
-
+  
+  
   if( censor.marks & type=="KM") p <- p + geom_point(data = subset(df, n.censor>0),
                                                      aes(x=time, y=surv, group = strata, col=strata),
                                                      shape=3, size=3, stroke = 1.5,show.legend =F)
-
-
+  
+  
   # Log rank p-val ----------------------------------------------------------
   if(pval & type=="KM" & multiple_lines) {
     sdiff <- survdiff(eval(sfit$call$formula), data = eval(sfit$call$data))
@@ -1967,10 +1967,10 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
       p <- p + annotate("text", x = 0.9 * max(times), y = ylims[1], label = pvaltxt, size = psize)
     }else p <- p + annotate("text", x = pval.pos[1], y = pval.pos[2], label = pvaltxt, size = psize)
   }
-
-
+  
+  
   # Gray's pvalue -----------------------------------------------------------
-
+  
   if( !is.null(cov) & pval & type=="CIF") {
     if(length(plot.event)==1 ){
       test <- test[rownames(test)==plot.event,]
@@ -1981,41 +1981,41 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
         p <- p + annotate("text", x = 0.9 * max(times), y = ylims[1], label = pvaltxt, size = psize)
       }else p <- p + annotate("text", x = pval.pos[1], y = c(pval.pos[2]), label = pvaltxt)
     }else{
-
+      
       pval <- test[,2]
       pvaltxt <- ifelse(pval < 0.0001, "p < 0.0001", paste("p =", signif(pval, 3)))
       pvaltxt <- c("Gray's test",paste("Event", rownames(test), pvaltxt))
       if(is.null(pval.pos)){
-
+        
         p <- p + annotate("text", x = 0.9 * max(df$time), y = c(0.12,0.08,0.04), label = pvaltxt)
       }else p <- p + annotate("text", x = pval.pos[1], y = c(pval.pos[2],pval.pos[2]-0.04, pval.pos[2]-0.08), label = pvaltxt)
     }
   }
-
-
-
-
+  
+  
+  
+  
   # Colour, linetype and fill -----------------------------------------------
-
-
-
+  
+  
+  
   if(!is.null(col)) {
     p <- p + scale_colour_manual(values = col)
     p <- p + scale_fill_manual(values = col)
   }
   if(!is.null(linetype)) {
     p <- p + scale_linetype_manual(values = linetype)
-
+    
   }
-
-
-
-
+  
+  
+  
+  
   # Numbers at risk ---------------------------------------------------------
-
+  
   if(table) {
     ## Create table graphic to include at-risk numbers
-
+    
     blank.pic <- ggplot(df, aes(time, surv)) +
       geom_blank() +
       theme_bw() +
@@ -2025,7 +2025,7 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
             axis.ticks = element_blank(), panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             panel.border = element_blank(), panel.background = element_rect(fill = "transparent"))
-
+    
     sfit.summary <- summary(sfit, times = times, extend = TRUE)
     risk.data <- data.frame(strata = if(multiple_lines){
       sfit.summary$strata
@@ -2034,16 +2034,16 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     n.risk = sfit.summary$n.risk)
     # if risk and event do paste0(sfit.summary$n.risk, "(",sfit.summary$n.events,")")
     risk.data$strata <- factor(risk.data$strata, levels=rev(levels(risk.data$strata)))
-
+    
     cols1 <- .extract_ggplot_colors(p, grp.levels = ystratalabs)
     if(multiple_lines==F) cols1 = "black"
     ### TODO: check length of m, if too long use dashes as thickmarks
-
+    
     n_strata <- length(ystratalabs)
     #yticklabs <- rep("-", n_strata)
     yticklabs <- unname(rev(ticklabs))
     strataylab = ifelse(n_strata==1, "\n", ystrataname)
-
+    
     data.table <- ggplot(risk.data, aes(x = time, y = strata, label = format(n.risk, nsmall = 0))) +
       geom_text(hjust="middle", vjust="center", size = nsize) +
       theme_bw() +
@@ -2053,19 +2053,19 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
       theme(text = element_text(size = fsize)) + ##increase font size
       theme(plot.margin = unit(c(-1.5, 1, 0.1, 0.2), "lines"))+
       scale_y_discrete(strataylab, breaks = as.character(levels(risk.data$strata)), labels = yticklabs)
-
+    
     data.table <- data.table +suppressWarnings(theme(axis.title.x = element_text(size = fsize, vjust = 1), panel.grid.major = element_blank(),
                                                      panel.grid.minor = element_blank(), panel.border = element_blank(),
                                                      axis.text.x = element_blank(), axis.ticks = element_blank(),
                                                      axis.text.y = element_text(face = "bold", hjust = 1,colour = rev(cols1))))
-
-
-
-
+    
+    
+    
+    
     if(all(yticklabs=="-")) data.table <- .set_large_dash_as_ytext(data.table)
-
-
-
+    
+    
+    
     gA <- ggplotGrob(p)
     gB <- ggplotGrob(blank.pic)
     gC <- ggplotGrob(data.table)
@@ -2073,11 +2073,11 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
     gA$widths[2:5] <- as.list(maxWidth)
     gB$widths[2:5] <- as.list(maxWidth)
     gC$widths[2:5] <- as.list(maxWidth)
-
+    
     grid.arrange(gA, gB, gC,
                  clip = FALSE, nrow = 3, ncol = 1,
                  heights = unit(c(2, .1, .25), c("null", "null", "null")))
-
+    
     if(returns) {
       a <- arrangeGrob(p, blank.pic, data.table,
                        clip = FALSE, nrow = 3, ncol = 1,
@@ -2085,8 +2085,8 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
       return(a)
     }
   }
-
-
+  
+  
 }
 
 #' Plot bivariate relationships in a single plot
@@ -2116,7 +2116,7 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
   for (v in c(response,covs)){
     if (class(data[[v]])=='character') data[[v]] <- factor(data[[v]])
   }
-
+  
   if (is.null(response_title)) response_title = response
   response_title = niceStr(response_title)
   plist <- NULL
@@ -2125,7 +2125,7 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
     for (x_var in covs){
       # remove missing data, if requested
       if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
-
+      
       if (class(pdata[[x_var]])[1] =='numeric' ){
         p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
           geom_boxplot()
@@ -2158,7 +2158,7 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
     for (x_var in covs){
       # remove missing data, if requested
       if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
-
+      
       if (class(pdata[[x_var]])[1] =='numeric' ){
         p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]])) +
           geom_point()
@@ -2180,12 +2180,12 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
           plot.margin = unit(c(0,1,0,1), "lines")) +
         labs(title=niceStr(x_var),x='',y='',fill=response_title)
     }
-
+    
   }
   ggpubr::ggarrange(plotlist=plist,
-            common.legend = T,
-            ncol=2,
-            nrow=ceiling(length(plist)/2))
+                    common.legend = T,
+                    ncol=2,
+                    nrow=ceiling(length(plist)/2))
 }
 
 
@@ -3129,66 +3129,66 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
     for (v in numCols) tab[[v]] <- sapply(tab[[v]],function(x) niceNum(x,digits=colDigits[v]))
   }
   out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
-                           ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
-                           ifelse(knitr::is_latex_output(),'latex','html')))
-
-    chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
+                   ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
+                          ifelse(knitr::is_latex_output(),'latex','html')))
+  
+  chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
+  
+  if (is.null(to_indent)) to_indent = numeric(0)
+  to_indent = as.vector(to_indent)
+  
+  
+  if (out_fmt=='doc'){
+    caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
+    tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
+    tab[tab==''] <-'&nbsp;'
     
-    if (is.null(to_indent)) to_indent = numeric(0)
-    to_indent = as.vector(to_indent)
-    
-    
-    if (out_fmt=='doc'){
-      caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
-      tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
-      tab[tab==''] <-'&nbsp;'
+    tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
+    if (length(to_bold)>0) {
+      pander::pander(tab,
+                     caption=caption,
+                     emphasize.strong.rows=to_bold,
+                     split.table=Inf, split.cells=15,
+                     justify = alignSpec)
       
-      tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
-      if (length(to_bold)>0) {
-        pander::pander(tab,
-                       caption=caption,
-                       emphasize.strong.rows=to_bold,
-                       split.table=Inf, split.cells=15,
-                       justify = alignSpec)
-        
+    } else {
+      pander::pander(tab,
+                     caption=caption,
+                     split.table=Inf, split.cells=15,
+                     justify = alignSpec)
+    }
+  } else {
+    # set NA to empty in kable
+    options(knitr.kable.NA = '')
+    if(!is.null(caption)) caption <- sanitize(caption)
+    if (nrow(tab)>30){
+      kout <- knitr::kable(tab, format = out_fmt,
+                           booktabs=TRUE,
+                           longtable=TRUE,
+                           linesep='',
+                           caption=caption,
+                           align =alignSpec)
+      if (ncol(tab)>4) {
+        kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
       } else {
-        pander::pander(tab,
-                       caption=caption,
-                       split.table=Inf, split.cells=15,
-                       justify = alignSpec)
+        kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
       }
     } else {
-      # set NA to empty in kable
-      options(knitr.kable.NA = '')
-      if(!is.null(caption)) caption <- sanitize(caption)
-      if (nrow(tab)>30){
-        kout <- knitr::kable(tab, format = out_fmt,
-                             booktabs=TRUE,
-                             longtable=TRUE,
-                             linesep='',
-                             caption=caption,
-                             align =alignSpec)
-        if (ncol(tab)>4) {
-          kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
-        } else {
-          kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-        }
-      } else {
-        kout <- knitr::kable(tab, format = out_fmt,
-                             booktabs=TRUE,
-                             longtable=FALSE,
-                             linesep='',
-                             caption=caption,
-                             align = alignSpec)
-        if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
-      }
-      kout <- kableExtra::add_indent(kout,positions = to_indent)
-      if (length(to_bold)>0){
-        kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
-      }
-      kout
+      kout <- knitr::kable(tab, format = out_fmt,
+                           booktabs=TRUE,
+                           longtable=FALSE,
+                           linesep='',
+                           caption=caption,
+                           align = alignSpec)
+      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
     }
-    # }
+    kout <- kableExtra::add_indent(kout,positions = to_indent)
+    if (length(to_bold)>0){
+      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
+    }
+    kout
+  }
+  # }
   
 }
 
@@ -3262,7 +3262,7 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 #'@export
 #'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
 rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',chunk_label,...){
-
+  
   tab <- covsum(data,covs,maincov,markup=FALSE,sanitize=FALSE,...)
   to_bold = numeric(0)
   if ('p-value' %in% names(tab)) {
@@ -3287,11 +3287,11 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
     } else
       caption = 'Summary sample statistics.'
   }
-
+  
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-
+  
 }
 
 #' Output several univariate models nicely in a single table
@@ -3310,10 +3310,10 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @export
 #'
 rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
-
+  
   # get the table
   tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
-
+  
   cap_warn <- character(0)
   if (removeInf){
     # Do not display unstable estimates
@@ -3321,10 +3321,10 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
     if (length(inf_values)>0){
       tab[inf_values,2:4] <-NA
       cap_warn <- paste0(cap_warn,'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
-
+      
     }
   }
-
+  
   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
   if (HolmGlobalp){
     p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
@@ -3332,23 +3332,23 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   } else {
     p_sig <- tab$`Global p-value`
   }
-
+  
   to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
-
+  
   tab[["p-value"]] <- formatp(tab[["p-value"]])
   tab[["Global p-value"]] <- formatp(tab[["Global p-value"]])
   if (HolmGlobalp){
     tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
   }
-
+  
   # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
     tab <- tab[,-which(names(tab)=="p-value")]
     names(tab) <- gsub('Global p-value','p-value',names(tab))
   }
-
+  
   if (tableOnly){
     if (length(cap_warn)>0) warning(cap_warn)
     return(tab)
@@ -3359,7 +3359,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   } else if (caption=='none' & identical(cap_warn,character(0))) {
     caption=NULL
   } else caption = paste0(caption,cap_warn)
-
+  
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
@@ -3432,11 +3432,11 @@ rm_ordsum <- function(data, covs, response, reflevel,caption = NULL, showN=T,
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @export
 rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALSE,chunk_label){
-
+  
   # get the table
   tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
-
-
+  
+  
   # Reduce the number of significant digits in p-values
   p_val <-  formatp(tab$`p-value`)
   g_p_val = formatp(tab$`Global p-value`)
@@ -3448,10 +3448,10 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
   }
   to_bold <- which(as.numeric(gp)<0.05)
   to_indent <- which(is.na(g_p_val))
-
+  
   tab$`p-value` <- p_val
   tab$`Global p-value` <- g_p_val
-
+  
   # Reorder
   if (HolmGlobalp){
     tab$`Holm Adj p` <- formatp(gp)
@@ -3462,18 +3462,18 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
   # } else if (caption=='none') {
   #   caption=NULL
   # }
-
-
+  
+  
   # If all outcomes are contunous (and so all p-values are NA), remove this column
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
-
+  
   if (tableOnly){
     return(tab)
   }
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-
+  
 }
 
 #'Print Event time summary
