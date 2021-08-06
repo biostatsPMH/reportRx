@@ -414,8 +414,6 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
             p_type = 'Chi Sq'
             p = try(chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
           }
-          # p <- if( testcat=='Fisher' | sum(table(pdata[[maincov]], pdata[[cov]]))<5){ try(fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
-          # } else try(chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
           if (class(p) == "try-error") p <- NA
           p <- lpvalue(p)
         }

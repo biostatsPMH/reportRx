@@ -1,5 +1,5 @@
 ---
-title: "reportRx Demo"
+title: "reportRx TestFile"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
   bookdown::word_document2:
@@ -31,9 +31,8 @@ library(tidyverse)
 \newpage
 # Introduction {-}
 
-This is an rMarkdown document to produce Word and PDF files from the reportRx package [@R-reportRx] in the R statistical programming language [@R-base]. 
 
-First, make some changes to the lung data.
+First, make some changes to the lung data (cancer in the newer version of survival)
 
 ```{r echo=T}
 data(cancer, package='survival')
@@ -76,6 +75,34 @@ rm_covsum(data=lung,
        maincov = 'Sex')
 ```
 
+\newpage
+
+Make sure it still works when there are empty levels
+
+In a covariate:
+
+```{r test-covsum-2}
+
+test_empty <- lung
+test_empty$AgeGroup[test_empty$Sex=='Female'] <- NA
+  
+rm_covsum(data=test_empty,
+       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+       maincov = 'Sex')
+```
+
+In the main covariate:
+
+```{r test-covsum-2}
+
+test_empty <- lung
+test_empty$Sex[test_empty$Sex=='Female'] <- NA
+  
+rm_covsum(data=test_empty,
+       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+       maincov = 'Sex')
+
+```
 
 If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table, which is on the todo list!
 
@@ -91,6 +118,8 @@ for (v in names(lung)[1:2]){
 
 pander::panderOptions('knitr.auto.asis', TRUE)
 ```
+
+\newpage
 
 ## Test plotuv
 
@@ -252,14 +281,5 @@ rm_uvsum(response = 'y',
       data=test_data,
       type='boxcox',
       CIwidth=.90)
-```
-
-
-```{r}
-# load('../Giuliani/CAPCR_20-5589/ord_fit_info_source.R')
-# reportRx::rm_mvsum(ord_fit_info_source$Q24_Use_Cncr_Cent)
-# 
-# reportRx::forestplot2(ord_fit_info_source[['Q24_Use_Print_News']])
-
 ```
 
