@@ -928,7 +928,7 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     nicename <- identity
   # call <- paste(deparse(summary(model)$call), collapse = "")
   # Retrieving call as below is more robust than previously as it now allows for flexible specification of the formula, e.g. using paste and as.formula. OEG
-  if( class(model)[1] %in% c("lm","lme","multinom","survreg") ){
+  if( class(model)[1] %in% c("lm","lme","multinom","survreg","polr") ){
     call <- Reduce(paste, deparse(formula(model$terms), width.cutoff = 500))
   }else call<-paste(deparse(model$formula),collapse="")
   call <- unlist(strsplit(call, "~", fixed = T))[2]
