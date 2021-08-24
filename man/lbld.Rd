@@ -10,5 +10,5 @@ lbld(strings)
 \item{strings}{A vector of strings to bold.}
 }
 \description{
-Bold strings in LaTeX.
+Bold strings in LaTeX
 }

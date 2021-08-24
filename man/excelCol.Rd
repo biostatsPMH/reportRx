@@ -12,3 +12,7 @@ excelCol(...)
 \description{
 Retrieve columns number from Excel columns specified as unquoted letters
 }
+\examples{
+## Find the column numbers for excel columns AB, CE and BB
+# excelCol(AB,CE,bb)
+}

@@ -18,4 +18,7 @@ makedocx(dir, fname, pdwd = "C:/PROGRA~1/RStudio/bin/pandoc", imwd = "")
 \description{
 Converts the knitr-compiled .TeX file to a .docx file. The function calls ImageMagick to convert .pdf images into .png and then calls pandoc (included with RStudio) to convert the .Tex file into .docx.
 }
+\details{
+Note: This function is deprecated and will not be supported in future versions of reportRx. Instead the rm_ functions can be used to output to pdf, Word or HTML from an Rmarkdown document.
+}
 \keyword{print}

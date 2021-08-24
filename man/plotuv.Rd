@@ -2,15 +2,17 @@
 % Please edit documentation in R/main.R
 \name{plotuv}
 \alias{plotuv}
-\title{Plot bivariate relationships in a single plot}
+\title{Plot multiple bivariate relationships in a single plot}
 \usage{
 plotuv(
   response,
   covs,
   data,
   showN = FALSE,
+  showPoints = TRUE,
   na.rm = TRUE,
-  response_title = NULL
+  response_title = NULL,
+  return_plotlist = FALSE
 )
 }
 \arguments{
@@ -22,22 +24,40 @@ plotuv(
 
 \item{showN}{boolean indicating whether sample sizes should be shown on the plots}
 
+\item{showPoints}{boolean indicating whether individual data points should be shown when n>20 in a category}
+
 \item{na.rm}{boolean indicating whether na values should be shown or removed}
 
 \item{response_title}{character value with title of the plot}
+
+\item{return_plotlist}{boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details}
 }
 \description{
 This function is designed to accompany \code{\link{uvsum}} as a means
-of visualising the results. It is not designed for publication, but rather
-to facilitate explanations of the uvsum output.
+of visualising the results, and uses similar syntax.
 }
 \details{
-The following hierarchy of how to display plots is used:
+Plots are displayed as follows:
 If response is continuous
-  For a numeric predictor -> scatterplot
-  For a categorical predictor -> boxplot
+  For a numeric predictor scatterplot
+  For a categorical predictor: 
+    If 20+ observations available boxplot, otherwise dotplot with median line
 If response is a factor
-  For a numeric predictor -> boxplot
-  For a categorical predictor -> barplot
+  For a numeric predictor:
+      If 20+ observations available boxplot, otherwise dotplot with median line
+  For a categorical predictor barplot
+Response variables are shown on the ordinate (y-axis) and covariates on the abscissa (x-axis)
+}
+\examples{
+## Run multiple univariate analyses on the mtcars dataset to predict mpg and 
+## then visualise the relationships.
+# rm_uvsum(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+# plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+## Set cylinder to a factor and re-run
+# mtcars$cyl = factor(mtcars$cyl)
+# plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+}
+\seealso{
+\code{\link{ggplot}} and \code{\link{ggarrange}}
 }
 \keyword{plot}

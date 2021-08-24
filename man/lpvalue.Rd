@@ -4,11 +4,13 @@
 \alias{lpvalue}
 \title{Formats p-values for LaTeX}
 \usage{
-lpvalue(x)
+lpvalue(x, sigdigits = 2)
 }
 \arguments{
 \item{x}{an integer}
+
+\item{sigdigits}{number of significant digit to report}
 }
 \description{
-Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits. Will bold the p-value if it is <= 0.05
+Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified significant digits. Will bold the p-value if it is <= 0.05
 }

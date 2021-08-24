@@ -2,7 +2,7 @@
 #' @param ... unquoted excel column headers (i.e. excelCol(A,CG,AA)) separated by commas
 #' @importFrom rlang as_string
 #' @export
-#' @example 
+#' @examples 
 #' ## Find the column numbers for excel columns AB, CE and BB
 #' # excelCol(AB,CE,bb)
 excelCol<- function(...){
@@ -38,22 +38,20 @@ niceNum <- function(x,digits=2){
 #'
 #' @param x a vector
 #'@keywords helper
-#'@export
 #'@examples
-#'pstprn(c(1,2,3,4,5))
-#'pstprn(c("Hello","Hi",2))
+#'#pstprn(c(1,2,3,4,5))
+#'#pstprn(c("Hello","Hi",2))
 pstprn<-function(x){paste(x[1]," (",paste(x[-1],collapse=","),")",sep="")}
 
 #' Round and paste with parentheses
 #'
 #' Round and paste with parentheses
 #'
-#' @param x a numeic vector
+#' @param x a numeric vector
 #' @param y integer corresponding to the number of digits to round by
 #'@keywords helper
-#'@export
 #'@examples
-#'psthr(c(1.111111,2.2222222,3.333333))
+#'#psthr(c(1.111111,2.2222222,3.333333))
 # LA updated to always return a formatted string
 psthr<- function (x, y = 2)
 {
@@ -108,7 +106,6 @@ betaindx<-function(x){
 #'
 #' @param x string
 #' @keywords helper
-#' @export
 cap <- function(x) {
   s <- strsplit(x, " ")[[1]]
   paste(toupper(substring(s, 1, 1)), substring(s, 2),
@@ -120,7 +117,6 @@ cap <- function(x) {
 #' Returns strings with . and _ replaced by a space. This is nice when printing column names of your dataframe in a report
 #' @param strings vector of strings to give a nice name
 #' @keywords helper
-#' @export
 nicename<-function(strings){
   out<-sapply(strings,function(x){
     x<-chartr(".", " ",x)
@@ -166,17 +162,13 @@ sanitize <- function(str) {
 #' Strings with special charaters will break LaTeX if returned 'asis' by knitr. This happens every time we use one of the main reportRx functions. We first sanitize our strings with this function to stop LaTeX from breaking.
 #'
 #'@param str a vector of strings to sanitize
-#'@export
 sanitizestr<-function(str){
   as.vector(sapply(str,function(char){sanitize(char)}))
 }
 
-#'Bold strings in LaTeX
-#'
-#'Bold strings in LaTeX.
+#' Bold strings in LaTeX
 #'
 #'@param strings A vector of strings to bold.
-#'@export
 lbld<-function(strings){sapply(strings,function(x){
   if(is.null(x)) return(x)
   if(is.na(x)) return(x)
@@ -187,19 +179,18 @@ lbld<-function(strings){sapply(strings,function(x){
 #'Add spaces to strings in LaTeX. Returns appends ~~~ before the string
 #'
 #'@param x string
-#'@export
 addspace<-function(x){
   paste("~~~",x,sep="")
 }
 #' Formats p-values for LaTeX
 #'
-#' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits. Will bold the p-value if it is <= 0.05
+#' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified significant digits. Will bold the p-value if it is <= 0.05
 #' @param x an integer
-#' @export
-lpvalue<-function(x){
+#' @param sigdigits number of significant digit to report
+lpvalue<-function(x,sigdigits=2){
   if(is.na(x)|class(x)=="character") return(x)
   else if (x<=0.001) return("\\textbf{$<$0.001}")
-  else x=signif(x,2)
+  else x=signif(x,sigdigits)
   if(x<=0.05) return(paste("\\textbf{",x,"}",sep=""))
   else return(x)
 }
@@ -395,7 +386,7 @@ format_glm = function(glm_fit,conf.level = 0.95,digits=c(2,3),orderByRisk=TRUE){
     names(tab) =  c("variable","estimate",  "std.error" ,"statistic")
     tab$coef.type = ifelse(grepl("[|]",tab$variable),"scale","coefficient")
     tab <- tab[tab$coef.type=='coefficient',]
-    tab$p.value = pnorm(abs(tab$statistic),lower.tail = FALSE) * 2
+    tab$p.value = stats::pnorm(abs(tab$statistic),lower.tail = FALSE) * 2
   }
 
   tab$conf.low=exp(tab$estimate-Z*tab$std.error)

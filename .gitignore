@@ -8,3 +8,5 @@
 /img
 .DS_Store
 inst/doc
+old_functions.R
+test_ggkmcif.R

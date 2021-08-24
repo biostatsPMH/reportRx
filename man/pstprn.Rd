@@ -13,7 +13,7 @@ pstprn(x)
 Paste with parentheses
 }
 \examples{
-pstprn(c(1,2,3,4,5))
-pstprn(c("Hello","Hi",2))
+#pstprn(c(1,2,3,4,5))
+#pstprn(c("Hello","Hi",2))
 }
 \keyword{helper}
