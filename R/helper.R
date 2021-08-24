@@ -598,16 +598,6 @@ bib_ReadGatherTidy <- function(file){
 
 
 
-checkOutput <- function(fmt){
-  if (missing(fmt)){
-    message(paste("Is Latex:", knitr::is_latex_output()))
-    message(paste("Is HTML:",    knitr::is_html_output()))
-    message(paste("Is HTML excl markdoen epub:",  knitr::is_html_output(excludes = c("markdown", "epub"))))
-  }
-  # Get current formats
-  message(paste('Pandoc To:',knitr::pandoc_to()))
-}
-
 reportRx_pal <- function(
   direction = 1
 ) {
@@ -621,7 +611,6 @@ reportRx_pal <- function(
     if (direction >= 0) colour_list else rev(colour_list)
   }
 }
-
 
 scale_colour_reportRx <- function(
   direction = 1, 

@@ -5,7 +5,7 @@
 \title{Create a forest plot using ggplot2}
 \usage{
 forestplot2(
-  glm_fit,
+  model,
   conf.level = 0.95,
   orderByRisk = T,
   colours = "default",
@@ -16,7 +16,7 @@ forestplot2(
 )
 }
 \arguments{
-\item{glm_fit}{an object output from the glm function, must be from a logistic regression}
+\item{model}{an object output from the glm function, must be from a logistic regression}
 
 \item{conf.level}{controls the width of the confidence interval}
 

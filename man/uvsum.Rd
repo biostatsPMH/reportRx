@@ -15,7 +15,8 @@ uvsum(
   nicenames = T,
   testing = F,
   showN = T,
-  CIwidth = 0.95
+  CIwidth = 0.95,
+  reflevel
 )
 }
 \arguments{
@@ -26,7 +27,7 @@ uvsum(
 \item{data}{dataframe containing data}
 
 \item{type}{string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-Options include "linear", "logistic", "coxph", "crr", "boxcox","logistic"}
+Options include "linear", "logistic", "coxph", "crr", "boxcox","ordinal"}
 
 \item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
 
@@ -40,10 +41,16 @@ Options include "linear", "logistic", "coxph", "crr", "boxcox","logistic"}
 
 \item{showN}{boolean indicating if you want to show sample sizes}
 
-\item{CIwidth}{width of confidence interval, default is 0.95
+\item{CIwidth}{width of confidence interval, default is 0.95}
+
+\item{reflevel}{manual specification of the reference level. Only used for ordinal
 This will allow you to see which model is not fitting if the function throws an error}
 }
 \description{
-Returns a dataframe corresponding to a univariate table
+Returns a dataframe corresponding to a univariate regression table
+}
+\details{
+Univariate summaries for a number of covariates, the type of model can be specified. 
+If unspecified the function will guess the appropriate model based on the response variable.
 }
 \keyword{dataframe}

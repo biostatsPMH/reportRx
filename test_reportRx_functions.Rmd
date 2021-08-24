@@ -22,8 +22,9 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(reportRx)
 library(tidyverse)
 
-# Uncomment to create the packages.bib file of R packages used
-#reportRx::rmdBibfile(bibfile = 'masterfile.bib',outfile = 'bibfile.bib')
+#Uncomment to create the packages.bib file of R packages used
+# Check the location of bibfile before running!
+reportRx::rmdBibfile(bibfile = '../library.bib',outfile = 'bibfile.bib')
 
 ```
 
@@ -31,6 +32,7 @@ library(tidyverse)
 \newpage
 # Introduction {-}
 
+Citations can be made like this for R packages [@R-reportRx], or [@R-base] for the R language itself. Other citations must match those found in your master bibfile. See ?rmdBibfile.
 
 First, make some changes to the lung data (cancer in the newer version of survival)
 
@@ -81,7 +83,7 @@ Make sure it still works when there are empty levels
 
 In a covariate:
 
-```{r test-covsum-2}
+```{r test-covsum-3}
 
 test_empty <- lung
 test_empty$AgeGroup[test_empty$Sex=='Female'] <- NA
@@ -93,7 +95,7 @@ rm_covsum(data=test_empty,
 
 In the main covariate:
 
-```{r test-covsum-2}
+```{r test-covsum-4}
 
 test_empty <- lung
 test_empty$Sex[test_empty$Sex=='Female'] <- NA
@@ -190,6 +192,24 @@ rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
       data=lung,
       CIwidth=.99)
+
+```
+
+### Test ordinal
+
+TODO: Update this once ordsum is incorporated
+
+```{r}
+uvsum2(response = 'mpg',
+      covs=c('cyl','wt','hp'),
+      data=mtcars,
+      CIwidth=.90,markup=F)
+
+uvsum2(response = 'cyl',
+      covs=c('vs','wt','hp'),
+      data=mtcars,
+      type='ordinal',
+      CIwidth=.90,markup=F)
 
 ```
 
