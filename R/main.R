@@ -2089,31 +2089,45 @@ ggsurv <- function(response, cov=NULL, data, type=NULL, times = NULL, table = TR
   
 }
 
-#' Plot bivariate relationships in a single plot
+#' Plot multiple bivariate relationships in a single plot
 #' 
 #' This function is designed to accompany \code{\link{uvsum}} as a means
-#' of visualising the results. It is not designed for publication, but rather
-#' to facilitate explanations of the uvsum output.
+#' of visualising the results, and uses similar syntax. 
 #' 
-#' The following hierarchy of how to display plots is used:
+#' Plots are displayed as follows:
 #' If response is continuous
-#'   For a numeric predictor -> scatterplot
-#'   For a categorical predictor -> boxplot
+#'   For a numeric predictor scatterplot
+#'   For a categorical predictor: 
+#'     If 20+ observations available boxplot, otherwise dotplot with median line
 #' If response is a factor
-#'   For a numeric predictor -> boxplot
-#'   For a categorical predictor -> barplot
+#'   For a numeric predictor:
+#'       If 20+ observations available boxplot, otherwise dotplot with median line
+#'   For a categorical predictor barplot
+#' Response variables are shown on the ordinate (y-axis) and covariates on the abscissa (x-axis)
 #' @param response character vector with names of columns to use for response
 #' @param covs character vector with names of columns to use for covariates
 #' @param data dataframe containing your data
 #' @param showN boolean indicating whether sample sizes should be shown on the plots
+#' @param showPoints boolean indicating whether individual data points should be shown when n>20 in a category
 #' @param na.rm boolean indicating whether na values should be shown or removed
 #' @param response_title character value with title of the plot
+#' @param return_plotlist boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details
 #' @keywords plot
 #' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
 #' @export
-plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL){
+#' @examples 
+#' ## Run multiple univariate analyses on the mtcars dataset to predict mpg and then visualise the relationships
+#' # rm_uvsum(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+#' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+#' ## Set cylinder to a factor and re-run
+#' # mtcars$cyl = factor(mtcars$cyl)
+#' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+#' @seealso \code{\link{ggplot}} and \code{\link{ggarrange}}
+plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE){
+  
   for (v in c(response,covs)){
+    if (!v %in% names(data)) stop(paste(v,'is not a variable in data.'))
     if (class(data[[v]])=='character') data[[v]] <- factor(data[[v]])
   }
   
@@ -2121,40 +2135,80 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
   response_title = niceStr(response_title)
   plist <- NULL
   if (class(data[[response]])[1] %in% c('factor','ordered')){
+    use_common_legend = TRUE
     levels(data[[response]]) = niceStr(levels(data[[response]]))
     for (x_var in covs){
+      flip=FALSE
       # remove missing data, if requested
       if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
       
       if (class(pdata[[x_var]])[1] =='numeric' ){
-        p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
-          geom_boxplot()
-        if (showN){
-          p=  p+
-            stat_summary(geom='text',fun.data = lbl_count,vjust=-0.5,hjust=1)
+        if (all(table(pdata[[response]])<20)){
+          p<-ggplot(data=pdata, aes(x=.data[[response]],y=.data[[x_var]],fill=.data[[response]]),colour=.data[[response]]) +
+            geom_dotplot(binaxis = "y",stackdir = "center",dotsize = .8  ) + 
+            stat_summary(fun = median, fun.min = median, fun.max = median,
+                         geom = "crossbar", width = 0.5) +
+            coord_flip()
+          flip = TRUE
+        } else{
+          if (any(table(pdata[[response]])<20)){
+            message('Boxplots not shown for categories with fewer than 20 observations.')
+          } 
+          pdata$alpha <- factor(if_else(pdata[[response]] %in% names(table(pdata[[response]]))[table(pdata[[response]])<20],'light','regular'),
+                                levels=c('light','regular'))
+          pdata$lty <- factor(if_else(pdata[[response]] %in% names(table(pdata[[response]]))[table(pdata[[response]])<20],'0','1'),
+                              levels = c('0','1'))
+          black_points <- pdata[!pdata[[response]] %in% names(table(pdata[[response]]))[table(pdata[[response]])<20],]
+          coloured_points <- pdata[pdata[[response]] %in% names(table(pdata[[response]]))[table(pdata[[response]])<20],]
+          p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
+            geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
+            scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+          if (showPoints) {
+            p <- p +geom_jitter( data=coloured_points,aes(colour=.data[[response]]), alpha=0.9) 
+            p <- p +geom_jitter(data= black_points,
+                                color="black", size=0.4, alpha=0.9) 
+          }
+          if (showN){
+            p <-  p+
+              stat_summary(aes(x=min(.data[[x_var]])),geom='label',vjust=-0.5,hjust=0,fun.data = lbl_count,label.size=0,fill='white',label.padding = unit(0.15, "lines"),alpha=.8)
+          }
+          
         }
-      } else {
+        p<- p+ 
+          theme(axis.text.y=element_blank(),
+                axis.ticks.y = element_blank())
+      } else {  # x_var is categorical
         p <- ggplot(data=pdata, aes(x=.data[[x_var]],fill=.data[[response]])) +
-          geom_bar(position='fill') +
+          geom_bar(position=position_dodge()) +
           scale_x_discrete(labels= function(x) wrp_lbl(x))
         if (showN){
           p <- p +
-            geom_text(aes(label=stat(count)),stat='count',position='fill',vjust=1)
+            geom_text(aes(label=stat(count)),position = position_dodge(width = 1),stat='count',vjust=1)
         }
         if (length(unique(pdata[[x_var]]))>8){
           p <- p + theme(axis.text.x = element_text(angle = 45, hjust = 1))
         }
       }
-      plist[[x_var]] <- p  +
+      p <- p  +
         theme_bw() +
-        theme(axis.text.y=element_blank(),
-              axis.ticks.y = element_blank(),
-              legend.position = 'bottom',
-              plot.title = element_text(size=10),
-              plot.margin = unit(c(0,1,0,1), "lines")) +
-        labs(title=niceStr(x_var),x='',y='',fill=response_title)
+        theme(
+          plot.title = element_text(size=10),
+          plot.margin = unit(c(0,1,0,1), "lines")) +
+        guides(alpha=FALSE,linetype=FALSE,colour=FALSE)+
+        scale_colour_reportRx()
+      if (flip){
+        plist[[x_var]] <- p + 
+          labs(y=niceStr(x_var),x='',fill=response_title) 
+      } else {
+        plist[[x_var]] <- p +
+          labs(x=niceStr(x_var),y='',fill=response_title) 
+        
+      }
     }
-  } else{
+    
+  } else{ # Response is numeric
+    use_common_legend = FALSE # colours have different meanings, indicated on x axis
     for (x_var in covs){
       # remove missing data, if requested
       if (na.rm) pdata = stats::na.omit(data[,c(response,x_var)]) else pdata = data[,c(response,x_var)]
@@ -2162,32 +2216,58 @@ plotuv <- function(response,covs,data,showN=FALSE,na.rm=TRUE,response_title=NULL
       if (class(pdata[[x_var]])[1] =='numeric' ){
         p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]])) +
           geom_point()
-      } else
-        p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
-          geom_boxplot() +
-          scale_x_discrete(labels= function(x) wrp_lbl(x))
-      if (showN){
-        p=  p+
-          stat_summary(geom='text',fun.data = lbl_count,vjust=-0.5,hjust=1)
-      }
-      if (length(unique(pdata[[x_var]]))>8){
-        p <- p + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      } else{
+        if (all(table(pdata[[x_var]])<20)){
+          p <- ggplot(data=pdata, aes(x=.data[[x_var]],y=.data[[response]],fill=.data[[x_var]]),colour=.data[[x_var]]) +
+            geom_dotplot(binaxis = "y",stackdir = "center" ,dotsize = .8) + 
+            stat_summary(fun = median, fun.min = median, fun.max = median,
+                         geom = "crossbar", width = 0.5) 
+        } else{
+          if (any(table(pdata[[x_var]])<20)){
+            message('Boxplots not shown for categories with fewer than 20 observations.')
+          } 
+          pdata$alpha <- factor(if_else(pdata[[x_var]] %in% names(table(pdata[[x_var]]))[table(pdata[[x_var]])<20],'light','regular'),
+                                c('light','regular'))
+          pdata$lty <- factor(if_else(pdata[[x_var]] %in% names(table(pdata[[x_var]]))[table(pdata[[x_var]])<20],'0','1'),
+                              levels=c('0','1'))
+          black_points <- pdata[!pdata[[x_var]] %in% names(table(pdata[[x_var]]))[table(pdata[[x_var]])<20],]
+          coloured_points <- pdata[pdata[[x_var]] %in% names(table(pdata[[x_var]]))[table(pdata[[x_var]])<20],]
+          p <- ggplot(data=pdata, aes(x=.data[[x_var]],y=.data[[response]],fill=.data[[x_var]])) +
+            geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
+            scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+          if (showPoints) {
+            p <- p +geom_jitter(data=coloured_points,aes(colour=.data[[x_var]]), alpha=0.9) 
+            p <- p +geom_jitter(data= black_points,
+                                color="black", size=0.4, alpha=0.9) 
+          }
+          if (showN){
+            p <-  p+
+              stat_summary(aes(y=max(.data[[response]])),geom='label',fun.data = lbl_count,label.size=0,fill='white',label.padding = unit(0.15, "lines"),alpha=.8)
+          }
+          
+        }
       }
       plist[[x_var]] <- p  +
+        theme_bw() +
         theme(
-          legend.position = 'bottom',
+          legend.position = 'none',
           plot.title = element_text(size=10),
           plot.margin = unit(c(0,1,0,1), "lines")) +
-        labs(title=niceStr(x_var),x='',y='',fill=response_title)
+        labs(x=niceStr(x_var),y=niceStr(response_title)) +
+        scale_colour_reportRx() +
+        guides(colour=FALSE,linetype=FALSE,alpha=FALSE)
+      
     }
-    
   }
-  ggpubr::ggarrange(plotlist=plist,
-                    common.legend = T,
-                    ncol=2,
-                    nrow=ceiling(length(plist)/2))
-}
-
+  
+  if (return_plotlist){
+    return(plist)
+  } else{   suppressMessages(ggpubr::ggarrange(plotlist=plist,
+                                               common.legend = use_common_legend,
+                                               ncol=2,
+                                               nrow=ceiling(length(plist)/2)))
+  }}
 
 #' Plot KM and CIF curves with ggplot
 #'

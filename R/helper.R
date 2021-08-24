@@ -2,9 +2,15 @@
 #' @param ... unquoted excel column headers (i.e. excelCol(A,CG,AA)) separated by commas
 #' @importFrom rlang as_string
 #' @export
+#' @example 
+#' ## Find the column numbers for excel columns AB, CE and BB
+#' # excelCol(AB,CE,bb)
 excelCol<- function(...){
   args <- as.list(match.call())[-1]
   args <-unname(unlist(lapply(args,function(x) {rlang::as_string(x)})))
+  if (sum(unlist(lapply(args, function(x) grepl("[^A-Za-z]",x))))>0) {
+    stop('Only valid Excel column names can be supplied, separated by commas.')
+  }
   rtn<-sapply(args, function(x){
     colHead <- toupper(x)
     if (nchar(colHead)>1){
@@ -18,6 +24,7 @@ excelCol<- function(...){
   names(rtn) <- toupper(names(rtn))
   return(rtn)
 }
+
 
 niceNum <- function(x,digits=2){
   rndx = sapply(x, function(x) {format(round(as.numeric(x),digits),nsmall=digits)})
@@ -609,3 +616,31 @@ checkOutput <- function(fmt){
   # Get current formats
   message(paste('Pandoc To:',knitr::pandoc_to()))
 }
+
+reportRx_pal <- function(
+  direction = 1
+) {
+  
+  function(n) {
+    if (n>10) warning('Ten colour maximum, colours will be recycled.')
+    
+    colour_list <- color_palette_surv_ggplot(n)
+    
+    colour_list <- unname(unlist(colour_list))
+    if (direction >= 0) colour_list else rev(colour_list)
+  }
+}
+
+
+scale_colour_reportRx <- function(
+  direction = 1, 
+  ...
+) {
+  ggplot2::discrete_scale(
+    aesthetics = c("colour","fill"),
+    scale_name = "reportRx", 
+    reportRx_pal( direction), 
+    ...
+  )
+}
+
