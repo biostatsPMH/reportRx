@@ -481,7 +481,7 @@ niceStr <- function (strings)
 
 wrp_lbl <- function(x,width = 10){
   x <- niceStr(x)
-  stringr::str_wrap(x,width = width)
+  strwrap(x,width = width)
 }
 
 
@@ -505,96 +505,6 @@ formatp<- function(pvalues,sigdigits=2){
   return(p_out)
 }
 
-bib_ReadGatherTidy <- function(file){
-  #
-  # Note that this is an amalgamation of the bib2df read, gather and tidy functions which are included here because they are not exported from the bib2df namespace
-  # changes have been made to enable the code to work outside the bib2df package.
-  bib <- readLines(file)
-  bib <- stringr::str_replace_all(bib, "[^[:graph:]]", " ")
-  
-  from <- which( stringr::str_extract(bib, "[:graph:]") == "@")
-  to <- c(from[-1] - 1, length(bib))
-  if (!length(from)) {
-    return(empty)
-  }
-  itemslist <- mapply(function(x, y) return(bib[x:y]), x = from,
-                      y = to - 1, SIMPLIFY = FALSE)
-  keys <- lapply(itemslist, function(x) {
-    stringr::str_extract(x[1], "(?<=\\{)[^,]+")
-  })
-  fields <- lapply(itemslist, function(x) {
-    stringr::str_extract(x[1], "(?<=@)[^\\{]+")
-  })
-  fields <- lapply(fields, toupper)
-  categories <- lapply(itemslist, function(x) {
-    stringr::str_extract(x, "[:graph:]+")
-  })
-  dupl <- sum(unlist(lapply(categories, function(x) sum(duplicated(x[!is.na(x)])))))
-  if (dupl > 0) {
-    message("Some BibTeX entries may have been dropped.\n            The result could be malformed.\n            Review the .bib file and make sure every single entry starts\n            with a '@'.")
-  }
-  values <- lapply(itemslist, function(x) {
-    stringr::str_extract(x, "(?<==).*")
-  })
-  values <- lapply(values, function(x) {
-    stringr::str_extract(x, "(?![\"\\{\\s]).*")
-  })
-  values <- lapply(values, function(x) {
-    gsub("?(^[\\{\"])", "", x)
-  })
-  values <- lapply(values, function(x) {
-    gsub("?([\\}\"]\\,$)", "", x)
-  })
-  values <- lapply(values, function(x) {
-    gsub("?([\\}\"]$)", "", x)
-  })
-  values <- lapply(values, function(x) {
-    gsub("?(\\,$)", "", x)
-  })
-  values <- lapply(values, trimws)
-  items <- mapply(cbind, categories, values, SIMPLIFY = FALSE)
-  items <- lapply(items, function(x) {
-    x <- cbind(toupper(x[, 1]), x[, 2])
-  })
-  items <- lapply(items, function(x) {
-    x[stats::complete.cases(x), ]
-  })
-  items <- mapply(function(x, y) {
-    rbind(x, c("CATEGORY", y))
-  }, x = items, y = fields, SIMPLIFY = FALSE)
-  items <- lapply(items, t)
-  items <- lapply(items, function(x) {
-    colnames(x) <- x[1, ]
-    x <- x[-1, ]
-    return(x)
-  })
-  items <- lapply(items, function(x) {
-    x <- t(x)
-    x <- data.frame(x, stringsAsFactors = FALSE)
-    return(x)
-  })
-  empty = data.frame(CATEGORY=character(), BIBTEXKEY=character(), ADDRESS=character(), ANNOTE=character(), AUTHOR=character(), BOOKTITLE=character(), CHAPTER=character(), CROSSREF=character(), EDITION=character(), EDITOR=character(), HOWPUBLISHED=character(), INSTITUTION=character(), JOURNAL=character(), KEY=character(), MONTH=character(), NOTE=character(), NUMBER=character(), ORGANIZATION=character(), PAGES=character(), PUBLISHER=character(), SCHOOL=character(), SERIES=character(), TITLE=character(), TYPE=character(), VOLUME=character(), YEAR=character())
-  dat <- dplyr::bind_rows(c(list(empty), items))
-  dat <- as.data.frame(dat)
-  dat$BIBTEXKEY <- unlist(keys)
-  bib <- dat
-  if (dim(bib)[1] == 0) {
-    return(bib)
-  }
-  AUTHOR <- EDITOR <- YEAR <- CATEGORY <- NULL
-  if ("AUTHOR" %in% colnames(bib)) {
-    bib$AUTHOR = strsplit(bib$AUTHOR, " and ",fixed = TRUE)
-  }
-  if ("EDITOR" %in% colnames(bib)) {
-    bib$EDITOR = strsplit(bib$EDITOR, " and ",fixed = TRUE)
-  }
-  if ("YEAR" %in% colnames(bib)) {
-    if (sum(is.na(as.numeric(bib$YEAR))) == 0) {
-      bib$YEAR = as.numeric(bib$YEAR)
-    } else { warning('Check YEAR in bibfile, may be some missing or character strings.')}
-  }
-  return(bib)
-}
 
 
 

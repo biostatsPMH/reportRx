@@ -3,6 +3,7 @@
 #'This function will plot a KM curve with possible stratification. You can specifyif you want
 #'a legend or confidence bands as well as the units of time used.
 #'
+#' Note: This function is deprecated and will not be supported in future versions of reportRx. Please use ggkmcif.
 #' @param data dataframe containing your data
 #' @param response character vector with names of columns to use for response
 #' @param group string specifiying the column name of stratification variable
@@ -20,6 +21,7 @@
 #' plotkm(lung,c("time","status"))
 #' plotkm(lung,c("time","status"),"sex")
 plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,legend=T,title=""){
+  message('plotkm has been deprecated. Please use ggkmcif.')
   if(class(group)=="numeric"){
     kfit<-survfit(as.formula(paste("Surv(",response[1],",",response[2],")~1",sep="")),data=data)
     sk<-summary(kfit)$table
@@ -660,6 +662,7 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #'This will allow you to see which model is not fitting if the function throws an error
 #'@keywords dataframe
 #' @importFrom survival coxph Surv
+#' @importFrom aod wald.test
 #'@export
 uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
                    sanitize = T, nicenames = T, testing = F,showN=T,CIwidth=0.95,reflevel)
@@ -2503,87 +2506,6 @@ modify_ggkmcif <- function(list_gg){
 
 
 # Rmarkdown Reporting --------------------------------------------------------------
-
-#' Generate a bibfile for an Rmd document from a master *.bib file
-#'
-#' This function will search through the current Rmd document for citations and
-#' extract these from a central bib file to save as a file-specific bibfile.
-#' It will also search through for citations to R packages and include those,
-#' which can be useful to keep track of which version of a package was used.
-#' @param bibfile a master bib file contianing all the references in the document (Zotero or Mendeley).
-#' @param outfile a filename to write the bibfile to. If missing this will be the rmd file name with a bib extension
-#' @importFrom bib2df df2bib
-#' @importFrom knitr write_bib
-#' @importFrom rstudioapi getSourceEditorContext
-#' @keywords citations
-#' @export
-rmdBibfile <- function(bibfile,outfile){
-  # First sanitise the specified bibfile
-  
-  if (!file.exists(bibfile)) stop(paste(bibfile,'does not exist.'))
-  
-  if (file.access(bibfile)==0){
-    bib <- bib_ReadGatherTidy(bibfile)
-  } else stop(paste('Can not access',bibfile))
-  
-  # Replace some troublesome characters
-  bib$URL <- gsub("\\{\\\\_\\}","_", bib$URL)
-  
-  # remove abstract, keywords
-  rm <- c(which(names(bib)=='ABSTRACT'),which(names(bib)=='KEYWORDS'))
-  if (length(rm) >0) bib <- bib[,-rm]
-  
-  thisFile = rstudioapi::getSourceEditorContext()$path
-  if (thisFile=="") stop('Please save the current file before running writeBibFile.')
-  thisDir = dirname(thisFile)
-  
-  # open current file and search for [@xx] entries
-  fileWords = scan(thisFile,what='character',quote="")
-  refs = fileWords[grep("\\[@.*\\]",fileWords)]
-  stripped = gsub(".*\\[|\\].*","",refs)
-  allrefs = unique(unlist(strsplit(stripped,';')))
-  
-  if (is.null(allrefs)){
-    message('No citations in current file to write. Try saving file and re-running.')
-    
-  } else {
-    rRefs = allrefs[grep("R-",allrefs)]
-    otherRefs = setdiff(allrefs,rRefs)
-    Rpckgs = gsub("@R-","",rRefs)
-    paperBib <- NULL
-    if (!is.null(otherRefs)) {
-      sepRefs = unlist(strsplit(otherRefs,";")) 
-      
-      tidyRefs <-gsub(".*@","",sepRefs)
-      tidyRefs <-gsub("[.]| .*|,","",tidyRefs)
-      libRefs = unique(tidyRefs)
-      
-      # Extract the references from the master library
-      
-      for ( p in libRefs){
-        ind = which(bib$BIBTEXKEY==p)
-        if (length(ind)>0) {
-          paperBib <- rbind(paperBib,bib[ind,])
-        } else warning(paste(p,'not in',bibfile,'\n'))
-      }
-    }
-    
-    if (missing(outfile)){
-      bib_out = paste0(thisDir,gsub(".Rmd","",gsub(thisDir,"",thisFile)),".bib")
-    } else bib_out = paste0(thisDir,"/",gsub(".bib","",outfile),".bib")
-    
-    # write R packages to bibfile and append remaining references
-    if (length(Rpckgs)>0){
-      add = TRUE
-      knitr::write_bib(Rpckgs,file =bib_out)
-    } else {add=FALSE}
-    
-    if (!is.null(paperBib)){
-      bib2df::df2bib(paperBib,file = bib_out,append = add)
-    } else { if (add==FALSE) warning('No citations in current file to write')}
-  }
-  
-}
 
 
 #' Print tables to PDF/Latex HTML or Word
