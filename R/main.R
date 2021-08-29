@@ -672,7 +672,7 @@ uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
     stop(paste('These covariates are not in the data:',missing_vars))
   }
   for (v in covs) { if (class(data[[v]])[1] %in% c('character','ordered')) data[[v]] <- factor(data[[v]],ordered=F)}
-  if (class(data[[response]])[1]=='character') data[[v]] <- factor(data[[v]])
+  if (class(data[[response[1]]])[1]=='character') data[[v]] <- factor(data[[v]])
   
   if (!markup) {
     lbld <- identity
@@ -700,7 +700,7 @@ uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
     } else if (type == "coxph" | type == "crr") {
       beta <- "HR"
     } else if (type == 'ordinal'){
-      if (!class(data[[response]])[1] %in% c('factor','ordered')) {
+      if (!class(data[[response[1]]])[1] %in% c('factor','ordered')) {
         warning('Response variable is not a factor, will be converted to an ordered factor')
         data[[response]] <- factor(data[[response]],ordered=T)
       }
@@ -722,7 +722,7 @@ uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
     } else if (length(unique(data[[response]])) == 2) {
       type <- "logistic"
       beta <- "OR"
-    } else if ("ordered" %in% class(data[[response]])){
+    } else if ("ordered" %in% class(data[[response[1]]])){
       type <- 'ordinal'
       beta <- "OR"
       if (!missing(reflevel)){
@@ -1031,7 +1031,10 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     beta <- "HR"
     expnt = TRUE # not used but req'd for conditional statements
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
-    ss_data <- model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data)))))
+    ss_data <- try(model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data))))),silent = TRUE,outFile)
+    if(class(ss_data)=="try-error") ss_data <- data
+    
+    
   } else {
     stop("type must be either polr, coxph, logistic, lm, crr, lme (or NULL)")
   }
@@ -1187,7 +1190,6 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
   colnames(table)<-sapply(colName,lbld)
   return(table)
 }
-
 #'Print multivariate summary LaTeX table
 #'
 #'Returns a LaTeX table of the multivariate summary.

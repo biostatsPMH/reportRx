@@ -237,4 +237,13 @@ test_that("mvsum outputs glm poisson models correctly",{
 
 # TODO: test_that('CI works correctly ')
 
+#lung$sex <- ifelse(lung$sex==1,"F","M")
+# lung$crr_status <- lung$status*1
+# lung$crr_status[seq(1,200,by=2)] <- 2
+
+#mvsum(crrRx(time+crr_status~age+sex,data=lung),data=lung)
+#mvsum(coxph(Surv(time,status)~age+sex,data=lung))
+
+#uvsum(response = c('time','crr_status'),covs=c('age','sex'),data=lung)
+#uvsum(response = c('time','status'),covs=c('age','sex'),data=lung)
 
