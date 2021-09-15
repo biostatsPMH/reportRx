@@ -24,7 +24,8 @@ library(tidyverse)
 
 #Uncomment to create the packages.bib file of R packages used
 # Check the location of bibfile before running!
-reportRx::rmdBibfile(bibfile = '../library.bib',outfile = 'bibfile.bib')
+# TODO add back into the reportRx extension package
+#reportRx::rmdBibfile(bibfile = '../library.bib',outfile = 'bibfile.bib')
 
 ```
 
@@ -106,6 +107,34 @@ rm_covsum(data=test_empty,
 
 ```
 
+\newpage
+
+The chi-square is the default setting, unless there are low counts, check that this works properly
+This should have two Chi-Sq tests:
+
+```{r}
+
+rm_covsum(data=test_empty,
+       covs=c('AgeGroup','Status'),
+       maincov = 'Sex',
+       testcat='Chi-squared',
+       show.tests=T)
+
+```
+
+Here age group should be analysed with a Fisher test:
+
+```{r}
+
+rm_covsum(data=test_empty,
+       covs=c('AgeGroup','Status'),
+       maincov = 'Sex',
+       show.tests=T)
+
+```
+
+\newpage
+
 If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table, which is on the todo list!
 
 ```{r results='asis',echo=T}
@@ -186,7 +215,7 @@ rm_uvsum(response = 'wt.loss',
 
 ```
 
-### Test coxph & ggsurv
+### Test coxph 
 ```{r test-uv-coxph}
 rm_uvsum(response = c('time','status'),
       covs=c('Sex','ph.ecog','meal.cal','age'),
@@ -195,21 +224,18 @@ rm_uvsum(response = c('time','status'),
 
 ```
 
+### Test crr 
+See Appendix
+
 ### Test ordinal
 
-TODO: Update this once ordsum is incorporated
-
-```{r}
-uvsum2(response = 'mpg',
-      covs=c('cyl','wt','hp'),
+```{r test-uv-ord}
+mtcars$cyl <- factor(mtcars$cyl)
+rm_uvsum(response = 'cyl',
+      covs=c('qsec'),
       data=mtcars,
-      CIwidth=.90,markup=F)
+      CIwidth=.90)
 
-uvsum2(response = 'cyl',
-      covs=c('vs','wt','hp'),
-      data=mtcars,
-      type='ordinal',
-      CIwidth=.90,markup=F)
 
 ```
 
@@ -222,9 +248,20 @@ ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 
 
 ```
 
+## modify a KM plot 
+
+```{r}
+km <- ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
+        set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE,returns = T)
+km[[1]] <- km[[1]] + ggplot2::theme_minimal()
+modify_ggkmcif(km)
+```
+
+
 \newpage
 
 # Unnumbered Heading {-}
+
 ## Test mvsum & forestplot2
 
 ```{r}

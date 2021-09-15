@@ -23,7 +23,7 @@
 plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,legend=T,title=""){
   message('plotkm has been deprecated. Please use ggkmcif.')
   if(class(group)=="numeric"){
-    kfit<-survfit(as.formula(paste("Surv(",response[1],",",response[2],")~1",sep="")),data=data)
+    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~1",sep="")),data=data)
     sk<-summary(kfit)$table
     levelnames<-paste("N=",sk[1],",Events=",sk[4]," (",round(sk[4]/sk[1],2)*100,"%)",sep="")
     if(title=="")  title<-paste("KM-Curve for ",nicename(response[2]),sep="")
@@ -36,7 +36,7 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
     lr<-survdiff(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
     lrpv<-1-pchisq(lr$chisq,length(lr$n)- 1)
     levelnames<-levels(data[,group])
-    kfit<-survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
+    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
     if(title=="") title<-paste("KM-Curve for ",nicename(response[2])," stratified by ",nicename(group),sep="")
     levelnames<-sapply(1:length(levelnames),function(x){paste(levelnames[x]," n=",lr$n[x],sep="")})
     
@@ -91,10 +91,10 @@ etsum<- function(data,response,group=1,times=c(12,24)){
   stind <- as.matrix(Surv(data[,response[1]], data[,response[2]]))[,2] # This variable is needed to later create a subset across non-events (or censored to be more precise, i.e. stind==0)
   
   if(class(group)=="numeric"){
-    kfit <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
+    kfit <- summary(survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
     maxtime = max(kfit$time)
     times[times>maxtime] = maxtime
-    kfit2 <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep="")) ,data=data),times=times)
+    kfit2 <- summary(survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep="")) ,data=data),times=times)
     tab <- as.data.frame(cbind(strata=as.character(kfit2$strata), times=kfit2$time, SR=paste(round(kfit2$surv*100,0)," (",round(kfit2$lower*100,0),"-",round(kfit2$upper*100,0),")",sep="")))
     tab$times = round(as.numeric(as.character(tab$times)),1)
     tbl <- kfit2$table
@@ -104,10 +104,10 @@ etsum<- function(data,response,group=1,times=c(12,24)){
     tab <- lapply(levels(data[,group]),function(level){
       # subdata <- subset(data,data[,group]==level)
       subdata <- data[data[,group]==level,]
-      # kfit<-summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep=""))  ,data=subdata))
+      # kfit<-summary(survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep=""))  ,data=subdata))
       # maxtime=max(kfit$time)
       # times[times>maxtime]=maxtime
-      kfit2 <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep="")) ,data=subdata),times=times, extend=TRUE)
+      kfit2 <- summary(survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",1,sep="")) ,data=subdata),times=times, extend=TRUE)
       list(cbind(strata=paste0(group,"=",level),times=kfit2$time,SR=paste(round(kfit2$surv*100,0)," (",round(kfit2$lower*100,0),"-",round(kfit2$upper*100,0),")",sep="")),kfit2$table)})
     tbl = t(sapply(tab,"[[",2))
     rownames(tbl) = sapply(levels(data[,group]),function(level)paste0(group,"=",level))
@@ -118,7 +118,7 @@ etsum<- function(data,response,group=1,times=c(12,24)){
   
   if(class(group)!="numeric"){
     
-    kfit <- summary(survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
+    kfit <- summary(survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",group,sep=""))  ,data=data))
     med = by(data,data[,group],function(x) median(x[,response[1]],na.rm=T))
     min = by(data,data[,group],function(x) min(x[,response[1]],na.rm=T))
     max = by(data,data[,group],function(x) max(x[,response[1]],na.rm=T))
@@ -345,10 +345,12 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
   for (v in c(maincov,covs)) if (class(data[[v]])[1]=='character') data[[v]] <- factor(data[[v]])
   
+  missing_testcat <- missing(testcat)
   testcont <- match.arg(testcont)
   testcat <- match.arg(testcat)
   percentage <- match.arg(percentage)
   
+
   if (!pvalue) {
     show.tests<- FALSE
     excludeLevels<- NULL
@@ -404,8 +406,11 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
       if (!is.null(maincov)) {
         if(pvalue){
           pdata = data[!(data[[cov]] %in% excludeLevel),]
-          # Check for low counts and if found perform Fisher test
-          if( testcat[1]=='Fisher' | sum(table(pdata[[maincov]], pdata[[cov]],exclude = excludeLevel)<5)>0){
+          # Check for low counts 
+          lowcounts <- sum(table(pdata[[maincov]], pdata[[cov]],exclude = excludeLevel)<5)>0
+          # If testcat is specified as ChiSquare and low counts are present issue warning
+          if (!missing_testcat & testcat=='Chi-squared' & lowcounts) warning(paste('Low counts are present in',cov,'variable consider Fisher\'s test.'),call. = F)
+          if ((missing_testcat & lowcounts)|testcat=='Fisher'){
             p_type <- 'Fisher Exact'
             p <- try(stats::fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
             if (class(p)[1]=='try-error'){
@@ -416,6 +421,17 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
             p_type = 'Chi Sq'
             p = try(stats::chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
           }
+          # if( testcat=='Fisher' | sum(table(pdata[[maincov]], pdata[[cov]],exclude = excludeLevel)<5)>0){
+          #   p_type <- 'Fisher Exact'
+          #   p <- try(stats::fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+          #   if (class(p)[1]=='try-error'){
+          #     p <- try(stats::fisher.test(pdata[[maincov]], pdata[[cov]],simulate.p.value =  T)$p.value,silent=T)
+          #     p_type <- 'MC sim'
+          #   }
+          # } else {
+          #   p_type = 'Chi Sq'
+          #   p = try(stats::chisq.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
+          # }
           if (class(p) == "try-error") p <- NA
           p <- lpvalue(p)
         }
@@ -996,7 +1012,6 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
   type <- class(model)[1]
   
   # THis needs to be changed for multinom
-  # Still to fix: doesn't work when interactions are specified as x1:x2 instead of x1*x2
   if (type=='lm'){
     betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
     beta <- 'Estimate'
@@ -1033,13 +1048,11 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
     ss_data <- try(model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data))))),silent = TRUE,outFile)
     if(class(ss_data)=="try-error") ss_data <- data
-    
-    
   } else {
     stop("type must be either polr, coxph, logistic, lm, crr, lme (or NULL)")
   }
   
-  if (missing(data)) if(class(ss_data)=='data.frame') {data=ss_data} else{ stop('data can not be derived from model')}
+  if (missing(data)) if(class(ss_data)=='data.frame') {data=ss_data} else{ stop('Data can not be derived from model, data argument must be supplied.')}
   
   beta = betaWithCI(beta,CIwidth)
   
@@ -1618,7 +1631,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
         theme(
           plot.title = element_text(size=10),
           plot.margin = unit(c(0,1,0,1), "lines")) +
-        guides(alpha=FALSE,linetype=FALSE,colour=FALSE)+
+        guides(alpha='none',linetype='none',colour='none')+
         scale_colour_reportRx()
       if (flip){
         plist[[x_var]] <- p + 
@@ -1679,7 +1692,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
           plot.margin = unit(c(0,1,0,1), "lines")) +
         labs(x=niceStr(x_var),y=niceStr(response_title)) +
         scale_colour_reportRx() +
-        guides(colour=FALSE,linetype=FALSE,alpha=FALSE)
+        guides(colour='none',linetype='none',alpha='none')
       
     }
   }
@@ -1765,6 +1778,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #' @param set.time.digits Number of digits printed of the probability at a specified time
 #' @param print.n.missing Logical, should the number of missing be shown !Needs to be checked
 #' @param returns Logical value returns a list with all ggplot objects in a list
+#' @importFrom survival survfit
+#' @importFrom gridExtra grid.arrange
 #'@export
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=FALSE,HR_pval=FALSE,conf.curves=FALSE,conf.type = "log",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
@@ -1896,7 +1911,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   if(type=="KM"){
     if(!multiple_lines){
       
-      sfit <- survfit(as.formula(paste(paste("survival::Surv(", response[1],
+      sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
                                              ",", response[2], ")", sep = ""), "~", 1,
                                        sep = "")), data = data,conf.type=conf.type)
       
@@ -1937,7 +1952,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
       stratalabs <- "All"
       
     }else{
-      sfit <- survfit(as.formula(paste(paste("survival::Surv(", response[1],
+      sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
                                              ",", response[2], ")", sep = ""), "~", cov,
                                        sep = "")), data = data,conf.type=conf.type)
       
@@ -2067,7 +2082,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
-        sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
+        sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
                                                ",", response[2], ")", sep = ""), "~", 1,
                                          sep = "")), data = temp)
         
@@ -2122,7 +2137,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
-        sfit <- survfit(as.formula(paste(paste("Surv(", response[1],
+        sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
                                                ",", response[2], ")", sep = ""), "~", cov,
                                          sep = "")), data = temp)
         
@@ -2462,7 +2477,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     gB$widths[2:5] <- as.list(maxWidth)
     gC$widths[2:5] <- as.list(maxWidth)
     
-    grid.arrange(gA, gB, gC,
+    gridExtra::grid.arrange(gA, gB, gC,
                  clip = FALSE, nrow = 3, ncol = 1,
                  heights = unit(c(2, .1, .25), c("null", "null", "null")))
     

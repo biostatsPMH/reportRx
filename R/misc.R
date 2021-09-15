@@ -7,6 +7,7 @@
 #' of the column in a dataframe. It does not work by using $ or [] notation.
 #' @param data dataframe containing data
 #' @keywords model
+#' @importFrom cmprsk crr
 #' @export
 crrRx<-function(f,data){
   k<-as.character(f)[3]
