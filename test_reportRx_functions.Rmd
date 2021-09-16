@@ -262,6 +262,26 @@ modify_ggkmcif(km)
 
 # Unnumbered Heading {-}
 
+\newpage
+
+## Test etsum
+
+To get nice output from  `rm_etsum` you must set `results='asis' in the chunk options`
+
+otherwise you get this:
+
+```{r, eval=T}
+rm_etsum(data = lung, response = c("time","status"), group = 1,
+         times=c(365,720,1095), units="days")
+
+```
+
+when you want this:
+
+```{r, results='asis'}
+rm_etsum(lung,c("time","status"),"Sex",c(1,2,3),"months")
+```
+
 ## Test mvsum & forestplot2
 
 ```{r}

@@ -230,8 +230,8 @@ etsum<- function(data,response,group=1,times=c(12,24)){
 #'
 #'@param data dataframe containing data
 #'@param response character vector with names of columns to use for response
-#'@param group string specifiying the column name of stratification variable
-#'@param times numeric vector of times you want survival time provbabilities for.
+#'@param group string specifying the column name of stratification variable
+#'@param times numeric vector of times you want survival time probabilities for.
 #'@param units string indicating the unit of time. Use lower case and plural.
 #'@keywords print
 #'@export
@@ -2878,19 +2878,19 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
 #'
 #'Wrapper for the etsum function that prints paragraphs of text in R Markdown
 #'
-#'@param data dataframe containing data
+#'@param data data frame containing data
 #'@param response character vector with names of columns to use for response
-#'@param group string specifiying the column name of stratification variable
-#'@param times numeric vector of times you want survival time provbabilities for.
+#'@param group string specifying the column name of stratification variable
+#'@param times numeric vector of times you want survival time probabilities for.
 #'@param units string indicating the unit of time. Use lower case and plural.
 #'@keywords print
 #'@export
 #'@examples
 #'require(survival)
-#'lung$sex<-factor(lung$sex)
-#'petsum(lung,c("time","status"),"sex")
-#'petsum(lung,c("time","status"))
-#'petsum(lung,c("time","status"),"sex",c(1,2,3),"months")
+#'cancer$sex<-factor(cancer$sex)
+#'rm_etsum(cancer,c("time","status"),"sex")
+#'rm_etsum(cancer,c("time","status"))
+#'rm_etsum(cancer,c("time","status"),"sex",c(1,2,3),"months")
 rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   
@@ -2917,7 +2917,7 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
       flet<-paste(" The first and last event times occurred at ",t[i,9],
                   " and ",t[i,10]," ",units," respectively. ",sep="")
       
-      psindex=11:(ncol(t)-ofst)
+      psindex=14:(ncol(t)-ofst)
       psindex=psindex[which(!is.na(t[i,psindex]))]
       if(length(psindex)>1){
         lastindex=psindex[length(psindex)]
@@ -2939,7 +2939,7 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
     }
     
     
-    out<-paste0(ifelse(strta[i]=='','',paste('**',sanitizestr(nicename(strta[i])),'**'))," There are ",t[i,1]," patients. There were ",t[i,2],
+    out<-paste0(ifelse(strta[i]=='','',paste0('**',sanitizestr(nicename(strta[i])),'**'))," There are ",t[i,1]," patients. There were ",t[i,2],
                 " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times is ",
                 t[i,6]," (",t[i,7],"-",t[i,8],") ",units,". ",km,flet,ps,sep="")
     cat("\n",out,"\n")
