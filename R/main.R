@@ -1059,7 +1059,8 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
   ucall = unique(call)
   indx = matchcovariate(betanames, ucall)
   data = as.data.frame(data) # LA to enable tibbles to work
-  for (v in ucall[-1]){ if(class(data[[v]])[1]=='character') data[[v]]<-factor(data[[v]])} # LA change char to factor
+  for (v in ucall){ if(class(data[[v]])[1]=='character') data[[v]]<-factor(data[[v]])} # updated 12 oct 2021, to reflect above changes to call
+#  for (v in ucall[-1]){ if(class(data[[v]])[1]=='character') data[[v]]<-factor(data[[v]])} # LA change char to factor
   if (min(indx) == -1)  stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
   
   y <- betaindx(indx)

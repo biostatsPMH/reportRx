@@ -230,7 +230,7 @@ See Appendix
 ### Test ordinal
 
 ```{r test-uv-ord}
-mtcars$cyl <- factor(mtcars$cyl)
+mtcars$cyl <- factor(mtcars$cyl,ordered=T)
 rm_uvsum(response = 'cyl',
       covs=c('qsec'),
       data=mtcars,
@@ -262,8 +262,6 @@ modify_ggkmcif(km)
 
 # Unnumbered Heading {-}
 
-\newpage
-
 ## Test etsum
 
 To get nice output from  `rm_etsum` you must set `results='asis' in the chunk options`
@@ -282,7 +280,28 @@ when you want this:
 rm_etsum(lung,c("time","status"),"Sex",c(1,2,3),"months")
 ```
 
-## Test mvsum & forestplot2
+## Test mvsum 
+
+
+Comments from Susie 8 Oct
+```{r}
+library(survival)
+data <- read.csv('../reportRxTestData/sampledata.csv')
+str(data)
+
+table(data$Chemo_Yes_No)
+class(data$Chemo_Yes_No)
+table(data$RT_QA)
+class(data$RT_QA)
+
+m1 <- coxph(Surv(OStime,OS)~ RT_QA + Chemo_Yes_No,  data)
+rm_mvsum(model=m1,data=data)
+
+
+```
+
+
+### Test with glm
 
 ```{r}
 m = glm(Status~wt.loss+Sex+AgeGroup,
@@ -291,10 +310,65 @@ m = glm(Status~wt.loss+Sex+AgeGroup,
 rm_mvsum(model=m,data = lung,HolmGlobalp = T)
 ```
 
-\newpage
+```{r}
+## Dobson (1990) Page 93: Randomized Controlled Trial :
+counts <- c(18,17,15,20,10,20,25,13,12)
+outcome <- gl(3,1,9)
+treatment <- gl(3,3)
+pois_data <- data.frame(treatment, outcome, counts) # showing data
+glm.D93 <- glm(counts ~ outcome + treatment, data=pois_data, family = poisson())
+rm_mvsum(model=glm.D93,data = pois_data)
+```
+
+### Test with glm, linear
 
 ```{r}
-forestplot2(m)
+m = glm(wt.loss~Sex+age,
+        data=lung,
+        family='gaussian')
+#summary(m)
+rm_mvsum(model=m,data = lung)
+```
+
+### Test with lm
+
+```{r}
+m = lm(wt.loss~Status+Sex+age,
+        data=lung)
+rm_mvsum(model=m,data = lung,HolmGlobalp = F)
+
+```
+
+### Test with lme
+
+```{r}
+
+library(nlme)
+data(BodyWeight)
+fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
+#summary(fm1BW.lme)
+rm_mvsum(fm1BW.lme,data=BodyWeight)
+```
+
+### Test with polr
+
+
+```{r}
+library(MASS)
+data(housing)
+options(contrasts = c("contr.treatment", "contr.poly"))
+house.plr <- MASS::polr(Sat ~ Infl + Type + Cont, weights = Freq, data = housing)
+#summary(house.plr)
+rm_mvsum(house.plr)
+
+```
+
+
+\newpage
+
+## Test forestplot2
+```{r}
+forestplot2(house.plr)
 ```
 
 \newpage
