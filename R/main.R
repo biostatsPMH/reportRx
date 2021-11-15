@@ -749,12 +749,12 @@ makedocx<-function(dir,fname,pdwd,imwd=""){
   if(imwd!=""){
     setwd(imwd)
     command<-paste("mogrify -path ", dir,"figure\\ ", "-format png ", dir, "figure\\*.pdf",sep="" )
-    shell(command)
+    system(command)
   }
   setwd(pdwd)
   command<-paste("pandoc -o ",dir,fname,".docx ",dir,fname,".tex ",
                  "--default-image-extension=png",sep="")
-  shell(command)
+  system(command)
   setwd(oldwd)
 }
 
