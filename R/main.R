@@ -749,12 +749,24 @@ makedocx<-function(dir,fname,pdwd,imwd=""){
   if(imwd!=""){
     setwd(imwd)
     command<-paste("mogrify -path ", dir,"figure\\ ", "-format png ", dir, "figure\\*.pdf",sep="" )
-    system(command)
+    # check system name and make ReportRx compatible for Windows/Mac/Linux
+    if(.Platform$OS.type == "windows"){
+      shell(command)
+    } else{
+      system(command)
+    }
   }
   setwd(pdwd)
   command<-paste("pandoc -o ",dir,fname,".docx ",dir,fname,".tex ",
                  "--default-image-extension=png",sep="")
-  system(command)
+  
+  # check system name and make ReportRx compatible for Windows/Mac/Linux
+  if(.Platform$OS.type == "windows"){
+      shell(command)
+    } else{
+      system(command)
+    }
+  
   setwd(oldwd)
 }
 
