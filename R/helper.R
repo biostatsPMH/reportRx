@@ -481,11 +481,7 @@ niceStr <- function (strings)
 
 wrp_lbl <- function(x,width = 10){
   x <- niceStr(x)
-#  strwrap(x,width = width) # doesn't work nicely with spaces
-  lst <- strwrap(x,width = width,simplify = F)
-  for (i in seq_along(lst)) lst[[i]] <- paste(lst[[i]],collapse='\n')
-  unlist(lst)
-  
+  strwrap(x,width = width)
 }
 
 

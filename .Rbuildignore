@@ -5,6 +5,3 @@
 ^[.]]Rproj[.]user$
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^bibfile\.bib$
-^test_reportRx_functions\.Rmd$
-^wordTemplate\.docx$
