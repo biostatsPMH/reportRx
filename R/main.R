@@ -1374,11 +1374,6 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                          Sigma = vcov(model)[covariateindex, covariateindex], 
                                          Terms = seq_along(covariateindex))$result$chi2[3])
     }
-    else if (type == "geeglm") {
-      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
-                                         Sigma = (model$geese$vbeta)[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    }
     else if (type != "crr") {
       globalpvalue <- try(aod::wald.test(b = coef(model)[covariateindex], 
                                          Sigma = vcov(model)[covariateindex, covariateindex], 
@@ -1424,7 +1419,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                                                                   2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
                                                                                                                              2])), 1, psthr)
       pvalues = stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, 
-                                                              "Std. Error"]), lower.tail = FALSE) * 2
+                                                       "Std. Error"]), lower.tail = FALSE) * 2
       pvalues <- c(sapply(pvalues, lpvalue))
     }
     else if (type == "lm" | type == "glm" & !expnt) {
@@ -1438,7 +1433,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "geeglm" & !expnt) {
-      T_mult = abs(qt((1 - CIwidth)/2, model$df.residual))
+      T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
       m <- summary(model, conf.int = CIwidth)$coefficients
       hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
                                  m[covariateindex, "Estimate"] - T_mult * 
@@ -1448,7 +1443,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "lme") {
-      T_mult = abs(stats::qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
+      T_mult = abs(qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
       m <- summary(model, conf.int = CIwidth)$tTable
       hazardratio <- apply(cbind(m[covariateindex, 1], 
                                  m[covariateindex, 1] - T_mult * m[covariateindex, 
@@ -1466,8 +1461,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                    globalpvalue)
         if (!is.null(data)) 
           reference <- c(addspace(sanitizestr(names(table(data[, 
-                                                               which(names(data) == oldcovname)]))[which(table(data[, 
-                                                                                                                    which(names(data) == oldcovname)]) > 0)[1]])), 
+                                                               which(names(data) == oldcovname)]))[1])), 
                          "reference", "", "")
         body <- c(levelnames, hazardratio, "", 
                   "")
@@ -1475,8 +1469,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       else {
         if (!is.null(data)) {
           reference <- c(addspace(sanitizestr(names(table(data[, 
-                                                               which(names(data) == oldcovname)]))[which(table(data[, 
-                                                                                                                    which(names(data) == oldcovname)]) > 0)[1]])), 
+                                                               which(names(data) == oldcovname)]))[1])), 
                          "reference", "", "")
         }
         title <- c(covariatename, "", "", 
@@ -1513,8 +1506,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                    })))
       }
       else {
-        ss_N = c("", table(data[[oldcovname]])[out[-1, 
-                                                   1]])
+        ss_N = c("", table(data[[oldcovname]]))
       }
     }
     else {
@@ -1550,7 +1542,6 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   colnames(table) <- sapply(colName, lbld)
   return(table)
 }
-
 
 
 #'Print multivariate summary LaTeX table
