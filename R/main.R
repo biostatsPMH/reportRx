@@ -688,8 +688,6 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                    type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
                    testing = F, showN = T, CIwidth = 0.95, reflevel) 
 {
-  addspace <- identity
-  nicename <- identity
   if (is.null(id)) {
     missing_vars = setdiff(c(response, covs), names(data))
     if (length(missing_vars) > 0) {
@@ -1196,6 +1194,10 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@param response string vector with name of response
 #'@param covs character vector with the names of columns to fit univariate models to
 #'@param data dataframe containing data
+#'#'@param id character vector which identifies clusters. Only used for geeglm
+#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
+#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
 #'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options in clude "linear","logistic","coxph","crr","boxcox","logistic"
 #'@param strata character vector of covariates to stratify by. Only used for coxph and crr
 #'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
@@ -1205,11 +1207,11 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@importFrom xtable xtable print.xtable
 #'@keywords dataframe
 #'@export
-puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
+puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
   if(!TeX){
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }
   
 }
@@ -1231,8 +1233,6 @@ puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIw
 mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
                    CIwidth = 0.95) 
 {
-  addspace <- identity
-  nicename <- identity
   if (!markup) {
     lbld <- identity
     addspace <- identity
@@ -1326,7 +1326,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   else {
     stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
   }
-  if (missing(data)) 
+  if (any(is.na(data))) 
     if (class(ss_data) == "data.frame") {
       data = ss_data
     }
@@ -1344,7 +1344,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   if (min(indx) == -1) 
     stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
   y <- betaindx(indx)
-  if (type %in% c("lm", "glm", "lme")) {
+  if (type %in% c("lm", "glm", "geeglm", "lme")) {
     y <- lapply(y, function(x) {
       x + 1
     })
@@ -1379,11 +1379,6 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     else if (type == "polr") {
       globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
                                          Sigma = vcov(model)[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    }
-    else if (type == "geeglm") {
-      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
-                                         Sigma = (model$geese$vbeta)[covariateindex, covariateindex], 
                                          Terms = seq_along(covariateindex))$result$chi2[3])
     }
     else if (type != "crr") {
@@ -1431,7 +1426,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                                                                   2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
                                                                                                                              2])), 1, psthr)
       pvalues = stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, 
-                                                              "Std. Error"]), lower.tail = FALSE) * 2
+                                                       "Std. Error"]), lower.tail = FALSE) * 2
       pvalues <- c(sapply(pvalues, lpvalue))
     }
     else if (type == "lm" | type == "glm" & !expnt) {
@@ -1445,7 +1440,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "geeglm" & !expnt) {
-      T_mult = abs(qt((1 - CIwidth)/2, model$df.residual))
+      T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
       m <- summary(model, conf.int = CIwidth)$coefficients
       hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
                                  m[covariateindex, "Estimate"] - T_mult * 
@@ -1455,7 +1450,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "lme") {
-      T_mult = abs(stats::qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
+      T_mult = abs(qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
       m <- summary(model, conf.int = CIwidth)$tTable
       hazardratio <- apply(cbind(m[covariateindex, 1], 
                                  m[covariateindex, 1] - T_mult * m[covariateindex, 
@@ -1473,8 +1468,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                    globalpvalue)
         if (!is.null(data)) 
           reference <- c(addspace(sanitizestr(names(table(data[, 
-                                                               which(names(data) == oldcovname)]))[which(table(data[, 
-                                                                                                                    which(names(data) == oldcovname)]) > 0)[1]])), 
+                                                               which(names(data) == oldcovname)]))[1])), 
                          "reference", "", "")
         body <- c(levelnames, hazardratio, "", 
                   "")
@@ -1482,8 +1476,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       else {
         if (!is.null(data)) {
           reference <- c(addspace(sanitizestr(names(table(data[, 
-                                                               which(names(data) == oldcovname)]))[which(table(data[, 
-                                                                                                                    which(names(data) == oldcovname)]) > 0)[1]])), 
+                                                               which(names(data) == oldcovname)]))[1])), 
                          "reference", "", "")
         }
         title <- c(covariatename, "", "", 
@@ -1520,8 +1513,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                    })))
       }
       else {
-        ss_N = c("", table(data[[oldcovname]])[out[-1, 
-                                                   1]])
+        ss_N = c("", table(data[[oldcovname]]))
       }
     }
     else {
@@ -1557,7 +1549,6 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   colnames(table) <- sapply(colName, lbld)
   return(table)
 }
-
 
 
 #'Print multivariate summary LaTeX table
