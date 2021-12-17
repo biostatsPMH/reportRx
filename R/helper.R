@@ -388,7 +388,7 @@ format_glm = function(glm_fit,conf.level = 0.95,digits=c(2,3),orderByRisk=TRUE){
     tab <- tab[tab$coef.type=='coefficient',]
     tab$p.value = stats::pnorm(abs(tab$statistic),lower.tail = FALSE) * 2
   }
-
+  
   tab$conf.low=exp(tab$estimate-Z*tab$std.error)
   tab$conf.high=exp(tab$estimate+Z*tab$std.error)
   tab$estimate = exp(tab$estimate)
@@ -481,7 +481,7 @@ niceStr <- function (strings)
 
 wrp_lbl <- function(x,width = 10){
   x <- niceStr(x)
-#  strwrap(x,width = width) # doesn't work nicely with spaces
+  #  strwrap(x,width = width) # doesn't work nicely with spaces
   lst <- strwrap(x,width = width,simplify = F)
   for (i in seq_along(lst)) lst[[i]] <- paste(lst[[i]],collapse='\n')
   unlist(lst)
@@ -501,14 +501,23 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
   structure(fun, class = "labeller")
 }
 
-formatp<- function(pvalues,sigdigits=2){
+formatp<- function(pvalues){
   p_out <- sapply(pvalues, function(x){
-    xsig <- suppressWarnings(signif(as.numeric(x),sigdigits))
-    x <- ifelse(x=='excl','excl',ifelse(is.na(xsig),NA_character_,ifelse(xsig<0.001,"<0.001",format(xsig))))})
+    
+    xsig <-suppressWarnings(as.numeric(x))
+    nsmall <- ifelse(xsig<0.1,3,2)
+    x <- ifelse(x=='excl','excl',ifelse(is.na(nsmall),NA_character_,ifelse(xsig<0.001,"<0.001",format(round(xsig,nsmall),nsmall))))})
   p_out = unname(p_out)
   return(p_out)
 }
 
+# formatp<- function(pvalues,sigdigits=2){
+#   p_out <- sapply(pvalues, function(x){
+#     xsig <- suppressWarnings(signif(as.numeric(x),sigdigits))
+#     x <- ifelse(x=='excl','excl',ifelse(is.na(xsig),NA_character_,ifelse(xsig<0.001,"<0.001",format(xsig))))})
+#   p_out = unname(p_out)
+#   return(p_out)
+# }
 
 
 

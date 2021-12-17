@@ -67,15 +67,15 @@ test_data = tibble(
 
 ```{r test-covsum-1}
 rm_covsum(data=lung,
-       covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
-              caption='Test Special characters in caption 80% $100.')
+          covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+          caption='Test Special characters in caption 80% $100.')
 
 ```
 
 ```{r test-covsum-2}
 rm_covsum(data=lung,
-       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
-       maincov = 'Sex')
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
 ```
 
 \newpage
@@ -88,10 +88,10 @@ In a covariate:
 
 test_empty <- lung
 test_empty$AgeGroup[test_empty$Sex=='Female'] <- NA
-  
+
 rm_covsum(data=test_empty,
-       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
-       maincov = 'Sex')
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
 ```
 
 In the main covariate:
@@ -100,10 +100,10 @@ In the main covariate:
 
 test_empty <- lung
 test_empty$Sex[test_empty$Sex=='Female'] <- NA
-  
+
 rm_covsum(data=test_empty,
-       covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
-       maincov = 'Sex')
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
 
 ```
 
@@ -115,10 +115,10 @@ This should have two Chi-Sq tests:
 ```{r}
 
 rm_covsum(data=test_empty,
-       covs=c('AgeGroup','Status'),
-       maincov = 'Sex',
-       testcat='Chi-squared',
-       show.tests=T)
+          covs=c('AgeGroup','Status'),
+          maincov = 'Sex',
+          testcat='Chi-squared',
+          show.tests=T)
 
 ```
 
@@ -127,9 +127,9 @@ Here age group should be analysed with a Fisher test:
 ```{r}
 
 rm_covsum(data=test_empty,
-       covs=c('AgeGroup','Status'),
-       maincov = 'Sex',
-       show.tests=T)
+          covs=c('AgeGroup','Status'),
+          maincov = 'Sex',
+          show.tests=T)
 
 ```
 
@@ -142,9 +142,9 @@ If you need to run an `rm_` function in a loop, you need to use this structure: 
 pander::panderOptions('knitr.auto.asis', FALSE)
 
 for (v in names(lung)[1:2]){
-    cat("\n")
-    print(rm_covsum(data=lung,covs=v))
-    cat("\n")
+  cat("\n")
+  print(rm_covsum(data=lung,covs=v))
+  cat("\n")
 }
 
 pander::panderOptions('knitr.auto.asis', TRUE)
@@ -158,10 +158,10 @@ Figure \@ref(fig:test-plotuv) shows the bivariate relationships between the resp
 
 ```{r test-plotuv, fig.cap= 'Associations between status and covariates in the lung data.'}
 plotuv(data=lung,
-                covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
-                response = 'Status',
-                response_title = 'Test Response Title',
-                showN=T
+       covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+       response = 'Status',
+       response_title = 'Test Response Title',
+       showN=T
 )
 ```
 
@@ -173,30 +173,30 @@ Tables \@ref(tab:test-uv-logistic-1), \@ref(tab:test-uv-logistic-2) and \@ref(ta
 
 ```{r test-uv-logistic-1}
 rm_uvsum(response = 'Status',
-      covs=c('age','Sex','wt.loss'),
-      data=lung,
-      type='logistic',
-      chunk_label = 'test-uv-logistic-1' )
+         covs=c('age','Sex','wt.loss'),
+         data=lung,
+         type='logistic',
+         chunk_label = 'test-uv-logistic-1' )
 
 
 ```
 
 ```{r test-uv-logistic-2}
 rm_uvsum(response = 'Status',
-      covs=c('age'),
-      data=lung,
-      type='logistic',
-      CIwidth=.9,
-      chunk_label='test-uv-logistic-2')
+         covs=c('age'),
+         data=lung,
+         type='logistic',
+         CIwidth=.9,
+         chunk_label='test-uv-logistic-2')
 ```
 
 ```{r test-uv-logistic-3}
 rm_uvsum(response = 'Status',
-      covs=c('age'),
-      data=lung,
-      type='logistic',
-      CIwidth=.99,
-      chunk_label='test-uv-logistic-3')
+         covs=c('age'),
+         data=lung,
+         type='logistic',
+         CIwidth=.99,
+         chunk_label='test-uv-logistic-3')
 
 
 
@@ -205,22 +205,22 @@ rm_uvsum(response = 'Status',
 ### Test Linear
 ```{r test-uv-linear}
 rm_uvsum(response = 'wt.loss',
-      covs=c('Status','Sex','ph.ecog','meal.cal','age'),
-      data=lung,
-      CIwidth=.95)
+         covs=c('Status','Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         CIwidth=.95)
 rm_uvsum(response = 'wt.loss',
-      covs=c('age'),
-      data=lung,
-      CIwidth=.90)
+         covs=c('age'),
+         data=lung,
+         CIwidth=.90)
 
 ```
 
 ### Test coxph 
 ```{r test-uv-coxph}
 rm_uvsum(response = c('time','status'),
-      covs=c('Sex','ph.ecog','meal.cal','age'),
-      data=lung,
-      CIwidth=.99)
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         CIwidth=.99)
 
 ```
 
@@ -232,9 +232,9 @@ See Appendix
 ```{r test-uv-ord}
 mtcars$cyl <- factor(mtcars$cyl,ordered=T)
 rm_uvsum(response = 'cyl',
-      covs=c('qsec'),
-      data=mtcars,
-      CIwidth=.90)
+         covs=c('qsec'),
+         data=mtcars,
+         CIwidth=.90)
 
 
 ```
@@ -252,7 +252,7 @@ ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 
 
 ```{r}
 km <- ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
-        set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE,returns = T)
+              set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE,returns = T)
 km[[1]] <- km[[1]] + ggplot2::theme_minimal()
 modify_ggkmcif(km)
 ```
@@ -297,8 +297,10 @@ class(data$RT_QA)
 m1 <- coxph(Surv(OStime,OS)~ RT_QA + Chemo_Yes_No,  data)
 rm_mvsum(model=m1,data=data)
 
+response <- names(m1$model)[1]
 
 ```
+
 
 
 ### Test with glm
@@ -307,7 +309,7 @@ rm_mvsum(model=m1,data=data)
 m = glm(Status~wt.loss+Sex+AgeGroup,
         data=lung,
         family='binomial')
-rm_mvsum(model=m,data = lung,HolmGlobalp = T)
+rm_mvsum(model=m,data = lung,p.adjust='holm')
 ```
 
 ```{r}
@@ -334,8 +336,8 @@ rm_mvsum(model=m,data = lung)
 
 ```{r}
 m = lm(wt.loss~Status+Sex+age,
-        data=lung)
-rm_mvsum(model=m,data = lung,HolmGlobalp = F)
+       data=lung)
+rm_mvsum(model=m,data = lung,p.adjust='hochberg')
 
 ```
 
@@ -376,20 +378,20 @@ forestplot2(house.plr)
 
 ```{r}
 m1 = glm(Status~wt.loss+Sex,
-        data=lung,
-        family='binomial')
-tab1 <- rm_mvsum(model=m1,data = lung,HolmGlobalp = T,tableOnly = T,showN=T)
+         data=lung,
+         family='binomial')
+tab1 <- rm_mvsum(model=m1,data = lung,p.adjust='none',tableOnly = T,showN=T)
 m2 = glm(Status~wt.loss+Sex+AgeGroup,
-        data=lung,
-        family='binomial')
-tab2 <- rm_mvsum(model=m2,data = lung,HolmGlobalp = T,tableOnly = T,showN = T)
+         data=lung,
+         family='binomial')
+tab2 <- rm_mvsum(model=m2,data = lung,p.adjust='none',tableOnly = T,showN = T)
 
 tab1$Model = 'Model 1'
 tab1$`p-value` = NA # necessary to make the columns match
 tab2$Model = 'Model 2'
 
 nestTable(data=rbind(tab1,tab2),
-              head_col = 'Model',to_col = 'Covariate')
+          head_col = 'Model',to_col = 'Covariate')
 
 
 
@@ -413,24 +415,66 @@ Other results can go here.
 ### Test crr
 ```{r test-uv-crr}
 rm_uvsum(response = c('time','status'),
-      covs=c('Sex','ph.ecog','meal.cal','age'),
-      data=lung,
-      type='crr',
-      CIwidth=.90)
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         type='crr',
+         CIwidth=.90)
 
 rm_uvsum(response = c('time','status'),
-      covs=c('age'),
-      data=lung,
-      type='crr')
+         covs=c('age'),
+         data=lung,
+         type='crr')
 
 ```
 
 ### Test boxcox
 ```{r test-uv-boxcox}
 rm_uvsum(response = 'y',
-      covs=c('x0','x1'),
-      data=test_data,
-      type='boxcox',
-      CIwidth=.90)
+         covs=c('x0','x1'),
+         data=test_data,
+         type='boxcox',
+         CIwidth=.90)
+```
+
+
+
+## Playing with Global P-values
+
+
+LRT p-values
+```{r}
+# For lm
+response <- 'wt.loss'
+lm_ecog <-lm(wt.loss~ph.ecog,data=lung) 
+m2 <- lm_ecog
+lm_null <- lm(paste0(response,'~1'),data=m2$model)
+lrt_p <- as.vector(na.omit(anova(lm_null,m2)[,"Pr(>F)"]))
+
+
+# for coxph
+lrt_p <- summary(m2)$logtest['pvalue']
+
+# for crr - uses estimating equations, so leave as is
+
+# for glm
+lung <- lung %>%
+  mutate(ECOG=factor(ph.ecog))
+glm_ecog <- glm(Status~ECOG,data=lung,family='binomial')
+glm_null <- update(glm_ecog,formula='Status~1',data=glm_ecog$model)
+lrt_p <- as.vector(na.omit(anova(glm_null,glm_ecog,test="LRT")[,"Pr(>Chi)"]))
+
+# For boxcox
+
+response = 'y'
+x_var='x1'
+data=test_data
+m2 <- boxcoxfitRx(as.formula(paste(response,
+                                   "~", x_var, 
+                                   sep = "")), data = data)
+lm_null <- lm(paste0(response,'~1'),data=m2$model)
+lrt_p <- as.vector(na.omit(anova(lm_null,m2)[,"Pr(>F)"]))
+
+summary(m2)
+
 ```
 

@@ -2753,12 +2753,12 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param removeInf boolean indicating if infinite estimates should be removed from the table
-#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #'@param ... additional options passed to function  \code{\link{uvsum}}
 #' @export
 #'
-rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
+rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,...){
   
   # get the table
   tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
@@ -2769,28 +2769,33 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
     inf_values =  grep('Inf',tab[,2])
     if (length(inf_values)>0){
       tab[inf_values,2:4] <-NA
-      cap_warn <- paste0(cap_warn,'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
-      
+      cap_warn <- paste0(cap_warn,ifelse(identical(cap_warn,character(0)),'',', '),'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
     }
   }
   
-  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
-  if (HolmGlobalp){
-    p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
-    tab$"Holm Adj p" = p_sig
-  } else {
-    p_sig <- tab$`Global p-value`
-  }
+  # perform p-value adjustment on the global p-values
+  p_sig <- stats::p.adjust(tab$`Global p-value`,method=p.adjust)
+
+  # if an adjustment was made, add this to the cap_warn text
+  if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
+  
+  #   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
+  # if (HolmGlobalp){
+  #   p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
+  #   tab$"Holm Adj p" = p_sig
+  # } else {
+  #   p_sig <- tab$`Global p-value`
+  # }
   
   to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
   
   tab[["p-value"]] <- formatp(tab[["p-value"]])
-  tab[["Global p-value"]] <- formatp(tab[["Global p-value"]])
-  if (HolmGlobalp){
-    tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
-  }
+  tab[["Global p-value"]] <- formatp(p_sig)
+  # if (HolmGlobalp){
+  #   tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
+  # }
   
   # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
@@ -2827,43 +2832,34 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @export
-rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALSE,chunk_label){
+rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label){
   
   # get the table
   tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
   
-  
   # Reduce the number of significant digits in p-values
   p_val <-  formatp(tab$`p-value`)
-  g_p_val = formatp(tab$`Global p-value`)
-  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
-  if (HolmGlobalp){
-    gp <- stats::p.adjust(tab$`Global p-value`,method='holm')
-  } else {
-    gp <- tab$`Global p-value`
-  }
-  to_bold <- which(as.numeric(gp)<0.05)
-  to_indent <- which(is.na(g_p_val))
+  gp <- stats::p.adjust(tab$`Global p-value`,method=p.adjust)
+  if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
+
+    to_bold <- which(as.numeric(gp)<0.05)
+  to_indent <- which(is.na(gp))
   
   tab$`p-value` <- p_val
-  tab$`Global p-value` <- g_p_val
+  tab$`Global p-value` <- formatp(gp)
   
-  # Reorder
-  if (HolmGlobalp){
-    tab$`Holm Adj p` <- formatp(gp)
-  }
   # TO DO: possibly automate this... need to extract response from mvsum
   # if(is.null(caption)){
   #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
   # } else if (caption=='none') {
   #   caption=NULL
   # }
-  
-  
-  # If all outcomes are contunous (and so all p-values are NA), remove this column
+  #response <- names(model$model)[1]
+
+  # If all outcomes are continuous (and so all p-values are NA), remove this column
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
   
   if (tableOnly){
