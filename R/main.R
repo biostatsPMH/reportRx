@@ -688,8 +688,6 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                    type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
                    testing = F, showN = T, CIwidth = 0.95, reflevel) 
 {
-  addspace <- identity
-  nicename <- identity
   if (is.null(id)) {
     missing_vars = setdiff(c(response, covs), names(data))
     if (length(missing_vars) > 0) {
@@ -1228,8 +1226,6 @@ puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,st
 mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
                    CIwidth = 0.95) 
 {
-  addspace <- identity
-  nicename <- identity
   if (!markup) {
     lbld <- identity
     addspace <- identity
