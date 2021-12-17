@@ -1189,6 +1189,10 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@param response string vector with name of response
 #'@param covs character vector with the names of columns to fit univariate models to
 #'@param data dataframe containing data
+#'#'@param id character vector which identifies clusters. Only used for geeglm
+#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
+#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
 #'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options in clude "linear","logistic","coxph","crr","boxcox","logistic"
 #'@param strata character vector of covariates to stratify by. Only used for coxph and crr
 #'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
@@ -1200,9 +1204,9 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@export
 puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
   if(!TeX){
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }
   
 }
