@@ -1337,7 +1337,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   if (min(indx) == -1) 
     stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
   y <- betaindx(indx)
-  if (type %in% c("lm", "glm", "lme")) {
+  if (type %in% c("lm", "glm", "geeglm", "lme")) {
     y <- lapply(y, function(x) {
       x + 1
     })
