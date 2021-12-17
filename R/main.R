@@ -1326,7 +1326,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   else {
     stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
   }
-  if (any(is.na(data))) 
+  if (missing(data)) 
     if (class(ss_data) == "data.frame") {
       data = ss_data
     }
