@@ -187,11 +187,17 @@ addspace<-function(x){
 #' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified significant digits. Will bold the p-value if it is <= 0.05
 #' @param x an integer
 #' @param sigdigits number of significant digit to report
-lpvalue<-function(x,sigdigits=2){
-  if(is.na(x)|class(x)=="character") return(x)
-  else if (x<=0.001) return("\\textbf{$<$0.001}")
-  else x=signif(x,sigdigits)
-  if(x<=0.05) return(paste("\\textbf{",x,"}",sep=""))
+lpvalue <- function (x, sigdigits = 2) 
+{
+  if (is.na(x) | class(x) == "character") 
+    return(x)
+  else if (x <= 0.001) 
+    return("\\textbf{$<$0.001}")
+  else if (x <= 0.1) 
+    x = format(round(x, 3), nsmall = 3)
+  else x = format(round(x, sigdigits), nsmall = sigdigits)
+  if (x <= 0.05) 
+    return(paste("\\textbf{", x, "}", sep = ""))
   else return(x)
 }
 
