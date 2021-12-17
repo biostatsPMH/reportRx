@@ -828,8 +828,10 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           m2 <- glm(as.formula(paste(response, "~", 
                                      x_var, sep = "")), family = "binomial", 
                     data = data)
-          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
-                                             Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          m2_null <- update(m2,formula=as.formula(paste0(response,'~1')),data=m2$model)
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+          #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
           m <- summary(m2)$coefficients
@@ -850,8 +852,10 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                                                "~", x_var, sep = "")), data = data)
           }
           m <- summary(m2)$coefficients
-          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
-                                             Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          m2_null <- lm(formula=as.formula(paste0(response,'~1')),data=m2$model)
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+          #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
           T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
@@ -869,9 +873,12 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           m <- m[grep(x_var, rownames(summary(m2)$coef)), 
                  ]
           nterms = length(m2$coefficients)
-          globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
-                                                              1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
-                              silent = T)
+          
+          m2_null <- update(m2,data=m2$model,formula=as.formula(paste0(response,'~1' )))
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2)[,"Pr(Chi)"])))
+          # globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
+          #                                                     1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
+          #                     silent = T)
           if (class(globalpvalue)[1] == "try-error") 
             globalpvalue <- "NA"
           Z_mult <- stats::qnorm(p = 1 - (1 - CIwidth)/2)
@@ -3009,6 +3016,8 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' # rbind(m1,m2)
 #' # nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
 nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=T,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
+  
+  
   data[[to_col]] <- as.character(data[[to_col]])
   new_row = data[1,]
   for (i in 1:ncol(new_row)) new_row[1,i] <- NA
@@ -3017,7 +3026,6 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
     header_index = which(!duplicated(data[[head_col]]) & !is.na(data[[head_col]]))[1]
     new_row[[to_col]] <- data[[head_col]][header_index]
     
-    #    data <- tibble::add_row(data,new_row, .before = header_index)
     if (header_index>1){
       data = rbind(data[1:(header_index-1),],new_row,data[(header_index):nrow(data),])
     } else {
@@ -3042,16 +3050,23 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
   outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
 }
 
+#' Outputs a descriptive covariate table 
 #'
-#'Returns a dataframe corresponding to a descriptive table for printing in Rmarkdown
-#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
-#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#'This is a wrapper function around covsum for use in Rmarkdown documents
+#'
+#'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
+#'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
+#'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
+#'The statistical test used can be displayed by specifying show.tests=TRUE.
 #'
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
-#'@param caption character containing table caption
-#'@param tableOnly should a dataframe or a formatted print object be returned
+#'@param caption character containing table caption. If caption = NULL then 
+#'notes about unstable estimates and p-value adjustments will be added to the
+#'caption. To suppress the caption completely set caption='none'.
+#'@param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a 
+#'formatted printed object is returned (default).
 #'@param covTitle character with the names of the covariate column
 #'@param chunk_label only used if output is to Word to allow cross-referencing
 #'@param ... additional options passed to function  \code{\link{covsum}}
@@ -3111,6 +3126,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   
   # get the table
   tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
+#  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
   
   cap_warn <- character(0)
   if (removeInf){
@@ -3123,7 +3139,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   }
   
   # perform p-value adjustment on the global p-values
-  p_sig <- stats::p.adjust(tab$`Global p-value`,method=p.adjust)
+  p_sig <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
 
   # if an adjustment was made, add this to the cap_warn text
   if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
@@ -3137,7 +3153,8 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   # }
   
   to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  nice_var_names = gsub('[_.]',' ',covs)
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  nice_var_names <- gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
   
   tab[["p-value"]] <- formatp(tab[["p-value"]])
@@ -3170,13 +3187,13 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
 
 
 
-
-#' Output a multivariable model nicely in Rmarkdown
-#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
-#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#' Format a regression model nicely for Rmarkdown
+#' 
+#' This is a wrapper around mvsum for use with Rmarkdown
 #'
 #' @param model model fit
-#' @param data data that model was fit on
+#' @param data data that model was fit on (an attempt will be made to extract
+#' this from the model)
 #' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @param caption table caption
@@ -3191,16 +3208,18 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
   
   # Reduce the number of significant digits in p-values
   p_val <-  formatp(tab$`p-value`)
-  gp <- stats::p.adjust(tab$`Global p-value`,method=p.adjust)
+  gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
   if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
 
-    to_bold <- which(as.numeric(gp)<0.05)
+  to_bold <- which(as.numeric(gp)<0.05)
   to_indent <- which(is.na(gp))
   
   tab$`p-value` <- p_val
   tab$`Global p-value` <- formatp(gp)
   
-  # TO DO: possibly automate this... need to extract response from mvsum
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+
+    # TO DO: possibly automate this... need to extract response from mvsum
   # if(is.null(caption)){
   #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
   # } else if (caption=='none') {
@@ -3218,6 +3237,62 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
+}
+
+#' Combine univariate and multivariable regression tables
+#' 
+#' This function will combine rm_uvsum and rm_mvsum outputs into a single table
+#' The tableOnly argument must be set to TRUE when tables to be combined are
+#' created. The resulting table will be in the same order as the uvsum table
+#' and will contain the same columns as the uvsum and mvsum tables, but the 
+#' p-values will be combined into a single column. There must be variable over-
+#' lap between the uvsum and mvsum tables and all variables in the mvsum table
+#' must also appear in the uvsum table.
+#' 
+#'
+#' @param uvsumTable Output from rm_uvsum, with tableOnly=T 
+#' @param mvsumTable  Output from rm_mvsum. with tableOnly=T
+#' @param caption table caption
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @export
+rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label){ 
+  # Check that tables are data frames and not kable objects
+  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
+  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
+  # Check that the first columns have the same name
+  if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
+  # Check that there is overlap between the variables
+  if (length(intersect(uvsumTable[,1],mvsumTable[,1]))==0) stop('There are no overlaping variables between the models, tables couldn\'t be combined.')
+  # Check that all the variables in the univariate model are in the multivariate model
+  if (length(setdiff(mvsumTable[,1],uvsumTable[,1]))>0) {
+    stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
+               '\nRun uvsum with all the variables in the multivariable model.'))
+  }
+  # identify the rows to be indented
+  to_indent <- numeric(0)
+  if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
+  x <- lapply(list(uvsumTable,mvsumTable), function(t) {
+    p_cols <- grep('p-value',names(t))
+    if (length(p_cols)==2){
+      p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
+      t$p <- p
+    } else {t$p <- t[,grep('p-value',names(t))] }
+    return(t[,setdiff(1:ncol(t),p_cols)])
+  })
+  x[[1]]$varOrder = 1:nrow(x[[1]])
+  names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
+  names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
+  names(x[[2]])[3:ncol(x[[2]])] <- paste(names(x[[2]])[3:ncol(x[[2]])], '(adj)')
+  out <- merge(x[[1]],x[[2]],by=names(uvsumTable)[1],all=T)
+  out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
+  
+  if (tableOnly) return(out)
+  
+  to_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
+  outTable(tab=out,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
 
 #'Print Event time summary

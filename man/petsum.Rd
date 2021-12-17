@@ -11,9 +11,9 @@ petsum(data, response, group = 1, times = c(12, 14), units = "months")
 
 \item{response}{character vector with names of columns to use for response}
 
-\item{group}{string specifiying the column name of stratification variable}
+\item{group}{string specifying the column name of stratification variable}
 
-\item{times}{numeric vector of times you want survival time provbabilities for.}
+\item{times}{numeric vector of times you want survival time probabilities for.}
 
 \item{units}{string indicating the unit of time. Use lower case and plural.}
 }

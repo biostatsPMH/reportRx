@@ -8,6 +8,9 @@ uvsum(
   response,
   covs,
   data,
+  id = NULL,
+  corstr = NULL,
+  family = NULL,
   type = NULL,
   strata = 1,
   markup = T,
@@ -26,8 +29,15 @@ uvsum(
 
 \item{data}{dataframe containing data}
 
+\item{id}{character vector which identifies clusters. Only used for geeglm}
+
+\item{corstr}{character string specifying the correlation structure. Only used for geeglm. 
+The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'}
+
+\item{family}{description of the error distribution and link function to be used in the model. Only used for geeglm}
+
 \item{type}{string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-Options include "linear", "logistic", "coxph", "crr", "boxcox","ordinal"}
+Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"}
 
 \item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
 

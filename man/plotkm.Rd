@@ -36,6 +36,9 @@ plotkm(
 This function will plot a KM curve with possible stratification. You can specifyif you want
 a legend or confidence bands as well as the units of time used.
 }
+\details{
+Note: This function is deprecated and will not be supported in future versions of reportRx. Please use ggkmcif.
+}
 \examples{
 require(survival)
 lung$sex<-factor(lung$sex)

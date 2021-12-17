@@ -374,6 +374,42 @@ forestplot2(house.plr)
 ```
 
 \newpage
+
+## Combining uvsum and mvsum tables
+
+Linear models
+
+```{r}
+uvsumTable  <- rm_uvsum(response = 'wt.loss',
+         covs=c('Status','Sex','ph.ecog','meal.cal','AgeGroup'),
+         data=lung,
+         CIwidth=.95,
+         tableOnly = T)
+
+m <- lm(wt.loss~Status+Sex+ph.ecog+meal.cal+AgeGroup,data=lung)
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+```
+
+
+Logsitic models
+
+```{r}
+uvsumTable  <- rm_uvsum(response = 'Status',
+         covs=c('Sex','ph.ecog','meal.cal','AgeGroup'),
+         data=lung,
+         CIwidth=.95,
+         tableOnly = T)
+
+m <- glm(Status~Sex+ph.ecog+meal.cal,data=lung,family='binomial')
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+```
+
+\newpage
+
 ## Combining Tables with nestTable
 
 ```{r}
@@ -390,9 +426,9 @@ tab1$Model = 'Model 1'
 tab1$`p-value` = NA # necessary to make the columns match
 tab2$Model = 'Model 2'
 
-nestTable(data=rbind(tab1,tab2),
+newtab <- rbind(tab1,tab2)
+nestTable(data=newtab[,c(5,1,2,6,3,4)],
           head_col = 'Model',to_col = 'Covariate')
-
 
 
 
@@ -437,44 +473,6 @@ rm_uvsum(response = 'y',
 ```
 
 
+# TO DO:
 
-## Playing with Global P-values
-
-
-LRT p-values
-```{r}
-# For lm
-response <- 'wt.loss'
-lm_ecog <-lm(wt.loss~ph.ecog,data=lung) 
-m2 <- lm_ecog
-lm_null <- lm(paste0(response,'~1'),data=m2$model)
-lrt_p <- as.vector(na.omit(anova(lm_null,m2)[,"Pr(>F)"]))
-
-
-# for coxph
-lrt_p <- summary(m2)$logtest['pvalue']
-
-# for crr - uses estimating equations, so leave as is
-
-# for glm
-lung <- lung %>%
-  mutate(ECOG=factor(ph.ecog))
-glm_ecog <- glm(Status~ECOG,data=lung,family='binomial')
-glm_null <- update(glm_ecog,formula='Status~1',data=glm_ecog$model)
-lrt_p <- as.vector(na.omit(anova(glm_null,glm_ecog,test="LRT")[,"Pr(>Chi)"]))
-
-# For boxcox
-
-response = 'y'
-x_var='x1'
-data=test_data
-m2 <- boxcoxfitRx(as.formula(paste(response,
-                                   "~", x_var, 
-                                   sep = "")), data = data)
-lm_null <- lm(paste0(response,'~1'),data=m2$model)
-lrt_p <- as.vector(na.omit(anova(lm_null,m2)[,"Pr(>F)"]))
-
-summary(m2)
-
-```
-
+Add in testing here for geeglm, but also into testthat

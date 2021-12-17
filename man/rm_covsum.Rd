@@ -2,9 +2,7 @@
 % Please edit documentation in R/main.R
 \name{rm_covsum}
 \alias{rm_covsum}
-\title{Returns a dataframe corresponding to a descriptive table for printing in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
+\title{Outputs a descriptive covariate table}
 \usage{
 rm_covsum(
   data,
@@ -24,9 +22,12 @@ rm_covsum(
 
 \item{maincov}{covariate to stratify table by}
 
-\item{caption}{character containing table caption}
+\item{caption}{character containing table caption. If caption = NULL then 
+notes about unstable estimates and p-value adjustments will be added to the
+caption. To suppress the caption completely set caption='none'.}
 
-\item{tableOnly}{should a dataframe or a formatted print object be returned}
+\item{tableOnly}{Logical, if TRUE then a dataframe is returned, otherwise a 
+formatted printed object is returned (default).}
 
 \item{covTitle}{character with the names of the covariate column}
 
@@ -38,9 +39,13 @@ rm_covsum(
 A formatted table displaying a summary of the covariates stratified by maincov
 }
 \description{
-Returns a dataframe corresponding to a descriptive table for printing in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+This is a wrapper function around covsum for use in Rmarkdown documents
+}
+\details{
+Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
+test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
+If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
+The statistical test used can be displayed by specifying show.tests=TRUE.
 }
 \seealso{
 \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
