@@ -1202,7 +1202,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@importFrom xtable xtable print.xtable
 #'@keywords dataframe
 #'@export
-puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
+puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
   if(!TeX){
     print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{
