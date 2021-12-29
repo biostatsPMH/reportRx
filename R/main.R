@@ -744,7 +744,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
         beta <- "OR"
       }
       else {
-        stop("type must be either coxph, logisitc, linear, coxbox, crr, ordinal (or NULL)")
+        stop("type must be either coxph, logistic, linear, coxbox, crr, ordinal (or NULL)")
       }
     }
     else {

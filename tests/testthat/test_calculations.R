@@ -1,6 +1,8 @@
 #-------------------------------------------------------------------------------------
 # Data Definition
 data(cancer, package='survival')
+data(dietox,package='geepack')
+
 lung <- cancer
 lung$Status=factor(lung$status-1)
 lung$Sex = factor(lung$sex,labels = c('Male','Female'))
@@ -12,12 +14,9 @@ lung$x_null = rnorm(nrow(lung))
 lung$x_pred = c(rnorm(sum(lung$Status==0),0,1),
                 rnorm(sum(lung$Status==1),1,1))
 
-test_data = data.frame(
-  y= rnorm(100),
-  x0= geoR::rboxcox(100, lambda=0.5, mean=10, sd=2))
-test_data$x1=  test_data$x0*test_data$y
 
-
+data(dietox)
+dietox$Cu     <- as.factor(dietox$Cu)
 
 test_row=data.frame(type=c(1,NA,1,1,2,2,2,2,3,3),age=c(5,NA,10,24,35,12,45,34,NA,12),group=c('A','A',NA,'A','A','B','I','C','A','B'),
                 group2=c('A','A','A','A','A','A','A','A','A','A'),group3=c('A','A','A','A','A','A','A','A','A',NA),group4=c('A','B','A','A','B','B','B','B',NA,NA))
@@ -223,6 +222,21 @@ test_that("mvsum outputs glm poisson models correctly",{
   names = c('Covariate','RR(95\\%CI)','p-value','Global p-value')
   covs = c('age','Sex','Male','Female')
   est = c('1.00 (0.99,1.01)','','reference','0.88 (0.72,1.09)')
+  expect_equal(output[,1],covs)
+  expect_equal(output[,2],est)
+  expect_equal(names(output),names)
+})
+
+test_that("uvsum outputs geeglm models correctly",{
+  mf1 <- formula(Weight ~ Cu)
+  gee1 <- geeglm(mf1, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+  mf2 <- formula(Weight ~ Time)
+  gee2 <- geeglm(mf2, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+  output = uvsum(response = 'Weight',covs=c('Cu','Time'),
+                 data=dietox, id='Pig', family=poisson("identity"), corstr="ar1",markup=FALSE)
+  names = c('Covariate','Estimate(95\\%CI)','p-value','Global p-value','N')
+  covs = c('Cu','Cu000','Cu035','Cu175','Time')
+  est = c("","Reference","-0.49 (-3.51,2.52)","1.78 (-1.90,5.46)", "6.51 (6.35,6.66)")
   expect_equal(output[,1],covs)
   expect_equal(output[,2],est)
   expect_equal(names(output),names)
