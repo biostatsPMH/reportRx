@@ -135,7 +135,7 @@ rm_covsum(data=test_empty,
 
 \newpage
 
-If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table, which is on the todo list!
+If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table. I haven't figured out how to fix this yet, but it is on the todo list!
 
 ```{r results='asis',echo=T}
 
@@ -239,6 +239,45 @@ rm_uvsum(response = 'cyl',
 
 ```
 
+### Test crr
+```{r test-uv-crr}
+rm_uvsum(response = c('time','status'),
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         type='crr',
+         CIwidth=.90)
+
+rm_uvsum(response = c('time','status'),
+         covs=c('age'),
+         data=lung,
+         type='crr')
+
+```
+
+### Test boxcox
+```{r test-uv-boxcox}
+rm_uvsum(response = 'y',
+         covs=c('x0','x1'),
+         data=test_data,
+         type='boxcox',
+         CIwidth=.90)
+```
+
+### Test  geeglm 
+
+```{r}
+data(BodyWeight,package='nlme')
+
+
+rm_uvsum(response = 'weight',
+         covs=c('Time','Diet'),
+         id='Rat',
+         corstr="ar1",
+         family=gaussian("identity"),
+         data=BodyWeight,showN=T)
+
+```
+
 \newpage
 
 # KM plit with confidence intervals
@@ -309,7 +348,12 @@ response <- names(m1$model)[1]
 m = glm(Status~wt.loss+Sex+AgeGroup,
         data=lung,
         family='binomial')
-rm_mvsum(model=m,data = lung,p.adjust='holm')
+rm_mvsum(model=m,data = lung,p.adjust='holm',showN=T)
+rm_mvsum(model=m,p.adjust='holm',showN=T)
+
+fit_lm = lm(wt.loss~age+Sex,data=lung)
+rm_mvsum(model=fit_lm,showN=T)
+
 ```
 
 ```{r}
@@ -349,7 +393,12 @@ library(nlme)
 data(BodyWeight)
 fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
 #summary(fm1BW.lme)
-rm_mvsum(fm1BW.lme,data=BodyWeight)
+rm_mvsum(model=fm1BW.lme,data=BodyWeight)
+rm_mvsum(fm1BW.lme,showN = T)
+
+
+
+
 ```
 
 ### Test with polr
@@ -361,7 +410,66 @@ data(housing)
 options(contrasts = c("contr.treatment", "contr.poly"))
 house.plr <- MASS::polr(Sat ~ Infl + Type + Cont, weights = Freq, data = housing)
 #summary(house.plr)
-rm_mvsum(house.plr)
+rm_mvsum(model=house.plr)
+rm_mvsum(model=house.plr,showN=T)
+
+
+```
+
+### Test crr
+```{r}
+# From the crr help file
+set.seed(10)
+ftime <- rexp(200)
+fstatus <- sample(0:2,200,replace=TRUE)
+cov <- matrix(runif(600),nrow=200)
+dimnames(cov)[[2]] <- c('x1','x2','x3')
+df <- data.frame(ftime,fstatus,cov)
+m1 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df)
+
+# summary(m1)
+rm_mvsum(m1,data=df,showN = T)
+# rm_mvsum(m1,data=df,showN = F)
+
+# df2 <- df
+# df2[sample(1:nrow(df),5),3] <- NA
+# df2[sample(1:nrow(df),5),4] <- NA
+# df2[sample(1:nrow(df),5),5] <- NA
+# 
+# m2 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df2)
+# #rm_mvsum(model=m2,showN = T) # data must be supplied for crr models
+# rm_mvsum(m2,data=df2,showN = T) # good
+# #rm_mvsum(m2,data=df,showN = T) # This is wrong, because the data supplied is wrong
+# 
+# df3 <- na.omit(df2)
+# m3 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df3)
+# rm_mvsum(m3,data=df3,showN = T) # This is right
+# 
+
+```
+
+### Test  geeglm 
+
+```{r}
+library(geepack)
+data(BodyWeight,package='nlme')
+fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
+
+gee1 <- geeglm(weight ~ Time+Diet , data=BodyWeight, id=Rat, family=gaussian("identity"), corstr="ar1")
+summary(gee1)
+rm_mvsum(gee1,data=BodyWeight,showN=T)
+
+```
+
+## TO DO fix- bug
+```{r, eval=F,echo=T}
+library(geepack)
+data(dietox)
+dietox$Cu     <- as.factor(dietox$Cu)
+mf <- formula(Weight ~ Cu * (Time + I(Time^2) + I(Time^3)))
+gee1 <- geeglm(mf, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+summary(gee1)
+mvsum(gee1,data=dietox)
 
 ```
 
@@ -393,7 +501,7 @@ rm_uv_mv(uvsumTable,mvsumTable)
 ```
 
 
-Logsitic models
+Logistic models
 
 ```{r}
 uvsumTable  <- rm_uvsum(response = 'Status',
@@ -446,33 +554,43 @@ nestTable(data=newtab[,c(5,1,2,6,3,4)],
 
 # Appendix
 
-Other results can go here.
+## Comparing p-values
 
-### Test crr
-```{r test-uv-crr}
-rm_uvsum(response = c('time','status'),
-         covs=c('Sex','ph.ecog','meal.cal','age'),
-         data=lung,
-         type='crr',
-         CIwidth=.90)
+P-values agree between 
 
-rm_uvsum(response = c('time','status'),
-         covs=c('age'),
+```{r}
+lung$ECOG <- as.factor(lung$ph.ecog)
+rm_uvsum(response = 'wt.loss',
+         covs=c('status','Status','sex','Sex','ph.ecog','ECOG'),
          data=lung,
-         type='crr')
+         CIwidth=.95)
+```
+
+With lm:
+
+```{r}
+l1 <- lm(wt.loss~Sex,data=lung)
+summary(l1)
 
 ```
 
-### Test boxcox
-```{r test-uv-boxcox}
-rm_uvsum(response = 'y',
-         covs=c('x0','x1'),
-         data=test_data,
-         type='boxcox',
-         CIwidth=.90)
+With t-test (using the default of non-homogenous variance):
+
+```{r}
+t1 <- t.test(wt.loss~Sex,data=lung)
+t1
+t1$p.value
+
 ```
 
 
-# TO DO:
+With t-test using the pooled variance:
 
-Add in testing here for geeglm, but also into testthat
+```{r}
+t2 <- t.test(wt.loss~Sex,data=lung,var.equal=T)
+t2
+t2$p.value
+
+```
+
+

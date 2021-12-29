@@ -350,7 +350,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   testcat <- match.arg(testcat)
   percentage <- match.arg(percentage)
   
-
+  
   if (!pvalue) {
     show.tests<- FALSE
     excludeLevels<- NULL
@@ -683,6 +683,7 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #'@keywords dataframe
 #' @importFrom survival coxph Surv
 #' @importFrom aod wald.test
+#' @importFrom geepack geeglm
 #'@export
 uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL,
                    type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
@@ -826,7 +827,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           m2 <- glm(as.formula(paste(response, "~", 
                                      x_var, sep = "")), family = "binomial", 
                     data = data)
-          m2_null <- update(m2,formula=as.formula(paste0(response,'~1')),data=m2$model)
+          m2_null <- stats::update(m2,formula=as.formula(paste0(response,'~1')),data=m2$model)
           globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
           # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
           #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
@@ -869,10 +870,10 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                           Hess = TRUE)
           m <- data.frame(summary(m2)$coef)
           m <- m[grep(x_var, rownames(summary(m2)$coef)), 
-                 ]
+          ]
           nterms = length(m2$coefficients)
           
-          m2_null <- update(m2,data=m2$model,formula=as.formula(paste0(response,'~1' )))
+          m2_null <- stats::update(m2,data=m2$model,formula=as.formula(paste0(response,'~1' )))
           globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2)[,"Pr(Chi)"])))
           # globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
           #                                                     1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
@@ -972,7 +973,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                           Hess = TRUE)
           m <- data.frame(summary(m2)$coef)
           m <- m[grep(x_var, rownames(summary(m2)$coef)), 
-                 ]
+          ]
           nterms = length(m2$coefficients)
           globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
                                                               1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
@@ -1008,7 +1009,8 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
     return(table)
   }
   else {
-    idf <- data %>% dplyr::select(id)
+#    idf <- data %>% dplyr::select(id) # This fails for groupedData (like the geepack BodyWeight data object)
+    idf <- data[[id]]
     idf <- as.matrix(idf)
     if (is.null(corstr)) {
       stop(paste('You must provide correlation structure (i.e. corstr="independence") with id variable.'))
@@ -1070,8 +1072,9 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
       stop("strata can only be used with coxph")
     }
     out <- lapply(covs, function(x_var) {
-      data <- dplyr::select(data, dplyr::any_of(c(response, 
-                                                  x_var, strataVar)))
+      # data <- dplyr::select(data, dplyr::any_of(c(response, 
+      #                                             x_var, strataVar)))
+      data <- data[,intersect(c(response, x_var, strataVar),names(data))]
       data <- na.omit(data)
       x_var_str <- x_var
       if (testing) 
@@ -1107,7 +1110,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                                              Sigma = (m2$geese$vbeta)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
-          T_mult = qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
           hazardratio <- c("Reference", apply(cbind(m[-1, 
                                                       1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + 
                                                       T_mult * m[-1, 2]), 1, psthr))
@@ -1156,7 +1159,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
           m <- summary(m2)$coefficients
-          T_mult = qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
           out <- matrix(c(x_var_str, psthr(c(m[-1, 1], 
                                              m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * 
                                                m[-1, 2])), "", lpvalue(globalpvalue)), 
@@ -1194,7 +1197,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 #'@param response string vector with name of response
 #'@param covs character vector with the names of columns to fit univariate models to
 #'@param data dataframe containing data
-#'#'@param id character vector which identifies clusters. Only used for geeglm
+#'@param id character vector which identifies clusters. Only used for geeglm
 #'@param corstr character string specifying the correlation structure. Only used for geeglm. 
 #'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
 #'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
@@ -1245,10 +1248,10 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   if (class(model)[1] %in% c("lm", "lme", "multinom", 
                              "survreg", "polr")) {
     call <- Reduce(paste, deparse(formula(model$terms), width.cutoff = 500))
-  }
+  } 
   else if (class(model)[1] %in% c("crr")) {
     call <- paste(deparse(model$call), collapse = "")
-  }
+  } 
   else call <- paste(deparse(model$formula), collapse = "")
   call <- unlist(strsplit(call, "~", fixed = T))[2]
   call <- unlist(strsplit(call, ",", fixed = T))[1]
@@ -1269,69 +1272,71 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     beta <- "Estimate"
     expnt = FALSE
     ss_data <- model$model
-  }
+  } 
   else if (type == "polr") {
     expnt = TRUE
     betanames <- names(model$coefficients)
     beta <- "OR"
     ss_data <- model$model
-  }
+  } 
   else if (type == "lme") {
     expnt = FALSE
     betanames <- names(model$coef$fixed)[-1]
     beta <- "Estimate"
     ss_data <- model$data
-  }
+  } 
   else if (type == "glm") {
     if (model$family$link == "logit") {
       beta <- "OR"
       expnt = TRUE
-    }
-    else if (model$family$link == "log") {
+    } else if (model$family$link == "log") {
       beta <- "RR"
       expnt = TRUE
-    }
-    else {
+    } else {
       beta <- "Estimate"
       expnt = FALSE
     }
     betanames <- names(model$coef)[-1]
     ss_data <- model$model
-  }
+  } 
   else if (type == "geeglm") {
     if (model$family$link == "logit") {
       beta <- "OR"
       expnt = TRUE
-    }
-    else if (model$family$link == "log") {
+    } else if (model$family$link == "log") {
       beta <- "RR"
       expnt = TRUE
-    }
-    else {
+    } else {
       beta <- "Estimate"
       expnt = FALSE
     }
     betanames <- attributes(summary(model)$coef)$row.names[-1]
     ss_data <- model$model
-  }
+  } 
   else if (type == "coxph" | type == "crr") {
     beta <- "HR"
     expnt = TRUE
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
     ss_data <- try(model.frame(model$call$formula, eval(parse(text = paste("data=", 
                                                                            deparse(model$call$data))))), silent = TRUE, outFile)
-    if (class(ss_data) == "try-error") 
-      ss_data <- data
-  }
+  } 
   else {
     stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
   }
-  if (missing(data)) 
-    if (class(ss_data) == "data.frame") {
-      data = ss_data
-    }
-  else {
-    stop("Data can not be derived from model, data argument must be supplied.")
+  if ("data.frame" %in% class(ss_data)) {
+    if ('(weights)' %in% names(ss_data))    
+      names(ss_data)<- gsub('[(]weights[)]',as.character(model$call[['weights']]),names(ss_data))
+    data <- ss_data
+  } else if (type=='crr'){
+    if (missing(data)){
+      stop("Data can not be derived from model, data argument must be supplied.")
+    } else if (model$n==nrow(stats::na.omit(data))) {
+      data <- stats::na.omit(data)
+    } else {
+      stop('Supplied data frame does not have the correct number of non-missing rows.')
+    } 
+  } else{
+    stop("Data can not be derived from model, check model object.")
   }
   beta = betaWithCI(beta, CIwidth)
   ucall = unique(call)
@@ -1372,24 +1377,43 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     title = NULL
     body = NULL
     if (type == "lme") {
-      globalpvalue <- try(aod::wald.test(b = model$coef$fixed[covariateindex], 
-                                         Sigma = vcov(model)[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    }
-    else if (type == "polr") {
-      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
-                                         Sigma = vcov(model)[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    }
-    else if (type != "crr") {
-      globalpvalue <- try(aod::wald.test(b = coef(model)[covariateindex], 
-                                         Sigma = vcov(model)[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    }
-    else {
+      globalpvalue <- NA
+      f <- paste0('. ~ . -',oldcovname)
+      if ( length(f)==1){
+        m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data,method='ML'),silent=T)
+        if (!('try-error' %in% class(m_small))){
+          m_new <- stats::update(model,method='ML')
+          globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,m_new)[,"p-value"]))) # LRT
+        }
+      }
+      if (is.na(globalpvalue)| 'try-error' %in% class(globalpvalue)) {  
+        globalpvalue <- try(aod::wald.test(b = model$coef$fixed[covariateindex],
+                                           Sigma = vcov(model)[covariateindex, covariateindex],
+                                           Terms = seq_along(covariateindex))$result$chi2[3])
+      }
+    } else if (type=='glm'){
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent = T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model,test='LRT')[,"Pr(>Chi)"])))
+    } else if (type == "polr") {
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent=T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model)[,"Pr(Chi)"])),silent=T)
+    } else if (type == "crr" ) { # Leave as Wald Test
       globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex], 
                                          Sigma = model$var[covariateindex, covariateindex], 
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
+                                         Terms = seq_along(covariateindex))$result$chi2[3],
+                          silent = T)
+    } else if (type=='geeglm'){ # Leave as Wald Test
+      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
+                                         Sigma = (model$geese$vbeta)[covariateindex, covariateindex], 
+                                         Terms = seq_len(length(model$coefficients[covariateindex])))$result$chi2[3],
+                          silent = T)
+      
+    } else {
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent=T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model)[,"Pr(>F)"])),silent = T)
+      # globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex],
+      #                                    Sigma = model$var[covariateindex, covariateindex],
+      #                                    Terms = seq_along(covariateindex))$result$chi2[3])
     }
     if (class(globalpvalue) == "try-error") 
       globalpvalue <- "NA"
@@ -1426,7 +1450,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                                                                   2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
                                                                                                                              2])), 1, psthr)
       pvalues = stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, 
-                                                       "Std. Error"]), lower.tail = FALSE) * 2
+                                                              "Std. Error"]), lower.tail = FALSE) * 2
       pvalues <- c(sapply(pvalues, lpvalue))
     }
     else if (type == "lm" | type == "glm" & !expnt) {
@@ -1450,7 +1474,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "lme") {
-      T_mult = abs(qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
+      T_mult = abs(stats::qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
       m <- summary(model, conf.int = CIwidth)$tTable
       hazardratio <- apply(cbind(m[covariateindex, 1], 
                                  m[covariateindex, 1] - T_mult * m[covariateindex, 
@@ -1504,9 +1528,9 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
                                    function(level) {
                                      N <- mapply(function(cn, lvl) {
                                        if (cn == lvl) {
-                                         nrow(ss_data)
+                                         nrow(data)
                                        } else {
-                                         sum(ss_data[[cn]] == lvl)
+                                         sum(data[[cn]] == lvl)
                                        }
                                      }, oldcovname, level)
                                      return(min(N))
@@ -1517,7 +1541,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       }
     }
     else {
-      ss_N = nrow(ss_data)
+      ss_N = nrow(data)
     }
     out <- cbind(out, ss_N)
     rownames(out) <- NULL
@@ -2260,8 +2284,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     if(!multiple_lines){
       
       sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
-                                             ",", response[2], ")", sep = ""), "~", 1,
-                                       sep = "")), data = data,conf.type=conf.type)
+                                                       ",", response[2], ")", sep = ""), "~", 1,
+                                                 sep = "")), data = data,conf.type=conf.type)
       
       if(median.lines==T|median.text==T){
         median_vals <- summary(sfit)$table['median']
@@ -2301,8 +2325,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
       
     }else{
       sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
-                                             ",", response[2], ")", sep = ""), "~", cov,
-                                       sep = "")), data = data,conf.type=conf.type)
+                                                       ",", response[2], ")", sep = ""), "~", cov,
+                                                 sep = "")), data = data,conf.type=conf.type)
       
       if(median.lines==T|median.text==T) {
         median_vals <- summary(sfit)$table[,'median']
@@ -2431,8 +2455,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
-                                               ",", response[2], ")", sep = ""), "~", 1,
-                                         sep = "")), data = temp)
+                                                         ",", response[2], ")", sep = ""), "~", 1,
+                                                   sep = "")), data = temp)
         
         
         
@@ -2486,8 +2510,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
-                                               ",", response[2], ")", sep = ""), "~", cov,
-                                         sep = "")), data = temp)
+                                                         ",", response[2], ")", sep = ""), "~", cov,
+                                                   sep = "")), data = temp)
         
       }
       
@@ -2826,8 +2850,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     gC$widths[2:5] <- as.list(maxWidth)
     
     gridExtra::grid.arrange(gA, gB, gC,
-                 clip = FALSE, nrow = 3, ncol = 1,
-                 heights = unit(c(2, .1, .25), c("null", "null", "null")))
+                            clip = FALSE, nrow = 3, ncol = 1,
+                            heights = unit(c(2, .1, .25), c("null", "null", "null")))
     
     if(returns) {
       # a <- arrangeGrob(p, blank.pic, data.table,
@@ -3117,7 +3141,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   
   # get the table
   tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
-#  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
+  #  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
   
   cap_warn <- character(0)
   if (removeInf){
@@ -3131,7 +3155,7 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
   
   # perform p-value adjustment on the global p-values
   p_sig <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
-
+  
   # if an adjustment was made, add this to the cap_warn text
   if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
   
@@ -3201,7 +3225,7 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
   p_val <-  formatp(tab$`p-value`)
   gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
   if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
-
+  
   to_bold <- which(as.numeric(gp)<0.05)
   to_indent <- which(is.na(gp))
   
@@ -3209,15 +3233,15 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
   tab$`Global p-value` <- formatp(gp)
   
   tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-
-    # TO DO: possibly automate this... need to extract response from mvsum
+  
+  # TO DO: possibly automate this... need to extract response from mvsum
   # if(is.null(caption)){
   #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
   # } else if (caption=='none') {
   #   caption=NULL
   # }
   #response <- names(model$model)[1]
-
+  
   # If all outcomes are continuous (and so all p-values are NA), remove this column
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
   
@@ -3357,4 +3381,7 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
     cat("\n",out,"\n")
   })
 }
+
+
+
 

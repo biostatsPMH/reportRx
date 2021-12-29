@@ -14,6 +14,7 @@ Maintainer: Biostatistics Department Princess Margaret Cancer Centre <biostatsPM
 Imports: 
     aod,
     cmprsk,
+    geepack,
     geoR,
     ggplot2,
     ggpubr,
