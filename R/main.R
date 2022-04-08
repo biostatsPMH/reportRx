@@ -1009,7 +1009,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
     return(table)
   }
   else {
-#    idf <- data %>% dplyr::select(id) # This fails for groupedData (like the geepack BodyWeight data object)
+    #    idf <- data %>% dplyr::select(id) # This fails for groupedData (like the geepack BodyWeight data object)
     idf <- data[[id]]
     idf <- as.matrix(idf)
     if (is.null(corstr)) {
@@ -1493,7 +1493,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
         if (!is.null(data)) 
           reference <- c(addspace(sanitizestr(names(table(data[, 
                                                                which(names(data) == oldcovname)]))[1])), 
-                         "reference", "", "")
+                         "Reference", "", "")
         body <- c(levelnames, hazardratio, "", 
                   "")
       }
@@ -1501,7 +1501,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
         if (!is.null(data)) {
           reference <- c(addspace(sanitizestr(names(table(data[, 
                                                                which(names(data) == oldcovname)]))[1])), 
-                         "reference", "", "")
+                         "Reference", "", "")
         }
         title <- c(covariatename, "", "", 
                    globalpvalue)
@@ -2901,16 +2901,21 @@ modify_ggkmcif <- function(list_gg){
 #'
 #' Output the table nicely to whatever format is appropriate. 
 #' This is the output function used by the rm_* printing functions.
+#' 
+#' Entire rows can be bolded, and the first column can be indented. Currently 
+#' there is no support for cell-specific formatting. By default, underscores in
+#' column names are converted to spaces. To disable this set rm_ to FALSE
 #' @param tab a table to format
 #' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
 #' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
 #' @param align string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns
+#' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
 #' 
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label){
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
@@ -2966,10 +2971,20 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                      split.table=Inf, split.cells=15,
                      justify = alignSpec)
     }
-  } else {
+  } else {  # For PDF, HTML
     # set NA to empty in kable
     options(knitr.kable.NA = '')
     if(!is.null(caption)) caption <- sanitize(caption)
+    # kout <- knitr::kable(tab, format = out_fmt,
+    #                      booktabs=TRUE,
+    #                      longtable=TRUE,
+    #                      linesep='',
+    #                      caption=caption,
+    #                      align =alignSpec)
+    # kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+    
+    # This may not work as expected if a small table is split over pages
+    # better to also repeat table headers
     if (nrow(tab)>30){
       kout <- knitr::kable(tab, format = out_fmt,
                            booktabs=TRUE,
@@ -2977,11 +2992,14 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            linesep='',
                            caption=caption,
                            align =alignSpec)
-      if (ncol(tab)>4) {
-        kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
-      } else {
-        kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      }
+      kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      # There is now a conflict with the tabu package, full_width=T fails with longtable
+      #       if (ncol(tab)>4) {
+      #         kout <- kableExtra::kable_styling(kout,full_width = TRUE,latex_options = c('repeat_header'))
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       } else {
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       }
     } else {
       kout <- knitr::kable(tab, format = out_fmt,
                            booktabs=TRUE,
@@ -2989,16 +3007,17 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            linesep='',
                            caption=caption,
                            align = alignSpec)
-      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
+      #      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout, full_width = TRUE)
     }
     kout <- kableExtra::add_indent(kout,positions = to_indent)
     if (length(to_bold)>0){
       kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
     }
+    if (!missing(fontsize)){
+      kout <- kableExtra::kable_styling(kout,font_size = fontsize)
+    }
     kout
   }
-  # }
-  
 }
 
 #' Combine two table columns into a single column with levels of one nested within levels of the other.
@@ -3067,12 +3086,15 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 
 #' Outputs a descriptive covariate table 
 #'
-#'This is a wrapper function around covsum for use in Rmarkdown documents
+#' Returns a data frame corresponding to a descriptive table. 
+#' This is a wrapper function around covsum for use in Rmarkdown documents
 #'
 #'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
 #'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
 #'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
 #'The statistical test used can be displayed by specifying show.tests=TRUE.
+#'
+#'Further formatting options are available using tableOnly=TRUE and outputting the table with a call to outTable. 
 #'
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
@@ -3083,15 +3105,45 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 #'@param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a 
 #'formatted printed object is returned (default).
 #'@param covTitle character with the names of the covariate column
+#'@param digits number of digits for summarizing mean data
+#'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
+#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
+#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param all.stats boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.
+#'@param pvalue boolean indicating if you want p-values included in the table
+#'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
+#'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
+#'@param full boolean indicating if you want the full sample included in the table, ignored if maincov is NULL
+#'@param include_missing Option to include NA values of maincov. NAs will not be included in statistical tests
+#'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
+#'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
+#'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param chunk_label only used if output is to Word to allow cross-referencing
-#'@param ... additional options passed to function  \code{\link{covsum}}
 #'@keywords dataframe
 #'@return A formatted table displaying a summary of the covariates stratified by maincov
 #'@export
-#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
-rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',chunk_label,...){
+#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}},  \code{\link{anova}}, and \code{\link{outTable}}
+#' @examples
+#' rm_covsum(data=mtcars,maincov = 'Gears',
+#' covs=c('mpg','Cylinders','qsec'),show.tests=T)
+#' 
+#' # To make custom changes or change the fontsize in PDF/HTML
+#' tab <- rm_covsum(data=mtcars,maincov = 'Gears',
+#' covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+#' outTable(tab, fontsize=7)
+#' 
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
+                      digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
+                      testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
+                      full=TRUE,include_missing=FALSE,percentage=c('column','row'),
+                      excludeLevels=NULL,numobs=NULL,chunk_label){
   
-  tab <- covsum(data,covs,maincov,markup=FALSE,sanitize=FALSE,...)
+  argList <- as.list(match.call(expand.dots = TRUE)[-1])
+  argsToPass <- intersect(names(formals(covsum)),names(argList))
+  covsumArgs <- argList[names(argList) %in% argsToPass]
+  covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
+  tab <- do.call(covsum,covsumArgs)
   to_bold = numeric(0)
   if ('p-value' %in% names(tab)) {
     # format p-values nicely
@@ -3102,10 +3154,8 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
   } 
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
-  # if (IQR) {
-  #   tab$Covariate <- gsub('[(]Q1,Q3[)]','(IQR)',tab$Covariate)
-  # }
   if (covTitle !='Covariate') names(tab[1]) <-covTitle
+  if (nicenames) {names(tab) <- gsub('_|[.]',' ',names(tab))}  
   if (tableOnly){
     return(tab)
   }
@@ -3115,7 +3165,6 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
     } else
       caption = 'Summary sample statistics.'
   }
-  
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
@@ -3279,7 +3328,7 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
   if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
   # Check that there is overlap between the variables
   if (length(intersect(uvsumTable[,1],mvsumTable[,1]))==0) stop('There are no overlaping variables between the models, tables couldn\'t be combined.')
-  # Check that all the variables in the univariate model are in the multivariate model
+  # Check that all the variables in the multivariate model are in the univariate model
   if (length(setdiff(mvsumTable[,1],uvsumTable[,1]))>0) {
     stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
                '\nRun uvsum with all the variables in the multivariable model.'))
@@ -3290,6 +3339,11 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
   x <- lapply(list(uvsumTable,mvsumTable), function(t) {
     p_cols <- grep('p-value',names(t))
     if (length(p_cols)==2){
+      # add a column for the variable name
+      vname <- character(nrow(t))
+      vname[1] <- t$Covariate[1]
+      for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t$`Global p-value`[i]),vname[i-1],t$Covariate[i])
+      t$var_level <- paste(vname,t[,1],sep='_')
       p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
       t$p <- p
     } else {t$p <- t[,grep('p-value',names(t))] }
@@ -3298,8 +3352,15 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
   x[[1]]$varOrder = 1:nrow(x[[1]])
   names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
   names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
-  names(x[[2]])[3:ncol(x[[2]])] <- paste(names(x[[2]])[3:ncol(x[[2]])], '(adj)')
-  out <- merge(x[[1]],x[[2]],by=names(uvsumTable)[1],all=T)
+  for (vn in setdiff(names(x[[2]])[3:ncol(x[[2]])],'var_level')) names(x[[2]]) <- gsub(vn, paste(vn,'(adj)'),names(x[[2]]))
+  if ('var_level' %in% names(x[[1]])){
+    out <- merge(x[[1]],x[[2]],by='var_level',all=T)
+    out <- out[,-which(names(out)=='var_level')]
+    out <- out[,-grep('[.]y',names(out))]
+    names(out) <- gsub('[.]x','',names(out))
+  } else{
+    out <- merge(x[[1]],x[[2]],by=names(uvsumTable)[1],all=T)
+  }
   out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
   
   if (tableOnly) return(out)

@@ -11,7 +11,8 @@ outTable(
   caption = NULL,
   digits,
   align,
-  chunk_label
+  chunk_label,
+  fontsize
 )
 }
 \arguments{
@@ -28,8 +29,15 @@ outTable(
 \item{align}{string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns}
 
 \item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
+
+\item{fontsize}{PDF/HTML output only, manually set the table fontsize}
 }
 \description{
 Output the table nicely to whatever format is appropriate. 
 This is the output function used by the rm_* printing functions.
+}
+\details{
+Entire rows can be bolded, and the first column can be indented. Currently 
+there is no support for cell-specific formatting. By default, underscores in
+column names are converted to spaces. To disable this set rm_ to FALSE
 }

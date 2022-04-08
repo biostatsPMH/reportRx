@@ -242,6 +242,18 @@ test_that("uvsum outputs geeglm models correctly",{
   expect_equal(names(output),names)
 })
 
+test_that("mvsum outputs geeglm models correctly",{
+  mf1 <- formula(Weight ~ Cu+Time)
+  gee1 <- geeglm(mf1, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+  output = mvsum(gee1,data=dietox, markup=FALSE)
+  names = c('Covariate','Estimate(95\\%CI)','p-value','Global p-value','N')
+  covs = c('Cu','Cu000','Cu035','Cu175','Time')
+  est = c("","Reference","0.30 (-1.51,2.11)","0.50 (-1.62,2.62)", "6.51 (6.35,6.66)")
+  expect_equal(output[,1],covs)
+  expect_equal(output[,2],est)
+  expect_equal(names(output),names)
+})
+
 # # Uncomment this if you need to ensure the tests are being run
 # test_that("this script is being executed",{
 #   expect_equal("This script was run","YES!")

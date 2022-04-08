@@ -2,11 +2,11 @@
 title: "reportRx TestFile"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
   bookdown::word_document2:
     reference_docx: 'wordTemplate.docx'
     toc: yes
-  bookdown::pdf_document2:
-    latex_engine: xelatex
 sansfont: Calibri Light
 mainfont: Calibri Light
 bibliography:
@@ -18,22 +18,16 @@ link-citations: yes
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
-#library(survival)
-library(reportRx)
+#library(reportRx)
 library(tidyverse)
-
-#Uncomment to create the packages.bib file of R packages used
-# Check the location of bibfile before running!
-# TODO add back into the reportRx extension package
-#reportRx::rmdBibfile(bibfile = '../library.bib',outfile = 'bibfile.bib')
-
+devtools::load_all()
 ```
 
 
 \newpage
 # Introduction {-}
 
-Citations can be made like this for R packages [@R-reportRx], or [@R-base] for the R language itself. Other citations must match those found in your master bibfile. See ?rmdBibfile.
+Citations can be made like this for R packages [@R-reportRx], or [@R-base] for the R language itself. Other citations must match those found in your master bibfile. 
 
 First, make some changes to the lung data (cancer in the newer version of survival)
 
@@ -539,6 +533,35 @@ nestTable(data=newtab[,c(5,1,2,6,3,4)],
           head_col = 'Model',to_col = 'Covariate')
 
 
+
+```
+
+\newpage
+
+# covsum and missing values
+
+Add some more examples here...
+
+No Missing Values
+```{r}
+data("mtcars")
+mtcars$Cylinders <- as.factor(mtcars$cyl)
+mtcars$Transmission <- factor(mtcars$am,levels=0:1,labels=c('Automatic','Manual'))
+rm_covsum(data=mtcars,
+          maincov = 'Transmission',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T)
+
+```
+
+Adding in some extra rows with missing values on Cylinders and mpg
+
+```{r}
+
+missingData <- data.frame(Transmission = rep(c("Automatic","Manual"),each=10),Cylinders=NA,mpg=NA,qsec=NA)
+mtcars2 <- bind_rows(mtcars,missingData)
+rm_covsum(data=mtcars2,
+          maincov = 'Transmission',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T)
 
 ```
 

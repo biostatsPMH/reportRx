@@ -11,8 +11,21 @@ rm_covsum(
   caption = NULL,
   tableOnly = FALSE,
   covTitle = "Covariate",
-  chunk_label,
-  ...
+  digits = 1,
+  digits.cat = 0,
+  nicenames = TRUE,
+  IQR = FALSE,
+  all.stats = FALSE,
+  pvalue = TRUE,
+  show.tests = FALSE,
+  testcont = c("rank-sum test", "ANOVA"),
+  testcat = c("Chi-squared", "Fisher"),
+  full = TRUE,
+  include_missing = FALSE,
+  percentage = c("column", "row"),
+  excludeLevels = NULL,
+  numobs = NULL,
+  chunk_label
 )
 }
 \arguments{
@@ -31,14 +44,41 @@ formatted printed object is returned (default).}
 
 \item{covTitle}{character with the names of the covariate column}
 
-\item{chunk_label}{only used if output is to Word to allow cross-referencing}
+\item{digits}{number of digits for summarizing mean data}
 
-\item{...}{additional options passed to function  \code{\link{covsum}}}
+\item{digits.cat}{number of digits for the proportions when summarizing categorical data (default: 0)}
+
+\item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
+
+\item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
+
+\item{all.stats}{boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.}
+
+\item{pvalue}{boolean indicating if you want p-values included in the table}
+
+\item{show.tests}{boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.}
+
+\item{testcont}{test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}}
+
+\item{testcat}{test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}}
+
+\item{full}{boolean indicating if you want the full sample included in the table, ignored if maincov is NULL}
+
+\item{include_missing}{Option to include NA values of maincov. NAs will not be included in statistical tests}
+
+\item{percentage}{choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}}
+
+\item{excludeLevels}{a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.}
+
+\item{numobs}{named list overriding the number of people you expect to have the covariate}
+
+\item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \value{
 A formatted table displaying a summary of the covariates stratified by maincov
 }
 \description{
+Returns a data frame corresponding to a descriptive table. 
 This is a wrapper function around covsum for use in Rmarkdown documents
 }
 \details{
@@ -46,8 +86,20 @@ Comparisons for categorical variables default to chi-square tests, but if there 
 test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
 If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
 The statistical test used can be displayed by specifying show.tests=TRUE.
+
+Further formatting options are available using tableOnly=TRUE and outputting the table with a call to outTable.
+}
+\examples{
+rm_covsum(data=mtcars,maincov = 'Gears',
+covs=c('mpg','Cylinders','qsec'),show.tests=T)
+
+# To add change the table fontsize in PDF/HTML
+tab <-rm_covsum(data=mtcars,maincov = 'Gears',
+covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+outTable(tab, fontsize=7)
+
 }
 \seealso{
-\code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
+\code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}},  \code{\link{anova}}, and \code{\link{outTable}}
 }
 \keyword{dataframe}
