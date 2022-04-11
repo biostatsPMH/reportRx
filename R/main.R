@@ -3343,7 +3343,8 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
     # add a column for the variable name
     vname <- character(nrow(t))
     vname[1] <- t$Covariate[1]
-    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t$`Global p-value`[i]),vname[i-1],t$Covariate[i])
+    p_var <- ifelse('Global p-value' %in% names(t),'Global p-value','p-value')
+    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t[[p_var]][i]),vname[i-1],t$Covariate[i])
     t$var_level <- paste(vname,t[,1],sep='_')
     if (length(p_cols)==2){
       t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
