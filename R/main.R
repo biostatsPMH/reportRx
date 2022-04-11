@@ -3049,9 +3049,11 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' # m2$Response = 'horsepower'
 #' # rbind(m1,m2)
 #' # nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
-nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=T,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
+nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
   
-  
+  # ensure that the data are sorted by the header column and covariates in the order they first appear
+  data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
+  data <- data[order(data[[head_col]],data[[to_col]]),]
   data[[to_col]] <- as.character(data[[to_col]])
   new_row = data[1,]
   for (i in 1:ncol(new_row)) new_row[1,i] <- NA
@@ -3338,14 +3340,13 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
   if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
   x <- lapply(list(uvsumTable,mvsumTable), function(t) {
     p_cols <- grep('p-value',names(t))
+    # add a column for the variable name
+    vname <- character(nrow(t))
+    vname[1] <- t$Covariate[1]
+    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t$`Global p-value`[i]),vname[i-1],t$Covariate[i])
+    t$var_level <- paste(vname,t[,1],sep='_')
     if (length(p_cols)==2){
-      # add a column for the variable name
-      vname <- character(nrow(t))
-      vname[1] <- t$Covariate[1]
-      for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t$`Global p-value`[i]),vname[i-1],t$Covariate[i])
-      t$var_level <- paste(vname,t[,1],sep='_')
-      p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
-      t$p <- p
+      t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
     } else {t$p <- t[,grep('p-value',names(t))] }
     return(t[,setdiff(1:ncol(t),p_cols)])
   })
@@ -3353,14 +3354,10 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
   names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
   names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
   for (vn in setdiff(names(x[[2]])[3:ncol(x[[2]])],'var_level')) names(x[[2]]) <- gsub(vn, paste(vn,'(adj)'),names(x[[2]]))
-  if ('var_level' %in% names(x[[1]])){
-    out <- merge(x[[1]],x[[2]],by='var_level',all=T)
-    out <- out[,-which(names(out)=='var_level')]
-    out <- out[,-grep('[.]y',names(out))]
-    names(out) <- gsub('[.]x','',names(out))
-  } else{
-    out <- merge(x[[1]],x[[2]],by=names(uvsumTable)[1],all=T)
-  }
+  out <- merge(x[[1]],x[[2]],by='var_level',all=T)
+  out <- out[,-which(names(out)=='var_level')]
+  out <- out[,-grep('[.]y',names(out))]
+  names(out) <- gsub('[.]x','',names(out))
   out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
   
   if (tableOnly) return(out)

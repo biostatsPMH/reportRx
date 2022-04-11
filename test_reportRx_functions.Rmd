@@ -536,6 +536,16 @@ nestTable(data=newtab[,c(5,1,2,6,3,4)],
 
 ```
 
+Check - what happens if the columns aren't sorted?
+```{r}
+
+newtab <- rbind(tab1,tab2)
+newtab <- newtab[c(1,2,6:8,4:5,9:15),]
+nestTable(data=newtab[,c(5,1,2,6,3,4)],
+          head_col = 'Model',to_col = 'Covariate')
+
+```
+
 \newpage
 
 # covsum and missing values
