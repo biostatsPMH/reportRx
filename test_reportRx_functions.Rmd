@@ -159,6 +159,16 @@ plotuv(data=lung,
 )
 ```
 
+
+
+```{r test-plotuv-2, fig.cap= 'Associations between status and covariates in the lung data.'}
+plotuv(data=lung,
+       covs=c('Sex','Status','AgeGroup','meal.cal','OneLevelFactor'),
+       response = 'age',
+       showN=T
+)
+```
+
 ## Tests for uvsum
 
 ### Test logistic

@@ -491,7 +491,6 @@ wrp_lbl <- function(x,width = 10){
   lst <- strwrap(x,width = width,simplify = F)
   for (i in seq_along(lst)) lst[[i]] <- paste(lst[[i]],collapse='\n')
   unlist(lst)
-  
 }
 
 

@@ -1919,6 +1919,8 @@ forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',sho
 #' @param na.rm boolean indicating whether na values should be shown or removed
 #' @param response_title character value with title of the plot
 #' @param return_plotlist boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details
+#' @param ncol the number of columns of plots to be display in the ggarrange call, defaults to 2
+#' @param p_margins sets the TRBL margins of the individual plots, defaults to c(0,0.2,1,.2)
 #' @keywords plot
 #' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
@@ -1932,7 +1934,7 @@ forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',sho
 #' # mtcars$cyl = factor(mtcars$cyl)
 #' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
 #' @seealso \code{\link{ggplot}} and \code{\link{ggarrange}}
-plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE){
+plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE,ncol=2,p_margins=c(0,0.2,1,.2)){
   
   for (v in c(response,covs)){
     if (!v %in% names(data)) stop(paste(v,'is not a variable in data.'))
@@ -1971,7 +1973,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
           p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
             geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
             scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
-            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1)) +
+            scale_x_discrete(labels= function(x) wrp_lbl(x))
           if (showPoints) {
             p <- p +geom_jitter( data=coloured_points,aes(colour=.data[[response]]), alpha=0.9) 
             p <- p +geom_jitter(data= black_points,
@@ -2002,7 +2005,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
         theme_bw() +
         theme(
           plot.title = element_text(size=10),
-          plot.margin = unit(c(0,1,0,1), "lines")) +
+          plot.margin = unit(p_margins, "lines")) +
         guides(alpha='none',linetype='none',colour='none')+
         scale_colour_reportRx()
       if (flip){
@@ -2043,7 +2046,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
           p <- ggplot(data=pdata, aes(x=.data[[x_var]],y=.data[[response]],fill=.data[[x_var]])) +
             geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
             scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
-            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))+
+            scale_x_discrete(labels= function(x) wrp_lbl(x))
           if (showPoints) {
             p <- p +geom_jitter(data=coloured_points,aes(colour=.data[[x_var]]), alpha=0.9) 
             p <- p +geom_jitter(data= black_points,
@@ -2060,8 +2064,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
         theme_bw() +
         theme(
           legend.position = 'none',
-          plot.title = element_text(size=10),
-          plot.margin = unit(c(0,1,0,1), "lines")) +
+          plot.title = element_text(size=9),
+          plot.margin = unit(p_margins, "lines")) +
         labs(x=niceStr(x_var),y=niceStr(response_title)) +
         scale_colour_reportRx() +
         guides(colour='none',linetype='none',alpha='none')
@@ -2073,8 +2077,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
     return(plist)
   } else{   suppressMessages(ggpubr::ggarrange(plotlist=plist,
                                                common.legend = use_common_legend,
-                                               ncol=2,
-                                               nrow=ceiling(length(plist)/2)))
+                                               ncol=ncol,
+                                               nrow=ceiling(length(plist)/ncol)))
   }}
 
 #' Plot KM and CIF curves with ggplot
