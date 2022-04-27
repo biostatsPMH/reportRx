@@ -1,0 +1,13 @@
+^.[.]bib$
+^.[.]csl$
+^.[.]doc*$
+^[.].[.]Rproj$
+^[.]]Rproj[.]user$
+^.*\.Rproj$
+^\.Rproj\.user$
+<<<<<<< .merge_file_a07432
+=======
+^bibfile\.bib$
+^test_reportRx_functions\.Rmd$
+^wordTemplate\.docx$
+>>>>>>> .merge_file_a12436

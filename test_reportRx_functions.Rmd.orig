@@ -1,0 +1,664 @@
+---
+title: "reportRx TestFile"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+  bookdown::word_document2:
+    reference_docx: 'wordTemplate.docx'
+    toc: yes
+sansfont: Calibri Light
+mainfont: Calibri Light
+bibliography:
+  - bibfile.bib
+#csl: Vancouver.csl
+link-citations: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+#library(reportRx)
+library(tidyverse)
+devtools::load_all()
+```
+
+
+\newpage
+# Introduction {-}
+
+Citations can be made like this for R packages [@R-reportRx], or [@R-base] for the R language itself. Other citations must match those found in your master bibfile. 
+
+First, make some changes to the lung data (cancer in the newer version of survival)
+
+```{r echo=T}
+data(cancer, package='survival')
+lung <- cancer
+
+lung <- lung %>%
+  mutate(
+    Status=factor(status-1),
+    Sex = factor(sex,labels = c('Male','Female')),
+    AgeGroup = cut(age, breaks=seq(0,100,10)),
+    OneLevelFactor = factor(x='one level')
+  ) %>%
+  arrange(Status)
+
+lung$x_null = rnorm(nrow(lung))
+lung$x_pred = c(rnorm(sum(lung$Status==0),0,1),
+                rnorm(sum(lung$Status==1),1,1))
+set.seed(1)
+test_data = tibble(
+  y= rnorm(1000),
+  x0= geoR::rboxcox(1000, lambda=.5, mean=10, sd=2),
+  x1= x0+y
+)
+```
+
+# Numbered Heading
+
+## Test covsum
+
+```{r test-covsum-1}
+rm_covsum(data=lung,
+          covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+          caption='Test Special characters in caption 80% $100.')
+
+```
+
+```{r test-covsum-2}
+rm_covsum(data=lung,
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
+```
+
+\newpage
+
+Make sure it still works when there are empty levels
+
+In a covariate:
+
+```{r test-covsum-3}
+
+test_empty <- lung
+test_empty$AgeGroup[test_empty$Sex=='Female'] <- NA
+
+rm_covsum(data=test_empty,
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
+```
+
+In the main covariate:
+
+```{r test-covsum-4}
+
+test_empty <- lung
+test_empty$Sex[test_empty$Sex=='Female'] <- NA
+
+rm_covsum(data=test_empty,
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex')
+
+```
+
+\newpage
+
+The chi-square is the default setting, unless there are low counts, check that this works properly
+This should have two Chi-Sq tests:
+
+```{r}
+
+rm_covsum(data=test_empty,
+          covs=c('AgeGroup','Status'),
+          maincov = 'Sex',
+          testcat='Chi-squared',
+          show.tests=T)
+
+```
+
+Here age group should be analysed with a Fisher test:
+
+```{r}
+
+rm_covsum(data=test_empty,
+          covs=c('AgeGroup','Status'),
+          maincov = 'Sex',
+          show.tests=T)
+
+```
+
+\newpage
+
+If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table. I haven't figured out how to fix this yet, but it is on the todo list!
+
+```{r results='asis',echo=T}
+
+pander::panderOptions('knitr.auto.asis', FALSE)
+
+for (v in names(lung)[1:2]){
+  cat("\n")
+  print(rm_covsum(data=lung,covs=v))
+  cat("\n")
+}
+
+pander::panderOptions('knitr.auto.asis', TRUE)
+```
+
+\newpage
+
+## Test plotuv
+
+Figure \@ref(fig:test-plotuv) shows the bivariate relationships between the response and covariates. Figure referencing works only when a figure caption is provided in the chunk options. Note that underscores and not allowed in the chunk names, only hyphens.
+
+```{r test-plotuv, fig.cap= 'Associations between status and covariates in the lung data.'}
+plotuv(data=lung,
+       covs=c('Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+       response = 'Status',
+       response_title = 'Test Response Title',
+       showN=T
+)
+```
+
+
+
+```{r test-plotuv-2, fig.cap= 'Associations between status and covariates in the lung data.'}
+plotuv(data=lung,
+       covs=c('Sex','Status','AgeGroup','meal.cal','OneLevelFactor'),
+       response = 'age',
+       showN=T
+)
+```
+
+## Tests for uvsum
+
+### Test logistic
+
+Tables \@ref(tab:test-uv-logistic-1), \@ref(tab:test-uv-logistic-2) and \@ref(tab:test-uv-logistic-3) display the logistic regression results with different confidence interval widths. If the document in knit to pdf, the chank-lable option will not be used, instead the name of the chunk will be used in cross-referening. For Word tables the chunk label needs to be added into the function call.
+
+```{r test-uv-logistic-1}
+rm_uvsum(response = 'Status',
+         covs=c('age','Sex','wt.loss'),
+         data=lung,
+         type='logistic',
+         chunk_label = 'test-uv-logistic-1' )
+
+
+```
+
+```{r test-uv-logistic-2}
+rm_uvsum(response = 'Status',
+         covs=c('age'),
+         data=lung,
+         type='logistic',
+         CIwidth=.9,
+         chunk_label='test-uv-logistic-2')
+```
+
+```{r test-uv-logistic-3}
+rm_uvsum(response = 'Status',
+         covs=c('age'),
+         data=lung,
+         type='logistic',
+         CIwidth=.99,
+         chunk_label='test-uv-logistic-3')
+
+
+
+```
+
+### Test Linear
+```{r test-uv-linear}
+rm_uvsum(response = 'wt.loss',
+         covs=c('Status','Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         CIwidth=.95)
+rm_uvsum(response = 'wt.loss',
+         covs=c('age'),
+         data=lung,
+         CIwidth=.90)
+
+```
+
+### Test coxph 
+```{r test-uv-coxph}
+rm_uvsum(response = c('time','status'),
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         CIwidth=.99)
+
+```
+
+### Test crr 
+See Appendix
+
+### Test ordinal
+
+```{r test-uv-ord}
+mtcars$cyl <- factor(mtcars$cyl)
+rm_uvsum(response = 'cyl',
+         covs=c('qsec'),
+         data=mtcars,
+         CIwidth=.90)
+
+
+```
+
+### Test crr
+```{r test-uv-crr}
+rm_uvsum(response = c('time','status'),
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         type='crr',
+         CIwidth=.90)
+
+rm_uvsum(response = c('time','status'),
+         covs=c('age'),
+         data=lung,
+         type='crr')
+
+```
+
+### Test boxcox
+```{r test-uv-boxcox}
+rm_uvsum(response = 'y',
+         covs=c('x0','x1'),
+         data=test_data,
+         type='boxcox',
+         CIwidth=.90)
+```
+
+### Test  geeglm 
+
+```{r}
+data(BodyWeight,package='nlme')
+
+
+rm_uvsum(response = 'weight',
+         covs=c('Time','Diet'),
+         id='Rat',
+         corstr="ar1",
+         family=gaussian("identity"),
+         data=BodyWeight,showN=T)
+
+```
+
+\newpage
+
+# KM plit with confidence intervals
+```{r}
+ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
+        set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE)
+
+```
+
+## modify a KM plot 
+
+```{r}
+km <- ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
+              set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE,returns = T)
+km[[1]] <- km[[1]] + ggplot2::theme_minimal()
+modify_ggkmcif(km)
+```
+
+
+\newpage
+
+# Unnumbered Heading {-}
+
+\newpage
+
+## Test etsum
+
+To get nice output from  `rm_etsum` you must set `results='asis' in the chunk options`
+
+otherwise you get this:
+
+```{r, eval=T}
+rm_etsum(data = lung, response = c("time","status"), group = 1,
+         times=c(365,720,1095), units="days")
+
+```
+
+when you want this:
+
+```{r, results='asis'}
+rm_etsum(lung,c("time","status"),"Sex",c(1,2,3),"months")
+```
+
+<<<<<<< HEAD
+## Test mvsum & forestplot2
+=======
+## Test mvsum 
+
+
+Comments from Susie 8 Oct
+```{r}
+library(survival)
+data <- read.csv('../reportRxTestData/sampledata.csv')
+str(data)
+
+table(data$Chemo_Yes_No)
+class(data$Chemo_Yes_No)
+table(data$RT_QA)
+class(data$RT_QA)
+
+m1 <- coxph(Surv(OStime,OS)~ RT_QA + Chemo_Yes_No,  data)
+rm_mvsum(model=m1,data=data)
+
+response <- names(m1$model)[1]
+
+```
+
+
+
+### Test with glm
+>>>>>>> pre-devel
+
+```{r}
+m = glm(Status~wt.loss+Sex+AgeGroup,
+        data=lung,
+        family='binomial')
+rm_mvsum(model=m,data = lung,p.adjust='holm',showN=T)
+rm_mvsum(model=m,p.adjust='holm',showN=T)
+
+fit_lm = lm(wt.loss~age+Sex,data=lung)
+rm_mvsum(model=fit_lm,showN=T)
+
+```
+
+<<<<<<< HEAD
+=======
+```{r}
+## Dobson (1990) Page 93: Randomized Controlled Trial :
+counts <- c(18,17,15,20,10,20,25,13,12)
+outcome <- gl(3,1,9)
+treatment <- gl(3,3)
+pois_data <- data.frame(treatment, outcome, counts) # showing data
+glm.D93 <- glm(counts ~ outcome + treatment, data=pois_data, family = poisson())
+rm_mvsum(model=glm.D93,data = pois_data)
+```
+
+### Test with glm, linear
+
+```{r}
+m = glm(wt.loss~Sex+age,
+        data=lung,
+        family='gaussian')
+#summary(m)
+rm_mvsum(model=m,data = lung)
+```
+
+### Test with lm
+
+```{r}
+m = lm(wt.loss~Status+Sex+age,
+       data=lung)
+rm_mvsum(model=m,data = lung,p.adjust='hochberg')
+
+```
+
+### Test with lme
+
+```{r}
+
+library(nlme)
+data(BodyWeight)
+fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
+#summary(fm1BW.lme)
+rm_mvsum(model=fm1BW.lme,data=BodyWeight)
+rm_mvsum(fm1BW.lme,showN = T)
+
+
+
+
+```
+
+### Test with polr
+
+
+```{r}
+library(MASS)
+data(housing)
+options(contrasts = c("contr.treatment", "contr.poly"))
+house.plr <- MASS::polr(Sat ~ Infl + Type + Cont, weights = Freq, data = housing)
+#summary(house.plr)
+rm_mvsum(model=house.plr)
+rm_mvsum(model=house.plr,showN=T)
+
+
+```
+
+### Test crr
+```{r}
+# From the crr help file
+set.seed(10)
+ftime <- rexp(200)
+fstatus <- sample(0:2,200,replace=TRUE)
+cov <- matrix(runif(600),nrow=200)
+dimnames(cov)[[2]] <- c('x1','x2','x3')
+df <- data.frame(ftime,fstatus,cov)
+m1 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df)
+
+# summary(m1)
+rm_mvsum(m1,data=df,showN = T)
+# rm_mvsum(m1,data=df,showN = F)
+
+# df2 <- df
+# df2[sample(1:nrow(df),5),3] <- NA
+# df2[sample(1:nrow(df),5),4] <- NA
+# df2[sample(1:nrow(df),5),5] <- NA
+# 
+# m2 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df2)
+# #rm_mvsum(model=m2,showN = T) # data must be supplied for crr models
+# rm_mvsum(m2,data=df2,showN = T) # good
+# #rm_mvsum(m2,data=df,showN = T) # This is wrong, because the data supplied is wrong
+# 
+# df3 <- na.omit(df2)
+# m3 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df3)
+# rm_mvsum(m3,data=df3,showN = T) # This is right
+# 
+
+```
+
+### Test  geeglm 
+
+```{r}
+library(geepack)
+data(BodyWeight,package='nlme')
+fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
+
+gee1 <- geeglm(weight ~ Time+Diet , data=BodyWeight, id=Rat, family=gaussian("identity"), corstr="ar1")
+summary(gee1)
+rm_mvsum(gee1,data=BodyWeight,showN=T)
+
+```
+
+## TO DO fix- bug
+```{r, eval=F,echo=T}
+library(geepack)
+data(dietox)
+dietox$Cu     <- as.factor(dietox$Cu)
+mf <- formula(Weight ~ Cu * (Time + I(Time^2) + I(Time^3)))
+gee1 <- geeglm(mf, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+summary(gee1)
+mvsum(gee1,data=dietox)
+
+```
+
+
+>>>>>>> pre-devel
+\newpage
+
+```{r}
+forestplot2(m)
+```
+
+\newpage
+
+## Combining uvsum and mvsum tables
+
+Linear models
+
+```{r}
+uvsumTable  <- rm_uvsum(response = 'wt.loss',
+         covs=c('Status','Sex','ph.ecog','meal.cal','AgeGroup'),
+         data=lung,
+         CIwidth=.95,
+         tableOnly = T)
+
+m <- lm(wt.loss~Status+Sex+ph.ecog+meal.cal+AgeGroup,data=lung)
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+```
+
+
+Logistic models
+
+```{r}
+uvsumTable  <- rm_uvsum(response = 'Status',
+         covs=c('Sex','ph.ecog','meal.cal','AgeGroup'),
+         data=lung,
+         CIwidth=.95,
+         tableOnly = T)
+
+m <- glm(Status~Sex+ph.ecog+meal.cal,data=lung,family='binomial')
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+```
+
+\newpage
+
+## Combining Tables with nestTable
+
+```{r}
+m1 = glm(Status~wt.loss+Sex,
+         data=lung,
+         family='binomial')
+tab1 <- rm_mvsum(model=m1,data = lung,p.adjust='none',tableOnly = T,showN=T)
+m2 = glm(Status~wt.loss+Sex+AgeGroup,
+         data=lung,
+         family='binomial')
+tab2 <- rm_mvsum(model=m2,data = lung,p.adjust='none',tableOnly = T,showN = T)
+
+tab1$Model = 'Model 1'
+tab1$`p-value` = NA # necessary to make the columns match
+tab2$Model = 'Model 2'
+
+newtab <- rbind(tab1,tab2)
+nestTable(data=newtab[,c(5,1,2,6,3,4)],
+          head_col = 'Model',to_col = 'Covariate')
+
+
+
+```
+
+Check - what happens if the columns aren't sorted?
+```{r}
+
+newtab <- rbind(tab1,tab2)
+newtab <- newtab[c(1,2,6:8,4:5,9:15),]
+nestTable(data=newtab[,c(5,1,2,6,3,4)],
+          head_col = 'Model',to_col = 'Covariate')
+
+```
+
+\newpage
+
+# covsum and missing values
+
+Add some more examples here...
+
+No Missing Values
+```{r}
+data("mtcars")
+mtcars$Cylinders <- as.factor(mtcars$cyl)
+mtcars$Transmission <- factor(mtcars$am,levels=0:1,labels=c('Automatic','Manual'))
+rm_covsum(data=mtcars,
+          maincov = 'Transmission',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T)
+
+```
+
+Adding in some extra rows with missing values on Cylinders and mpg
+
+```{r}
+
+missingData <- data.frame(Transmission = rep(c("Automatic","Manual"),each=10),Cylinders=NA,mpg=NA,qsec=NA)
+mtcars2 <- bind_rows(mtcars,missingData)
+rm_covsum(data=mtcars2,
+          maincov = 'Transmission',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T)
+
+```
+
+
+```{r, eval=F}
+# ReportRx Code Dependencies
+exportedFunctions <- ls("package:reportRx")
+
+# get all functions inside the package using asNamespace
+all_funs <- unclass(lsf.str(envir = asNamespace("reportRx"), all.names = T))
+# get only non exported funs
+hiddenFunctions <- setdiff(all_funs, exportedFunctions)
+
+RxFuns <- data.frame(fName = c(exportedFunctions,hiddenFunctions),
+                     fStatus = c(rep('Exported',length(exportedFunctions)),
+                                 rep('Hidden',length(hiddenFunctions))))
+
+RxFuns %>% write.csv('../reportRxFunctionList.csv')
+```
+
+\newpage
+
+# References
+
+<!-- NOTE: This is a comment and will not appear in the final document -->
+
+<div id="refs"></div> <!-- This is only necessary if you need something after the Reference section -->
+
+\newpage
+
+# Appendix
+
+## Comparing p-values
+
+P-values agree between 
+
+```{r}
+lung$ECOG <- as.factor(lung$ph.ecog)
+rm_uvsum(response = 'wt.loss',
+         covs=c('status','Status','sex','Sex','ph.ecog','ECOG'),
+         data=lung,
+         CIwidth=.95)
+```
+
+With lm:
+
+```{r}
+l1 <- lm(wt.loss~Sex,data=lung)
+summary(l1)
+
+```
+
+With t-test (using the default of non-homogenous variance):
+
+```{r}
+t1 <- t.test(wt.loss~Sex,data=lung)
+t1
+t1$p.value
+
+```
+
+
+With t-test using the pooled variance:
+
+```{r}
+t2 <- t.test(wt.loss~Sex,data=lung,var.equal=T)
+t2
+t2$p.value
+
+```
+
+
