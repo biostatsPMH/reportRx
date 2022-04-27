@@ -137,6 +137,16 @@ pvalue<-function(x){
   else return(signif(x,2))
 }
 
+formatp<- function(pvalues){
+  p_out <- sapply(pvalues, function(x){
+    
+    xsig <-suppressWarnings(as.numeric(x))
+    nsmall <- ifelse(xsig<0.1,3,2)
+    x <- ifelse(x=='excl','excl',ifelse(is.na(nsmall),NA_character_,ifelse(xsig<0.001,"<0.001",format(round(xsig,nsmall),nsmall))))})
+  p_out = unname(p_out)
+  return(p_out)
+}
+
 sanitize <- function(str) {
   result <- str
   result <- gsub("\\\\", "SANITIZE.BACKSLASH", result)
@@ -187,11 +197,17 @@ addspace<-function(x){
 #' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified significant digits. Will bold the p-value if it is <= 0.05
 #' @param x an integer
 #' @param sigdigits number of significant digit to report
-lpvalue<-function(x,sigdigits=2){
-  if(is.na(x)|class(x)=="character") return(x)
-  else if (x<=0.001) return("\\textbf{$<$0.001}")
-  else x=signif(x,sigdigits)
-  if(x<=0.05) return(paste("\\textbf{",x,"}",sep=""))
+lpvalue <- function (x, sigdigits = 2) 
+{
+  if (is.na(x) | class(x) == "character") 
+    return(x)
+  else if (x <= 0.001) 
+    return("\\textbf{$<$0.001}")
+  else if (x <= 0.1) 
+    x = format(round(x, 3), nsmall = 3)
+  else x = format(round(x, sigdigits), nsmall = sigdigits)
+  if (x <= 0.05) 
+    return(paste("\\textbf{", x, "}", sep = ""))
   else return(x)
 }
 
@@ -481,7 +497,10 @@ niceStr <- function (strings)
 
 wrp_lbl <- function(x,width = 10){
   x <- niceStr(x)
-  strwrap(x,width = width)
+  #  strwrap(x,width = width) # doesn't work nicely with spaces
+  lst <- strwrap(x,width = width,simplify = F)
+  for (i in seq_along(lst)) lst[[i]] <- paste(lst[[i]],collapse='\n')
+  unlist(lst)
 }
 
 
@@ -497,13 +516,7 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
   structure(fun, class = "labeller")
 }
 
-formatp<- function(pvalues,sigdigits=2){
-  p_out <- sapply(pvalues, function(x){
-    xsig <- suppressWarnings(signif(as.numeric(x),sigdigits))
-    x <- ifelse(x=='excl','excl',ifelse(is.na(xsig),NA_character_,ifelse(xsig<0.001,"<0.001",format(xsig))))})
-  p_out = unname(p_out)
-  return(p_out)
-}
+
 
 
 

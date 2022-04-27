@@ -14,6 +14,7 @@ Maintainer: Biostatistics Department Princess Margaret Cancer Centre <biostatsPM
 Imports: 
     aod,
     cmprsk,
+    geepack,
     geoR,
     ggplot2,
     ggpubr,
@@ -33,7 +34,7 @@ Packaged: 2013-12-17 20:18:01 UTC; ryan
 NeedsCompilation: no
 Repository: CRAN
 Date/Publication: 2013-12-17 23:18:16
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8
 Suggests: 
     testthat (>= 3.0.0),

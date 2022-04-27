@@ -11,7 +11,7 @@ rm_uvsum(
   caption = NULL,
   tableOnly = FALSE,
   removeInf = T,
-  HolmGlobalp = FALSE,
+  p.adjust = "none",
   chunk_label,
   ...
 )
@@ -29,7 +29,7 @@ rm_uvsum(
 
 \item{removeInf}{boolean indicating if infinite estimates should be removed from the table}
 
-\item{HolmGlobalp}{boolean indicting if a Holm-corrected p-value should be presented}
+\item{p.adjust}{p-adjustments to be performed (Global p-values only)}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 

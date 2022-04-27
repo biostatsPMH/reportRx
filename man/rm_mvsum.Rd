@@ -2,9 +2,7 @@
 % Please edit documentation in R/main.R
 \name{rm_mvsum}
 \alias{rm_mvsum}
-\title{Output a multivariable model nicely in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.}
+\title{Format a regression model nicely for Rmarkdown}
 \usage{
 rm_mvsum(
   model,
@@ -13,14 +11,15 @@ rm_mvsum(
   CIwidth = 0.95,
   caption = NULL,
   tableOnly = FALSE,
-  HolmGlobalp = FALSE,
+  p.adjust = "none",
   chunk_label
 )
 }
 \arguments{
 \item{model}{model fit}
 
-\item{data}{data that model was fit on}
+\item{data}{data that model was fit on (an attempt will be made to extract
+this from the model)}
 
 \item{showN}{boolean indicating sample sizes should be shown for each comparison, can be useful for interactions}
 
@@ -30,12 +29,10 @@ rm_mvsum(
 
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
-\item{HolmGlobalp}{boolean indicting if a Holm-corrected p-value should be presented}
+\item{p.adjust}{p-adjustments to be performed (Global p-values only)}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \description{
-Output a multivariable model nicely in Rmarkdown
-The default output is a kable table for use in pdfs or html, but pander tables can be produced
-for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+This is a wrapper around mvsum for use with Rmarkdown
 }

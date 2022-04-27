@@ -1,0 +1,54 @@
+---
+title: "Report Title"
+author: "Lisa Avery, PMH Biostatistics"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    number_sections: FALSE
+  bookdown::word_document2:
+    reference_docx: '../wordTemplate.docx'
+sansfont: Calibri Light
+mainfont: Calibri Light
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE,message = FALSE)
+library(tidyverse)
+#library(reportRx)
+devtools::load_all()
+#library(createBibfile)
+theme_set(theme_bw())
+```
+
+Unadjusted Font Size
+```{r}
+
+data("mtcars")
+mtcars$Gears <- as.factor(mtcars$gear)
+mtcars$Cylinders <- as.factor(mtcars$cyl)
+mtcars$Transmission <- factor(mtcars$am,levels=0:1,labels=c('Automatic','Manual'))
+rm_covsum(data=mtcars,
+          maincov = 'Gears',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T)
+```
+
+Larger Font Size
+
+```{r}
+tab <- rm_covsum(data=mtcars,
+          maincov = 'Gears',
+          covs=c('mpg','Cylinders','qsec'),show.tests=F,tableOnly = T)
+outTable(tab,fontsize = 13)
+
+```
+
+Super Long Table
+
+```{r}
+tab <-rm_covsum(data=mtcars,
+          maincov = 'Gears',
+          covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+newtab <- rbind(tab,tab,tab,tab,tab,tab,tab,tab)
+outTable(newtab)
+```

@@ -7,13 +7,13 @@
 rm_etsum(data, response, group = 1, times = c(12, 14), units = "months")
 }
 \arguments{
-\item{data}{dataframe containing data}
+\item{data}{data frame containing data}
 
 \item{response}{character vector with names of columns to use for response}
 
-\item{group}{string specifiying the column name of stratification variable}
+\item{group}{string specifying the column name of stratification variable}
 
-\item{times}{numeric vector of times you want survival time provbabilities for.}
+\item{times}{numeric vector of times you want survival time probabilities for.}
 
 \item{units}{string indicating the unit of time. Use lower case and plural.}
 }
@@ -22,9 +22,9 @@ Wrapper for the etsum function that prints paragraphs of text in R Markdown
 }
 \examples{
 require(survival)
-lung$sex<-factor(lung$sex)
-petsum(lung,c("time","status"),"sex")
-petsum(lung,c("time","status"))
-petsum(lung,c("time","status"),"sex",c(1,2,3),"months")
+cancer$sex<-factor(cancer$sex)
+rm_etsum(cancer,c("time","status"),"sex")
+rm_etsum(cancer,c("time","status"))
+rm_etsum(cancer,c("time","status"),"sex",c(1,2,3),"months")
 }
 \keyword{print}

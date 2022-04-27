@@ -350,7 +350,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   testcat <- match.arg(testcat)
   percentage <- match.arg(percentage)
   
-
+  
   if (!pvalue) {
     show.tests<- FALSE
     excludeLevels<- NULL
@@ -665,8 +665,12 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #'@param response string vector with name of response
 #'@param covs character vector with the names of columns to fit univariate models to
 #'@param data dataframe containing data
+#'@param id character vector which identifies clusters. Only used for geeglm
+#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
+#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
 #'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-#'Options include "linear", "logistic", "coxph", "crr", "boxcox","ordinal"
+#'Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
 #'@param strata character vector of covariates to stratify by. Only used for coxph and crr
 #'@param markup boolean indicating if you want latex markup
 #'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
@@ -679,266 +683,510 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #'@keywords dataframe
 #' @importFrom survival coxph Surv
 #' @importFrom aod wald.test
+#' @importFrom geepack geeglm
 #'@export
-uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
-                   sanitize = T, nicenames = T, testing = F,showN=T,CIwidth=0.95,reflevel)
+uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL,
+                   type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
+                   testing = F, showN = T, CIwidth = 0.95, reflevel) 
 {
-  missing_vars = setdiff(c(response,covs),names(data))
-  if (length(missing_vars)>0){
-    stop(paste('These covariates are not in the data:',missing_vars))
-  }
-  for (v in covs) { if (class(data[[v]])[1] %in% c('character','ordered')) data[[v]] <- factor(data[[v]],ordered=F)}
-  if (class(data[[response[1]]])[1]=='character') data[[v]] <- factor(data[[v]])
-  
-  if (!markup) {
-    lbld <- identity
-    addspace <- identity
-    lpvalue <- identity
-  }
-  if (!sanitize)
-    sanitizestr <- identity
-  if (!nicenames)
-    nicename <- identity
-  if (class(strata) != "numeric") {
-    strataVar=strata
-    strata <- sapply(strata, function(stra) {
-      paste("strata(", stra, ")", sep = "")
+  if (is.null(id)) {
+    missing_vars = setdiff(c(response, covs), names(data))
+    if (length(missing_vars) > 0) {
+      stop(paste("These covariates are not in the data:", 
+                 missing_vars))
+    }
+    for (v in covs) {
+      if (class(data[[v]])[1] %in% c("character", "ordered")) 
+        data[[v]] <- factor(data[[v]], ordered = F)
+    }
+    if (class(data[[response[1]]])[1] == "character") 
+      data[[v]] <- factor(data[[v]])
+    if (!markup) {
+      lbld <- identity
+      addspace <- identity
+      lpvalue <- identity
+    }
+    if (!sanitize) 
+      sanitizestr <- identity
+    if (!nicenames) 
+      nicename <- identity
+    if (class(strata) != "numeric") {
+      strataVar = strata
+      strata <- sapply(strata, function(stra) {
+        paste("strata(", stra, ")", sep = "")
+      })
+    }
+    else {
+      strataVar <- ""
+      strata <- ""
+    }
+    if (!is.null(type)) {
+      if (type == "logistic") {
+        beta <- "OR"
+      }
+      else if (type == "linear" | type == "boxcox") {
+        beta <- "Estimate"
+      }
+      else if (type == "coxph" | type == "crr") {
+        beta <- "HR"
+      }
+      else if (type == "ordinal") {
+        if (!class(data[[response[1]]])[1] %in% c("factor", 
+                                                  "ordered")) {
+          warning("Response variable is not a factor, will be converted to an ordered factor")
+          data[[response]] <- factor(data[[response]], 
+                                     ordered = T)
+        }
+        if (!missing(reflevel)) {
+          data[[response]] <- stats::relevel(data[[response]], 
+                                             ref = reflevel)
+        }
+        beta <- "OR"
+      }
+      else {
+        stop("type must be either coxph, logistic, linear, coxbox, crr, ordinal (or NULL)")
+      }
+    }
+    else {
+      if (length(response) == 2) {
+        if (length(unique(data[[response[2]]])) < 3) {
+          type <- "coxph"
+        }
+        else {
+          type <- "crr"
+        }
+        beta <- "HR"
+      }
+      else if (length(unique(data[[response]])) == 2) {
+        type <- "logistic"
+        beta <- "OR"
+      }
+      else if ("ordered" %in% class(data[[response[1]]])) {
+        type <- "ordinal"
+        beta <- "OR"
+        if (!missing(reflevel)) {
+          data[[response]] <- stats::relevel(data[[response]], 
+                                             ref = reflevel)
+        }
+      }
+      else {
+        type <- "linear"
+        beta <- "Estimate"
+      }
+    }
+    beta = betaWithCI(beta, CIwidth)
+    if (strata != "" & type != "coxph") {
+      stop("strata can only be used with coxph")
+    }
+    out <- lapply(covs, function(x_var) {
+      data <- data[, intersect(names(data), c(response, x_var, 
+                                              strataVar))]
+      data <- stats::na.omit(data)
+      if (class(data[[x_var]])[1] %in% c("ordered", "factor")) {
+        data[[x_var]] = droplevels(data[[x_var]])
+      }
+      x_var_str <- x_var
+      if (testing) 
+        print(x_var)
+      if (is.factor(data[[x_var]])) {
+        levelnames = sapply(sapply(sapply(levels(data[[x_var]]), 
+                                          nicename), sanitizestr), addspace)
+        x_var_str <- lbld(sanitizestr(nicename(x_var)))
+        title <- NULL
+        body <- NULL
+        if (type == "coxph") {
+          m2 <- survival::coxph(as.formula(paste(paste("survival::Surv(", 
+                                                       response[1], ",", response[2], ")", 
+                                                       sep = ""), "~", x_var, ifelse(strata == 
+                                                                                       "", "", "+"), paste(strata, 
+                                                                                                           collapse = "+"), sep = "")), data = data)
+          hazardratio <- c("Reference", apply(matrix(summary(m2, 
+                                                             conf.int = CIwidth)$conf.int[, c(1, 3, 4)], 
+                                                     ncol = 3), 1, psthr))
+          pvalue <- c("", sapply(summary(m2, conf.int = CIwidth)$coef[, 
+                                                                      5], lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(summary(m2, 
+                                                        conf.int = CIwidth)$waldtest[3]))
+        }
+        else if (type == "crr") {
+          m2 <- crrRx(as.formula(paste(paste(response, 
+                                             collapse = "+"), "~", x_var, sep = "")), 
+                      data = data)
+          hazardratio <- c("Reference", apply(matrix(summary(m2, 
+                                                             conf.int = CIwidth)$conf.int[, c(1, 3, 4)], 
+                                                     ncol = 3), 1, psthr))
+          pvalue <- c("", sapply(summary(m2)$coef[, 
+                                                  5], lpvalue))
+          globalpvalue <- try(aod::wald.test(b = m2$coef, 
+                                             Sigma = m2$var, Terms = seq_len(length(m2$coef)))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
+        }
+        else if (type == "logistic") {
+          m2 <- glm(as.formula(paste(response, "~", 
+                                     x_var, sep = "")), family = "binomial", 
+                    data = data)
+          m2_null <- stats::update(m2,formula=as.formula(paste0(response,'~1')),data=m2$model)
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+          #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          m <- summary(m2)$coefficients
+          Z_mult = qnorm(1 - (1 - CIwidth)/2)
+          hazardratio <- c("Reference", apply(cbind(exp(m[-1, 
+                                                          1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
+                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr))
+          pvalue <- c("", sapply(m[-1, 4], lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
+        }
+        else if (type == "linear" | type == "boxcox") {
+          if (type == "linear") {
+            m2 <- lm(as.formula(paste(response, "~", 
+                                      x_var, sep = "")), data = data)
+          }
+          else {
+            m2 <- boxcoxfitRx(as.formula(paste(response, 
+                                               "~", x_var, sep = "")), data = data)
+          }
+          m <- summary(m2)$coefficients
+          m2_null <- lm(formula=as.formula(paste0(response,'~1')),data=m2$model)
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+          #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          hazardratio <- c("Reference", apply(cbind(m[-1, 
+                                                      1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + 
+                                                      T_mult * m[-1, 2]), 1, psthr))
+          pvalue <- c("", sapply(m[-1, 4], lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
+        }
+        else if (type == "ordinal") {
+          m2 = MASS::polr(data = data, as.formula(paste(response, 
+                                                        "~", x_var, sep = "")), method = "logistic", 
+                          Hess = TRUE)
+          m <- data.frame(summary(m2)$coef)
+          m <- m[grep(x_var, rownames(summary(m2)$coef)), 
+          ]
+          nterms = length(m2$coefficients)
+          
+          m2_null <- stats::update(m2,data=m2$model,formula=as.formula(paste0(response,'~1' )))
+          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2)[,"Pr(Chi)"])))
+          # globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
+          #                                                     1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
+          #                     silent = T)
+          if (class(globalpvalue)[1] == "try-error") 
+            globalpvalue <- "NA"
+          Z_mult <- stats::qnorm(p = 1 - (1 - CIwidth)/2)
+          m$p_value <- stats::pnorm(abs(m$t.value), lower.tail = FALSE) * 
+            2
+          hazardratio <- c("Reference", apply(cbind(exp(m[, 
+                                                          "Value"]), exp(m[, "Value"] - Z_mult * 
+                                                                           m[, "Std..Error"]), exp(m[, "Value"] + 
+                                                                                                     Z_mult * m[, "Std..Error"])), 1, psthr))
+          pvalue <- c("", sapply(m$p_value, lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
+        }
+        if (length(levelnames) == 2) {
+          body <- cbind(levelnames, hazardratio, c("", 
+                                                   ""), c("", ""))
+        }
+        else {
+          body <- cbind(levelnames, hazardratio, pvalue, 
+                        rep("", length(levelnames)))
+        }
+        out <- rbind(title, body)
+        if (showN) {
+          n_by_level = c(nrow(data), as.vector(table(data[[x_var]])))
+          out <- cbind(out, n_by_level)
+        }
+        rownames(out) <- NULL
+        colnames(out) <- NULL
+        return(list(out, nrow(out)))
+      }
+      else {
+        x_var_str <- lbld(sanitizestr(nicename(x_var)))
+        if (type == "coxph") {
+          m2 <- survival::coxph(as.formula(paste(paste("survival::Surv(", 
+                                                       response[1], ",", response[2], ")", 
+                                                       sep = ""), "~", x_var, ifelse(strata == 
+                                                                                       "", "", "+"), paste(strata, 
+                                                                                                           collapse = "+"), sep = "")), data = data)
+          out <- matrix(c(x_var_str, psthr(summary(m2, 
+                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)]), 
+                          "", lpvalue(summary(m2)$waldtest[3])), 
+                        ncol = 4)
+        }
+        else if (type == "crr") {
+          m2 <- crrRx(as.formula(paste(paste(response, 
+                                             collapse = "+"), "~", x_var, sep = "")), 
+                      data = data)
+          globalpvalue <- try(aod::wald.test(b = m2$coef, 
+                                             Sigma = m2$var, Terms = seq_len(length(m2$coef)))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          out <- matrix(c(x_var_str, psthr(summary(m2, 
+                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)]), 
+                          "", lpvalue(globalpvalue)), ncol = 4)
+        }
+        else if (type == "logistic") {
+          m2 <- glm(as.formula(paste(response, "~", 
+                                     x_var, sep = "")), family = "binomial", 
+                    data = data)
+          m <- summary(m2)$coefficients
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          Z_mult = qnorm(1 - (1 - CIwidth)/2)
+          out <- matrix(c(x_var_str, psthr(c(exp(m[-1, 
+                                                   1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
+                                                                                                 1] + Z_mult * m[-1, 2]))), "", lpvalue(globalpvalue)), 
+                        ncol = 4)
+        }
+        else if (type == "linear" | type == "boxcox") {
+          if (type == "linear") {
+            m2 <- lm(as.formula(paste(response, "~", 
+                                      x_var, sep = "")), data = data)
+          }
+          else {
+            m2 <- boxcoxfitRx(as.formula(paste(response, 
+                                               "~", x_var, sep = "")), data = data)
+          }
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          m <- summary(m2)$coefficients
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          out <- matrix(c(x_var_str, psthr(c(m[-1, 1], 
+                                             m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * 
+                                               m[-1, 2])), "", lpvalue(globalpvalue)), 
+                        ncol = 4)
+        }
+        else if (type == "ordinal") {
+          m2 = MASS::polr(data = data, as.formula(paste(response, 
+                                                        "~", x_var, sep = "")), method = "logistic", 
+                          Hess = TRUE)
+          m <- data.frame(summary(m2)$coef)
+          m <- m[grep(x_var, rownames(summary(m2)$coef)), 
+          ]
+          nterms = length(m2$coefficients)
+          globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
+                                                              1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
+                              silent = T)
+          if (class(globalpvalue)[1] == "try-error") 
+            globalpvalue <- "NA"
+          Z_mult <- stats::qnorm(p = 1 - (1 - CIwidth)/2)
+          out <- matrix(c(x_var_str, psthr(c(exp(m[, "Value"]), 
+                                             exp(m[, "Value"] - Z_mult * m[, "Std..Error"]), 
+                                             exp(m[, "Value"] + Z_mult * m[, "Std..Error"]))), 
+                          "", lpvalue(globalpvalue)), ncol = 4)
+        }
+        if (showN) {
+          out <- cbind(out, nrow(data))
+        }
+        return(list(out, nrow(out)))
+      }
     })
-  } else {
-    strataVar <-""
-    strata <- ""
-  }
-  if (!is.null(type)) {
-    if (type == "logistic") {
-      beta <- "OR"
-    } else if (type == "linear" | type == "boxcox") {
-      beta <- "Estimate"
-    } else if (type == "coxph" | type == "crr") {
-      beta <- "HR"
-    } else if (type == 'ordinal'){
-      if (!class(data[[response[1]]])[1] %in% c('factor','ordered')) {
-        warning('Response variable is not a factor, will be converted to an ordered factor')
-        data[[response]] <- factor(data[[response]],ordered=T)
-      }
-      if (!missing(reflevel)){
-        data[[response]] <- stats::relevel(data[[response]], ref=reflevel)
-      }
-      beta <- "OR"
-    } else {
-      stop("type must be either coxph, logisitc, linear, coxbox, crr, ordinal (or NULL)")
+    table <- lapply(out, function(x) {
+      return(x[[1]])
+    })
+    table <- do.call("rbind", lapply(table, data.frame, 
+                                     stringsAsFactors = FALSE))
+    if (showN) {
+      colnames(table) <- sapply(c("Covariate", sanitizestr(beta), 
+                                  "p-value", "Global p-value", "N"), 
+                                lbld)
     }
-  } else {
-    if (length(response) == 2) {
-      if (length(unique(data[[response[2]]])) < 3) {
-        type <- "coxph"
-      } else {
-        type <- "crr"
-      }
-      beta <- "HR"
-    } else if (length(unique(data[[response]])) == 2) {
-      type <- "logistic"
-      beta <- "OR"
-    } else if ("ordered" %in% class(data[[response[1]]])){
-      type <- 'ordinal'
-      beta <- "OR"
-      if (!missing(reflevel)){
-        data[[response]] <- stats::relevel(data[[response]], ref=reflevel)
-      }
-    } else {
-      type <- "linear"
-      beta <- "Estimate"
+    else {
+      colnames(table) <- sapply(c("Covariate", sanitizestr(beta), 
+                                  "p-value", "Global p-value"), lbld)
     }
+    return(table)
   }
-  beta = betaWithCI(beta,CIwidth)
-  
-  if (strata != "" & type != "coxph") {
-    stop("strata can only be used with coxph")
-  }
-  out <- lapply(covs, function(x_var) {
-    # data <- dplyr::select(data,dplyr::any_of(c(response,x_var,strataVar)))
-    data <- data[,intersect(names(data),c(response,x_var,strataVar))]
-    data <-stats::na.omit(data)
-    if (class(data[[x_var]])[1] %in% c("ordered", "factor" )){data[[x_var]] = droplevels(data[[x_var]])}
-    x_var_str <- x_var
-    if (testing)
-      print(x_var)
-    if (is.factor(data[[x_var]])) {
-      levelnames = sapply(sapply(sapply(levels(data[[x_var]]),nicename),sanitizestr),addspace)
-      x_var_str <- lbld(sanitizestr(nicename(x_var)))
-      title <- NULL
-      body <- NULL
-      if (type == "coxph") {
-        m2 <- survival::coxph(as.formula(paste(paste("survival::Surv(", response[1],
-                                                     ",", response[2], ")", sep = ""), "~", x_var,
-                                               ifelse(strata == "", "", "+"), paste(strata,
-                                                                                    collapse = "+"), sep = "")), data = data)
-        hazardratio <- c("Reference", apply(matrix(summary(m2,conf.int=CIwidth)$conf.int[,
-                                                                                         c(1, 3, 4)], ncol = 3), 1, psthr))
-        pvalue <- c("", sapply(summary(m2,conf.int=CIwidth)$coef[, 5],
-                               lpvalue))
-        title <- c(x_var_str, "", "", lpvalue(summary(m2,conf.int=CIwidth)$waldtest[3]))
-      } else if (type == "crr") {
-        m2 <- crrRx(as.formula(paste(paste(response,
-                                           collapse = "+"), "~", x_var, sep = "")), data = data)
-        hazardratio <- c("Reference", apply(matrix(summary(m2,conf.int=CIwidth)$conf.int[,
-                                                                                         c(1, 3, 4)], ncol = 3), 1, psthr))
-        pvalue <- c("", sapply(summary(m2)$coef[, 5],
-                               lpvalue))
-        globalpvalue <- try(aod::wald.test(b = m2$coef, Sigma = m2$var,
-                                           Terms = seq_len(length(m2$coef)))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        title <- c(x_var_str, "", "", lpvalue(globalpvalue))
-      } else if (type == "logistic") {
-        m2 <- glm(as.formula(paste(response, "~", x_var, 
-                                   sep = "")), family = "binomial", data = data)
-        globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1],
-                                           Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        m <- summary(m2)$coefficients
-        Z_mult = qnorm(1-(1-CIwidth)/2)
-        hazardratio <- c("Reference", apply(cbind(exp(m[-1,
-                                                        1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1,
-                                                                                                      1] + Z_mult * m[-1, 2])), 1, psthr))
-        pvalue <- c("", sapply(m[-1, 4], lpvalue))
-        title <- c(x_var_str, "", "", lpvalue(globalpvalue))
-      } else if (type == "linear" | type == "boxcox") {
-        if (type == "linear") {
-          m2 <- lm(as.formula(paste(response, "~", x_var,
-                                    sep = "")), data = data)
-        } else {
-          m2 <- boxcoxfitRx(as.formula(paste(response,
-                                             "~", x_var, 
-                                             sep = "")), data = data)
+  else {
+    #    idf <- data %>% dplyr::select(id) # This fails for groupedData (like the geepack BodyWeight data object)
+    idf <- data[[id]]
+    idf <- as.matrix(idf)
+    if (is.null(corstr)) {
+      stop(paste('You must provide correlation structure (i.e. corstr="independence") with id variable.'))
+    }
+    missing_vid = setdiff(c(covs, id), names(data))
+    if (length(missing_vid) > 0) {
+      stop(paste("This id variable is not in the data:", 
+                 missing_vid))
+    }
+    missing_vars = setdiff(c(response, covs), names(data))
+    if (length(missing_vars) > 0) {
+      stop(paste("These covariates are not in the data:", 
+                 missing_vars))
+    }
+    for (v in c(response, covs)) if (class(data[[v]])[1] == "character") 
+      data[[v]] <- factor(data[[v]])
+    if (!markup) {
+      lbld <- identity
+      addspace <- identity
+      lpvalue <- identity
+    }
+    if (!sanitize) 
+      sanitizestr <- identity
+    if (!nicenames) 
+      nicename <- identity
+    if (class(strata) != "numeric") {
+      strataVar = strata
+      strata <- sapply(strata, function(stra) {
+        paste("strata(", stra, ")", sep = "")
+      })
+    }
+    else {
+      strataVar <- ""
+      strata <- ""
+    }
+    if (!is.null(type)) {
+      if (type == "logistic") {
+        beta <- "OR"
+      }
+      else if (type == "linear") {
+        beta <- "Estimate"
+      }
+      else {
+        stop("type must be either geeglm (or NULL)")
+      }
+    }
+    else {
+      if (length(unique(data[[response]])) == 2) {
+        type <- "logistic"
+        beta <- "OR"
+      }
+      else {
+        type <- "linear"
+        beta <- "Estimate"
+      }
+    }
+    beta = betaWithCI(beta, CIwidth)
+    if (strata != "" & type != "coxph") {
+      stop("strata can only be used with coxph")
+    }
+    out <- lapply(covs, function(x_var) {
+      # data <- dplyr::select(data, dplyr::any_of(c(response, 
+      #                                             x_var, strataVar)))
+      data <- data[,intersect(c(response, x_var, strataVar),names(data))]
+      data <- na.omit(data)
+      x_var_str <- x_var
+      if (testing) 
+        print(x_var)
+      if (is.factor(data[[x_var]])) {
+        data[[x_var]] <- factor(data[[x_var]], ordered = FALSE)
+        levelnames = sapply(sapply(sapply(levels(data[[x_var]]), 
+                                          nicename), sanitizestr), addspace)
+        x_var_str <- lbld(sanitizestr(nicename(x_var)))
+        title <- NULL
+        body <- NULL
+        if (type == "logistic") {
+          m2 <- geepack::geeglm(as.formula(paste(response, "~", 
+                                                 x_var, sep = "")), family = "binomial", 
+                                data = data, id = idf, corstr = corstr)
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = (m2$geese$vbeta)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          m <- summary(m2)$coefficients
+          Z_mult = qnorm(1 - (1 - CIwidth)/2)
+          hazardratio <- c("Reference", apply(cbind(exp(m[-1, 
+                                                          1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
+                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr))
+          pvalue <- c("", sapply(m[-1, 4], lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
-        m <- summary(m2)$coefficients
-        globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1],
-                                           Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        T_mult = stats::qt(1-(1-CIwidth)/2,m2$df.residual)
-        hazardratio <- c("Reference", apply(cbind(m[-1,
-                                                    1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] +
-                                                    T_mult * m[-1, 2]), 1, psthr))
-        pvalue <- c("", sapply(m[-1, 4], lpvalue))
-        title <- c(x_var_str, "", "", lpvalue(globalpvalue))
-      } else if (type=='ordinal'){
-        m2 = MASS::polr(data=data,as.formula(paste(response, "~", x_var,sep = "")),
-                        method='logistic',Hess = TRUE)
-        m <- data.frame(summary(m2)$coef)
-        m <- m[grep(x_var,rownames(summary(m2)$coef)),]
-        nterms=length(m2$coefficients)
-        globalpvalue <- try(aod::wald.test(Sigma=vcov(m2)[1:nterms,1:nterms],
-                                           b=m2$coefficients,Terms=1:nterms)$result$chi2[3],silent = T)
-        if (class(globalpvalue)[1]=='try-error') globalpvalue <- "NA"
-        Z_mult <- stats::qnorm(p=1-(1-CIwidth)/2)
-        m$p_value <- stats::pnorm(abs(m$"t.value"), lower.tail = FALSE) * 2
-        
-        hazardratio <- c("Reference", apply(cbind(exp(m[,"Value"]), exp(m[,"Value"] - Z_mult * m[,"Std..Error"]), 
-                                                  exp(m[,"Value"] + Z_mult * m[,"Std..Error"])), 1, psthr))
-        pvalue <- c("", sapply(m$p_value, lpvalue))
-        title <- c(x_var_str, "", "", lpvalue(globalpvalue))
-      }
-      if (length(levelnames) == 2) {
-        body <- cbind(levelnames, hazardratio, c("",
-                                                 ""), c("", ""))
-      } else {
-        body <- cbind(levelnames, hazardratio, pvalue,
-                      rep("", length(levelnames)))
-      }
-      out <- rbind(title, body)
-      if (showN){
-        n_by_level = c(nrow(data),
-                       as.vector(table(data[[x_var]])))
-        out <- cbind(out,n_by_level)
-      }
-      rownames(out) <- NULL
-      colnames(out) <- NULL
-      return(list(out, nrow(out)))
-    } else {
-      x_var_str <- lbld(sanitizestr(nicename(x_var)))
-      if (type == "coxph") {
-        m2 <- survival::coxph(as.formula(paste(paste("survival::Surv(", response[1],
-                                                     ",", response[2], ")", sep = ""), "~", x_var,
-                                               ifelse(strata == "", "", "+"), paste(strata,
-                                                                                    collapse = "+"), sep = "")), data = data)
-        out <- matrix(c(x_var_str, psthr(summary(m2,conf.int=CIwidth)$conf.int[,
-                                                                               c(1, 3, 4)]), "", lpvalue(summary(m2)$waldtest[3])),
-                      ncol = 4)
-        
-      } else if (type == "crr") {
-        m2 <- crrRx(as.formula(paste(paste(response,
-                                           collapse = "+"), "~", x_var, sep = "")), data = data)
-        globalpvalue <- try(aod::wald.test(b = m2$coef, Sigma = m2$var,
-                                           Terms = seq_len(length(m2$coef)))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        out <- matrix(c(x_var_str, psthr(summary(m2,conf.int=CIwidth)$conf.int[,
-                                                                               c(1, 3, 4)]), "", lpvalue(globalpvalue)), ncol = 4)
-      } else if (type == "logistic") {
-        m2 <- glm(as.formula(paste(response, "~", x_var,
-                                   sep = "")), family = "binomial", data = data)
-        m <- summary(m2)$coefficients
-        globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1],
-                                           Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        Z_mult = qnorm(1-(1-CIwidth)/2)
-        out <- matrix(c(x_var_str, psthr(c(exp(m[-1, 1]), exp(m[-1,1] - Z_mult * m[-1, 2]), 
-                                           exp(m[-1, 1] + Z_mult *m[-1, 2]))), "", lpvalue(globalpvalue)), ncol = 4)
-      } else if (type == "linear" | type == "boxcox") {
-        if (type == "linear") {
-          m2 <- lm(as.formula(paste(response, "~", x_var,
-                                    sep = "")), data = data)
-        } else {
-          m2 <- boxcoxfitRx(as.formula(paste(response,
-                                             "~", x_var, sep = "")), data = data)
+        else {
+          m2 <- geepack::geeglm(as.formula(paste(response, "~", 
+                                                 x_var, sep = "")), data = data, id = idf, corstr = corstr, family = family)
+          m <- summary(m2)$coefficients
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = (m2$geese$vbeta)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          hazardratio <- c("Reference", apply(cbind(m[-1, 
+                                                      1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + 
+                                                      T_mult * m[-1, 2]), 1, psthr))
+          pvalue <- c("", sapply(m[-1, 4], lpvalue))
+          title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
-        globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1],
-                                           Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
-        if (class(globalpvalue) == "try-error")
-          globalpvalue <- "NA"
-        m <- summary(m2)$coefficients
-        T_mult = stats::qt(1-(1-CIwidth)/2,m2$df.residual)
-        out <- matrix(c(x_var_str, psthr(c(m[-1, 1], m[-1,
-                                                       1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * m[-1,
-                                                                                                     2])), "", lpvalue(globalpvalue)), ncol = 4)
-      } else if ( type=='ordinal'){
-        m2 = MASS::polr(data=data,as.formula(paste(response, "~", x_var,sep = "")),
-                        method='logistic',Hess = TRUE)
-        m <- data.frame(summary(m2)$coef)
-        m <- m[grep(x_var,rownames(summary(m2)$coef)),]
-        nterms=length(m2$coefficients)
-        globalpvalue <- try(aod::wald.test(Sigma=vcov(m2)[1:nterms,1:nterms],
-                                           b=m2$coefficients,Terms=1:nterms)$result$chi2[3],silent = T)
-        if (class(globalpvalue)[1]=='try-error') globalpvalue <- "NA"
-        Z_mult <- stats::qnorm(p=1-(1-CIwidth)/2)
-        
-        out <- matrix(c(x_var_str, psthr(c(exp(m[,"Value"]), exp(m[,"Value"] - Z_mult * m[,"Std..Error"]), 
-                                           exp(m[,"Value"] + Z_mult * m[,"Std..Error"]))), "", lpvalue(globalpvalue)), ncol = 4)
+        if (length(levelnames) == 2) {
+          body <- cbind(levelnames, hazardratio, c("", 
+                                                   ""), c("", ""))
+        }
+        else {
+          body <- cbind(levelnames, hazardratio, pvalue, 
+                        rep("", length(levelnames)))
+        }
+        out <- rbind(title, body)
+        if (showN) {
+          n_by_level = c(nrow(data), as.vector(table(data[[x_var]])))
+          out <- cbind(out, n_by_level)
+        }
+        rownames(out) <- NULL
+        colnames(out) <- NULL
+        return(list(out, nrow(out)))
       }
-      if (showN){
-        out<- cbind(out,nrow(data))
+      else {
+        x_var_str <- lbld(sanitizestr(nicename(x_var)))
+        if (type == "logistic") {
+          m2 <- geepack::geeglm(as.formula(paste(response, "~", 
+                                                 x_var, sep = "")), family = "binomial", 
+                                data = data, id = idf, corstr = corstr)
+          m <- summary(m2)$coefficients
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = (m2$geese$vbeta)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          Z_mult = qnorm(1 - (1 - CIwidth)/2)
+          out <- matrix(c(x_var_str, psthr(c(exp(m[-1, 
+                                                   1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
+                                                                                                 1] + Z_mult * m[-1, 2]))), "", lpvalue(globalpvalue)), 
+                        ncol = 4)
+        }
+        else {
+          m2 <- geepack::geeglm(as.formula(paste(response, "~", 
+                                                 x_var, sep = "")), data = data, id = idf, corstr = corstr, family = family)
+          globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
+                                             Sigma = (m2$geese$vbeta)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
+          if (class(globalpvalue) == "try-error") 
+            globalpvalue <- "NA"
+          m <- summary(m2)$coefficients
+          T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
+          out <- matrix(c(x_var_str, psthr(c(m[-1, 1], 
+                                             m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * 
+                                               m[-1, 2])), "", lpvalue(globalpvalue)), 
+                        ncol = 4)
+        }
+        if (showN) {
+          out <- cbind(out, nrow(data))
+        }
+        return(list(out, nrow(out)))
       }
-      
-      return(list(out, nrow(out)))
+    })
+    table <- lapply(out, function(x) {
+      return(x[[1]])
+    })
+    table <- do.call("rbind", lapply(table, data.frame, 
+                                     stringsAsFactors = FALSE))
+    if (showN) {
+      colnames(table) <- sapply(c("Covariate", sanitizestr(beta), 
+                                  "p-value", "Global p-value", "N"), 
+                                lbld)
     }
-  })
-  table <- lapply(out, function(x) {
-    return(x[[1]])
-  })
-  table <- do.call("rbind", lapply(table, data.frame, stringsAsFactors = FALSE))
-  if (showN){
-    colnames(table) <- sapply(c("Covariate", sanitizestr(beta),
-                                "p-value", "Global p-value","N"), lbld)
-    
-  } else{
-    colnames(table) <- sapply(c("Covariate", sanitizestr(beta),
-                                "p-value", "Global p-value"), lbld)
-    
+    else {
+      colnames(table) <- sapply(c("Covariate", sanitizestr(beta), 
+                                  "p-value", "Global p-value"), lbld)
+    }
+    return(table)
   }
-  return(table)
 }
 
 
@@ -949,6 +1197,10 @@ uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
 #'@param response string vector with name of response
 #'@param covs character vector with the names of columns to fit univariate models to
 #'@param data dataframe containing data
+#'@param id character vector which identifies clusters. Only used for geeglm
+#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
+#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
 #'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options in clude "linear","logistic","coxph","crr","boxcox","logistic"
 #'@param strata character vector of covariates to stratify by. Only used for coxph and crr
 #'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
@@ -958,11 +1210,11 @@ uvsum <- function (response, covs, data, type = NULL, strata = 1, markup = T,
 #'@importFrom xtable xtable print.xtable
 #'@keywords dataframe
 #'@export
-puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
+puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
   if(!TeX){
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
   }else{
-    print.xtable(xtable(uvsum(response,covs,data,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }
   
 }
@@ -981,210 +1233,317 @@ puvsum<-function(response,covs,data,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIw
 #'@param CIwidth width for confidence intervals, defaults to 0.95
 #'@keywords dataframe
 #'@export
-mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T,CIwidth=0.95)
+mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
+                   CIwidth = 0.95) 
 {
   if (!markup) {
     lbld <- identity
     addspace <- identity
     lpvalue <- identity
   }
-  if (!sanitize)
+  if (!sanitize) 
     sanitizestr <- identity
-  if (!nicenames)
+  if (!nicenames) 
     nicename <- identity
-  # call <- paste(deparse(summary(model)$call), collapse = "")
-  # Retrieving call as below is more robust than previously as it now allows for flexible specification of the formula, e.g. using paste and as.formula. OEG
-  if( class(model)[1] %in% c("lm","lme","multinom","survreg","polr") ){
+  if (class(model)[1] %in% c("lm", "lme", "multinom", 
+                             "survreg", "polr")) {
     call <- Reduce(paste, deparse(formula(model$terms), width.cutoff = 500))
-  }else if ( class(model)[1] %in% c("crr") ){
+  } 
+  else if (class(model)[1] %in% c("crr")) {
     call <- paste(deparse(model$call), collapse = "")
-  }else call<-paste(deparse(model$formula),collapse="")
+  } 
+  else call <- paste(deparse(model$formula), collapse = "")
   call <- unlist(strsplit(call, "~", fixed = T))[2]
   call <- unlist(strsplit(call, ",", fixed = T))[1]
-  if (substr(call, nchar(call), nchar(call)) == "\"")    call <- substr(call, 1, nchar(call) - 1)
+  if (substr(call, nchar(call), nchar(call)) == "\"") 
+    call <- substr(call, 1, nchar(call) - 1)
   call <- unlist(strsplit(call, "\"", fixed = T))[1]
   call <- unlist(strsplit(call, "+", fixed = T))
   call <- unlist(strsplit(call, "*", fixed = T))
-  call <- unlist(strsplit(call,":", fixed=T)) # addedd this to parse interactions with : alone, still not sure if will work. OEG
+  call <- unlist(strsplit(call, ":", fixed = T))
   call <- unique(call)
-  call <- call[which(is.na(sapply(call, function(cov) {charmatch("strata(", cov)})) == T)]
+  call <- call[which(is.na(sapply(call, function(cov) {
+    charmatch("strata(", cov)
+  })) == T)]
   call <- gsub("\\s", "", call)
   type <- class(model)[1]
-  
-  # THis needs to be changed for multinom
-  if (type=='lm'){
+  if (type == "lm") {
     betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
-    beta <- 'Estimate'
+    beta <- "Estimate"
     expnt = FALSE
     ss_data <- model$model
-  } else if (type=='polr'){
-    expnt = TRUE # not used but req'd for conditional statements
+  } 
+  else if (type == "polr") {
+    expnt = TRUE
     betanames <- names(model$coefficients)
     beta <- "OR"
     ss_data <- model$model
-  } else if (type=='lme'){
-    expnt = FALSE # not used but req'd for conditional statements
+  } 
+  else if (type == "lme") {
+    expnt = FALSE
     betanames <- names(model$coef$fixed)[-1]
-    beta <- 'Estimate'
+    beta <- "Estimate"
     ss_data <- model$data
-  } else if (type =='glm'){
-    if (model$family$link=='logit'){
+  } 
+  else if (type == "glm") {
+    if (model$family$link == "logit") {
       beta <- "OR"
       expnt = TRUE
-    } else if (model$family$link=='log') {
+    } else if (model$family$link == "log") {
       beta <- "RR"
       expnt = TRUE
     } else {
       beta <- "Estimate"
       expnt = FALSE
     }
-    # betanames <- attributes(summary(model)$coef)$dimnames[[1]][-1]
-    # betanames <- names(model$coef) ### obtain the names from the initial fit and not the summary since summary might get rid of NA's if present due to convergence issues. OEG
-    betanames <- names(model$coef)[-1]  ### fix to above LA
+    betanames <- names(model$coef)[-1]
     ss_data <- model$model
-  } else if (type == "coxph" | type == "crr") {
+  } 
+  else if (type == "geeglm") {
+    if (model$family$link == "logit") {
+      beta <- "OR"
+      expnt = TRUE
+    } else if (model$family$link == "log") {
+      beta <- "RR"
+      expnt = TRUE
+    } else {
+      beta <- "Estimate"
+      expnt = FALSE
+    }
+    betanames <- attributes(summary(model)$coef)$row.names[-1]
+    ss_data <- model$model
+  } 
+  else if (type == "coxph" | type == "crr") {
     beta <- "HR"
-    expnt = TRUE # not used but req'd for conditional statements
+    expnt = TRUE
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
-    ss_data <- try(model.frame(model$call$formula,eval(parse(text=paste('data=',deparse(model$call$data))))),silent = TRUE,outFile)
-    if(class(ss_data)=="try-error") ss_data <- data
-  } else {
-    stop("type must be either polr, coxph, logistic, lm, crr, lme (or NULL)")
+    ss_data <- try(model.frame(model$call$formula, eval(parse(text = paste("data=", 
+                                                                           deparse(model$call$data))))), silent = TRUE, outFile)
+  } 
+  else {
+    stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
   }
-  
-  if (missing(data)) if(class(ss_data)=='data.frame') {data=ss_data} else{ stop('Data can not be derived from model, data argument must be supplied.')}
-  
-  beta = betaWithCI(beta,CIwidth)
-  
+  if ("data.frame" %in% class(ss_data)) {
+    if ('(weights)' %in% names(ss_data))    
+      names(ss_data)<- gsub('[(]weights[)]',as.character(model$call[['weights']]),names(ss_data))
+    data <- ss_data
+  } else if (type=='crr'){
+    if (missing(data)){
+      stop("Data can not be derived from model, data argument must be supplied.")
+    } else if (model$n==nrow(stats::na.omit(data))) {
+      data <- stats::na.omit(data)
+    } else {
+      stop('Supplied data frame does not have the correct number of non-missing rows.')
+    } 
+  } else{
+    stop("Data can not be derived from model, check model object.")
+  }
+  beta = betaWithCI(beta, CIwidth)
   ucall = unique(call)
   indx = matchcovariate(betanames, ucall)
-  data = as.data.frame(data) # LA to enable tibbles to work
-  for (v in ucall[-1]){ if(class(data[[v]])[1]=='character') data[[v]]<-factor(data[[v]])} # LA change char to factor
-  if (min(indx) == -1)  stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
-  
+  data = as.data.frame(data)
+  for (v in ucall) {
+    if (class(data[[v]])[1] == "character") 
+      data[[v]] <- factor(data[[v]])
+  }
+  if (min(indx) == -1) 
+    stop("Factor name + level name is the same as another factor name. Please change. Will fix this issue later")
   y <- betaindx(indx)
-  if (type %in% c("lm", "glm", "lme")) {
-    y <- lapply(y, function(x) {x + 1 })
+  if (type %in% c("lm", "glm", "geeglm", "lme")) {
+    y <- lapply(y, function(x) {
+      x + 1
+    })
     betanames <- c("intercept", betanames)
   }
-  
   out <- lapply(y, function(covariateindex) {
-    #Get attribute names and split by interactions
     betaname <- betanames[covariateindex]
     betaname <- strsplit(betaname, ":", fixed = T)
-    # betaname <- gsub(' - ','-',betaname)  # Added LA, 14 Dec 2020
-    # betaname <- gsub(' + ','-',betaname)  # Added LA, 14 Dec 2020
-    # Get covariate names
     oldcovname <- covnm(betaname[[1]], call)
     oldcovname <- getvarname(oldcovname)
-    # # Changed Mar 2021 to enable sample size calculations
-    # levelnames <- unlist(lapply(betaname, function(level) {
-    #   paste(mapply(function(lvl, cn) {
-    #     # # Changed LA , Dec 15 for level names that also include the varname
-    #     #   result <- unlist(strsplit(lvl, cn, fixed = T))[2]
-    #     #   out <- ifelse(is.na(result), cn, result)
-    #     result <- ifelse(length(grep(paste0(cn,cn),lvl))>0, unlist(sub(paste0(cn,cn),cn,lvl)),unlist(sub(cn,'',lvl)))
-    #     out <- ifelse(result=='',cn,result)
-    #   }, level, oldcovname), collapse = ":")
-    # }))
     levelnameslist <- lapply(betaname, function(level) {
       mapply(function(lvl, cn) {
-        result <- ifelse(length(grep(paste0(cn,cn),lvl))>0, unlist(sub(paste0(cn,cn),cn,lvl)),unlist(sub(cn,'',lvl)))
-        out <- ifelse(result=='',cn,result)
+        result <- ifelse(length(grep(paste0(cn, cn), 
+                                     lvl)) > 0, unlist(sub(paste0(cn, cn), cn, lvl)), 
+                         unlist(sub(cn, "", lvl)))
+        out <- ifelse(result == "", cn, result)
       }, level, oldcovname)
     })
-    levelnames <-unlist(lapply(levelnameslist,function(x) paste(x,collapse=':'))    )
+    levelnames <- unlist(lapply(levelnameslist, function(x) paste(x, 
+                                                                  collapse = ":")))
     levelnames <- addspace(sanitizestr(nicename(levelnames)))
-    covariatename <- lbld(sanitizestr(nicename(paste(oldcovname,collapse = ":"))))
+    covariatename <- lbld(sanitizestr(nicename(paste(oldcovname, 
+                                                     collapse = ":"))))
     reference = NULL
     title = NULL
     body = NULL
     if (type == "lme") {
-      globalpvalue <- try(aod::wald.test(b = model$coef$fixed[covariateindex],
-                                         Sigma = vcov(model)[covariateindex, covariateindex],
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
+      globalpvalue <- NA
+      f <- paste0('. ~ . -',oldcovname)
+      if ( length(f)==1){
+        m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data,method='ML'),silent=T)
+        if (!('try-error' %in% class(m_small))){
+          m_new <- stats::update(model,method='ML')
+          globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,m_new)[,"p-value"]))) # LRT
+        }
+      }
+      if (is.na(globalpvalue)| 'try-error' %in% class(globalpvalue)) {  
+        globalpvalue <- try(aod::wald.test(b = model$coef$fixed[covariateindex],
+                                           Sigma = vcov(model)[covariateindex, covariateindex],
+                                           Terms = seq_along(covariateindex))$result$chi2[3])
+      }
+    } else if (type=='glm'){
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent = T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model,test='LRT')[,"Pr(>Chi)"])))
     } else if (type == "polr") {
-      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex],
-                                         Sigma = vcov(model)[covariateindex, covariateindex],
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
-    } else if (type != "crr") {
-      globalpvalue <- try(aod::wald.test(b = coef(model)[covariateindex],
-                                         Sigma = vcov(model)[covariateindex, covariateindex],
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent=T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model)[,"Pr(Chi)"])),silent=T)
+    } else if (type == "crr" ) { # Leave as Wald Test
+      globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex], 
+                                         Sigma = model$var[covariateindex, covariateindex], 
+                                         Terms = seq_along(covariateindex))$result$chi2[3],
+                          silent = T)
+    } else if (type=='geeglm'){ # Leave as Wald Test
+      globalpvalue <- try(aod::wald.test(b = model$coefficients[covariateindex], 
+                                         Sigma = (model$geese$vbeta)[covariateindex, covariateindex], 
+                                         Terms = seq_len(length(model$coefficients[covariateindex])))$result$chi2[3],
+                          silent = T)
+      
     } else {
-      globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex],
-                                         Sigma = model$var[covariateindex, covariateindex],
-                                         Terms = seq_along(covariateindex))$result$chi2[3])
+      m_small <- try(stats::update(model,paste0('. ~ . -',oldcovname),data=data),silent=T)
+      globalpvalue <- try(as.vector(stats::na.omit(anova(m_small,model)[,"Pr(>F)"])),silent = T)
+      # globalpvalue <- try(aod::wald.test(b = model$coef[covariateindex],
+      #                                    Sigma = model$var[covariateindex, covariateindex],
+      #                                    Terms = seq_along(covariateindex))$result$chi2[3])
     }
-    if (class(globalpvalue) == "try-error")
+    if (class(globalpvalue) == "try-error") 
       globalpvalue <- "NA"
     globalpvalue <- lpvalue(globalpvalue)
     if (type == "coxph" | type == "crr") {
-      hazardratio <- c(apply(matrix(summary(model,conf.int=CIwidth)$conf.int[covariateindex,c(1, 3, 4)], ncol = 3), 1, psthr))
-      pvalues <- c(sapply(summary(model)$coef[covariateindex,5], lpvalue))
-    } else if (type == "glm" & expnt) {
-      m <- summary(model,conf.int=CIwidth)$coefficients
-      Z_mult = qnorm(1-(1-CIwidth)/2)
-      hazardratio <- apply(cbind(exp(m[covariateindex,1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex,2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex,2])), 1, psthr)
+      hazardratio <- c(apply(matrix(summary(model, conf.int = CIwidth)$conf.int[covariateindex, 
+                                                                                c(1, 3, 4)], ncol = 3), 1, psthr))
+      pvalues <- c(sapply(summary(model)$coef[covariateindex, 
+                                              5], lpvalue))
+    }
+    else if (type == "glm" & expnt) {
+      m <- summary(model, conf.int = CIwidth)$coefficients
+      Z_mult = qnorm(1 - (1 - CIwidth)/2)
+      hazardratio <- apply(cbind(exp(m[covariateindex, 
+                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
+                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
+                                                                                                                             2])), 1, psthr)
       pvalues <- c(sapply(m[covariateindex, 4], lpvalue))
-    } else if (type == "polr" ) {
+    }
+    else if (type == "geeglm" & expnt) {
+      m <- summary(model, conf.int = CIwidth)$coefficients
+      Z_mult = qnorm(1 - (1 - CIwidth)/2)
+      hazardratio <- apply(cbind(exp(m[covariateindex, 
+                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
+                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
+                                                                                                                             2])), 1, psthr)
+      pvalues <- c(sapply(m[covariateindex, 4], lpvalue))
+    }
+    else if (type == "polr") {
       m <- summary(model)$coefficients
-      Z_mult = qnorm(1-(1-CIwidth)/2)
-      hazardratio <- apply(cbind(exp(m[covariateindex,1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex,2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex,2])), 1, psthr)
-      pvalues =  stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, "Std. Error"]),lower.tail = FALSE) * 2
+      Z_mult = qnorm(1 - (1 - CIwidth)/2)
+      hazardratio <- apply(cbind(exp(m[covariateindex, 
+                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
+                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
+                                                                                                                             2])), 1, psthr)
+      pvalues = stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, 
+                                                              "Std. Error"]), lower.tail = FALSE) * 2
       pvalues <- c(sapply(pvalues, lpvalue))
-    } else if (type == "lm" | type == "glm" & !expnt) {
-      T_mult = abs(stats::qt((1-CIwidth)/2,model$df.residual))
-      m <- summary(model,conf.int=CIwidth)$coefficients
-      hazardratio <- apply(cbind(m[covariateindex, 'Estimate'],m[covariateindex, 'Estimate'] - T_mult * m[covariateindex,'Std. Error'], m[covariateindex, 'Estimate'] + T_mult * m[covariateindex,'Std. Error']), 1, psthr)
+    }
+    else if (type == "lm" | type == "glm" & !expnt) {
+      T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
+      m <- summary(model, conf.int = CIwidth)$coefficients
+      hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
+                                 m[covariateindex, "Estimate"] - T_mult * 
+                                   m[covariateindex, "Std. Error"], m[covariateindex, 
+                                                                      "Estimate"] + T_mult * m[covariateindex, 
+                                                                                               "Std. Error"]), 1, psthr)
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
-    } else if (type == "lme") {
-      T_mult = abs(stats::qt((1-CIwidth)/2,summary(model)$fixDF$X))[covariateindex]
-      m <- summary(model,conf.int=CIwidth)$tTable
-      hazardratio <- apply(cbind(m[covariateindex, 1],m[covariateindex, 1] - T_mult * m[covariateindex,2], m[covariateindex, 1] + T_mult * m[covariateindex,2]), 1, psthr)
+    }
+    else if (type == "geeglm" & !expnt) {
+      T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
+      m <- summary(model, conf.int = CIwidth)$coefficients
+      hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
+                                 m[covariateindex, "Estimate"] - T_mult * 
+                                   m[covariateindex, "Std.err"], m[covariateindex, 
+                                                                   "Estimate"] + T_mult * m[covariateindex, 
+                                                                                            "Std.err"]), 1, psthr)
+      pvalues <- sapply(m[covariateindex, 4], lpvalue)
+    }
+    else if (type == "lme") {
+      T_mult = abs(stats::qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
+      m <- summary(model, conf.int = CIwidth)$tTable
+      hazardratio <- apply(cbind(m[covariateindex, 1], 
+                                 m[covariateindex, 1] - T_mult * m[covariateindex, 
+                                                                   2], m[covariateindex, 1] + T_mult * m[covariateindex, 
+                                                                                                         2]), 1, psthr)
       pvalues <- c(sapply(m[covariateindex, 5], lpvalue))
     }
-    # Update 3 Aug 2021 to work with empty factor levels
     if (length(betaname[[1]]) == 1) {
       if (!is.factor(data[, oldcovname])) {
-        title <- c(nicename(covariatename), hazardratio,"", globalpvalue)
-      } else if (length(levelnames) == 1) {
-        title <- c(covariatename, "", "", globalpvalue)
-        if (!is.null(data))
-          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[which(table(data[,which(names(data) == oldcovname)])>0)[1]])),"reference", "", "")
-        body <- c(levelnames, hazardratio, "", "")
-      } else {
-        if (!is.null(data)){
-          reference <- c(addspace(sanitizestr(names(table(data[,which(names(data) == oldcovname)]))[which(table(data[,which(names(data) == oldcovname)])>0)[1]])),"reference", "", "")
-        }
-        title <- c(covariatename, "", "", globalpvalue)
-        body <- cbind(levelnames, hazardratio, pvalues,rep("", length(levelnames)))
+        title <- c(nicename(covariatename), hazardratio, 
+                   "", globalpvalue)
       }
-    } else {
-      if (length(levelnames) != 1) {
-        title <- c(covariatename, "", "", globalpvalue)
-        body <- cbind(levelnames, hazardratio, pvalues,
+      else if (length(levelnames) == 1) {
+        title <- c(covariatename, "", "", 
+                   globalpvalue)
+        if (!is.null(data)) 
+          reference <- c(addspace(sanitizestr(names(table(data[, 
+                                                               which(names(data) == oldcovname)]))[1])), 
+                         "Reference", "", "")
+        body <- c(levelnames, hazardratio, "", 
+                  "")
+      }
+      else {
+        if (!is.null(data)) {
+          reference <- c(addspace(sanitizestr(names(table(data[, 
+                                                               which(names(data) == oldcovname)]))[1])), 
+                         "Reference", "", "")
+        }
+        title <- c(covariatename, "", "", 
+                   globalpvalue)
+        body <- cbind(levelnames, hazardratio, pvalues, 
                       rep("", length(levelnames)))
-      } else {
-        title <- c(covariatename, hazardratio, "", globalpvalue)
+      }
+    }
+    else {
+      if (length(levelnames) != 1) {
+        title <- c(covariatename, "", "", 
+                   globalpvalue)
+        body <- cbind(levelnames, hazardratio, pvalues, 
+                      rep("", length(levelnames)))
+      }
+      else {
+        title <- c(covariatename, hazardratio, "", 
+                   globalpvalue)
       }
     }
     out <- rbind(title, reference, body)
-    # New sample size work
-    # Updated 3 Aug 2021 to work with empty factor levels
-    if (out[1,2]=="") {
-      if (length(grep(':',title[1]))>0){
-        ss_N = c('',unlist(lapply(levelnameslist, function(level){
-          N<-mapply(function(cn,lvl){
-            if (cn==lvl) {nrow(ss_data)} else {sum(ss_data[[cn]]==lvl)}
-          },oldcovname,level)
-          return(min(N))
-        })))
-      } else{ss_N = c('',table(data[[oldcovname]])[out[-1,1]])}
-      
-    } else {ss_N = nrow(ss_data)}
-    out <- cbind(out,ss_N)
-    #    print(out)
+    if (out[1, 2] == "") {
+      if (length(grep(":", title[1])) > 0) {
+        ss_N = c("", unlist(lapply(levelnameslist, 
+                                   function(level) {
+                                     N <- mapply(function(cn, lvl) {
+                                       if (cn == lvl) {
+                                         nrow(data)
+                                       } else {
+                                         sum(data[[cn]] == lvl)
+                                       }
+                                     }, oldcovname, level)
+                                     return(min(N))
+                                   })))
+      }
+      else {
+        ss_N = c("", table(data[[oldcovname]]))
+      }
+    }
+    else {
+      ss_N = nrow(data)
+    }
+    out <- cbind(out, ss_N)
     rownames(out) <- NULL
     colnames(out) <- NULL
     return(list(out, nrow(out)))
@@ -1195,14 +1554,27 @@ mvsum <-function(model, data, showN = F, markup = T, sanitize = T, nicenames = T
   index <- unlist(lapply(out, function(x) {
     return(x[[2]])
   }))
-  table<-lapply(out,function(x){return(x[[1]])})
-  index<-unlist(lapply(out,function(x){return(x[[2]])}))
-  table<-do.call("rbind",lapply(table,data.frame,stringsAsFactors = FALSE))
-  colName = c("Covariate",sanitizestr(beta),"p-value","Global p-value")
-  if (!showN) {table <-table[,-5]} else {colName = c(colName,'N')}
-  colnames(table)<-sapply(colName,lbld)
+  table <- lapply(out, function(x) {
+    return(x[[1]])
+  })
+  index <- unlist(lapply(out, function(x) {
+    return(x[[2]])
+  }))
+  table <- do.call("rbind", lapply(table, data.frame, 
+                                   stringsAsFactors = FALSE))
+  colName = c("Covariate", sanitizestr(beta), "p-value", 
+              "Global p-value")
+  if (!showN) {
+    table <- table[, -5]
+  }
+  else {
+    colName = c(colName, "N")
+  }
+  colnames(table) <- sapply(colName, lbld)
   return(table)
 }
+
+
 #'Print multivariate summary LaTeX table
 #'
 #'Returns a LaTeX table of the multivariate summary.
@@ -1547,6 +1919,8 @@ forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',sho
 #' @param na.rm boolean indicating whether na values should be shown or removed
 #' @param response_title character value with title of the plot
 #' @param return_plotlist boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details
+#' @param ncol the number of columns of plots to be display in the ggarrange call, defaults to 2
+#' @param p_margins sets the TRBL margins of the individual plots, defaults to c(0,0.2,1,.2)
 #' @keywords plot
 #' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
@@ -1560,7 +1934,7 @@ forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',sho
 #' # mtcars$cyl = factor(mtcars$cyl)
 #' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
 #' @seealso \code{\link{ggplot}} and \code{\link{ggarrange}}
-plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE){
+plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE,ncol=2,p_margins=c(0,0.2,1,.2)){
   
   for (v in c(response,covs)){
     if (!v %in% names(data)) stop(paste(v,'is not a variable in data.'))
@@ -1599,7 +1973,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
           p <- ggplot(data=pdata, aes(y=.data[[response]],x=.data[[x_var]],fill=.data[[response]])) +
             geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
             scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
-            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1)) +
+            scale_x_discrete(labels= function(x) wrp_lbl(x))
           if (showPoints) {
             p <- p +geom_jitter( data=coloured_points,aes(colour=.data[[response]]), alpha=0.9) 
             p <- p +geom_jitter(data= black_points,
@@ -1630,7 +2005,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
         theme_bw() +
         theme(
           plot.title = element_text(size=10),
-          plot.margin = unit(c(0,1,0,1), "lines")) +
+          plot.margin = unit(p_margins, "lines")) +
         guides(alpha='none',linetype='none',colour='none')+
         scale_colour_reportRx()
       if (flip){
@@ -1671,7 +2046,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
           p <- ggplot(data=pdata, aes(x=.data[[x_var]],y=.data[[response]],fill=.data[[x_var]])) +
             geom_boxplot(aes(alpha=.data[['alpha']],linetype=.data[['lty']]),outlier.shape = NA)  +
             scale_alpha_manual(breaks=c('light','regular'),values=c(0,1)) +
-            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))
+            scale_linetype_manual(breaks=c('0','1'),values = c(0,1))+
+            scale_x_discrete(labels= function(x) wrp_lbl(x))
           if (showPoints) {
             p <- p +geom_jitter(data=coloured_points,aes(colour=.data[[x_var]]), alpha=0.9) 
             p <- p +geom_jitter(data= black_points,
@@ -1688,8 +2064,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
         theme_bw() +
         theme(
           legend.position = 'none',
-          plot.title = element_text(size=10),
-          plot.margin = unit(c(0,1,0,1), "lines")) +
+          plot.title = element_text(size=9),
+          plot.margin = unit(p_margins, "lines")) +
         labs(x=niceStr(x_var),y=niceStr(response_title)) +
         scale_colour_reportRx() +
         guides(colour='none',linetype='none',alpha='none')
@@ -1701,8 +2077,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
     return(plist)
   } else{   suppressMessages(ggpubr::ggarrange(plotlist=plist,
                                                common.legend = use_common_legend,
-                                               ncol=2,
-                                               nrow=ceiling(length(plist)/2)))
+                                               ncol=ncol,
+                                               nrow=ceiling(length(plist)/ncol)))
   }}
 
 #' Plot KM and CIF curves with ggplot
@@ -1912,8 +2288,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     if(!multiple_lines){
       
       sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
-                                             ",", response[2], ")", sep = ""), "~", 1,
-                                       sep = "")), data = data,conf.type=conf.type)
+                                                       ",", response[2], ")", sep = ""), "~", 1,
+                                                 sep = "")), data = data,conf.type=conf.type)
       
       if(median.lines==T|median.text==T){
         median_vals <- summary(sfit)$table['median']
@@ -1953,8 +2329,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
       
     }else{
       sfit <- survival::survfit(as.formula(paste(paste("survival::Surv(", response[1],
-                                             ",", response[2], ")", sep = ""), "~", cov,
-                                       sep = "")), data = data,conf.type=conf.type)
+                                                       ",", response[2], ")", sep = ""), "~", cov,
+                                                 sep = "")), data = data,conf.type=conf.type)
       
       if(median.lines==T|median.text==T) {
         median_vals <- summary(sfit)$table[,'median']
@@ -2083,8 +2459,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
-                                               ",", response[2], ")", sep = ""), "~", 1,
-                                         sep = "")), data = temp)
+                                                         ",", response[2], ")", sep = ""), "~", 1,
+                                                   sep = "")), data = temp)
         
         
         
@@ -2138,8 +2514,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
         temp <- data
         temp[,response[2]][temp[,response[2]] > 0] <- 1
         sfit <- survival::survfit(as.formula(paste(paste("Surv(", response[1],
-                                               ",", response[2], ")", sep = ""), "~", cov,
-                                         sep = "")), data = temp)
+                                                         ",", response[2], ")", sep = ""), "~", cov,
+                                                   sep = "")), data = temp)
         
       }
       
@@ -2478,8 +2854,8 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
     gC$widths[2:5] <- as.list(maxWidth)
     
     gridExtra::grid.arrange(gA, gB, gC,
-                 clip = FALSE, nrow = 3, ncol = 1,
-                 heights = unit(c(2, .1, .25), c("null", "null", "null")))
+                            clip = FALSE, nrow = 3, ncol = 1,
+                            heights = unit(c(2, .1, .25), c("null", "null", "null")))
     
     if(returns) {
       # a <- arrangeGrob(p, blank.pic, data.table,
@@ -2529,16 +2905,21 @@ modify_ggkmcif <- function(list_gg){
 #'
 #' Output the table nicely to whatever format is appropriate. 
 #' This is the output function used by the rm_* printing functions.
+#' 
+#' Entire rows can be bolded, and the first column can be indented. Currently 
+#' there is no support for cell-specific formatting. By default, underscores in
+#' column names are converted to spaces. To disable this set rm_ to FALSE
 #' @param tab a table to format
 #' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
 #' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
 #' @param caption table caption
 #' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
 #' @param align string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns
+#' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
 #' 
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label){
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
@@ -2594,10 +2975,20 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                      split.table=Inf, split.cells=15,
                      justify = alignSpec)
     }
-  } else {
+  } else {  # For PDF, HTML
     # set NA to empty in kable
     options(knitr.kable.NA = '')
     if(!is.null(caption)) caption <- sanitize(caption)
+    # kout <- knitr::kable(tab, format = out_fmt,
+    #                      booktabs=TRUE,
+    #                      longtable=TRUE,
+    #                      linesep='',
+    #                      caption=caption,
+    #                      align =alignSpec)
+    # kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+    
+    # This may not work as expected if a small table is split over pages
+    # better to also repeat table headers
     if (nrow(tab)>30){
       kout <- knitr::kable(tab, format = out_fmt,
                            booktabs=TRUE,
@@ -2605,11 +2996,14 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            linesep='',
                            caption=caption,
                            align =alignSpec)
-      if (ncol(tab)>4) {
-        kout <- kableExtra::kable_styling(kout,full_width = T,latex_options = c('repeat_header'))
-      } else {
-        kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      }
+      kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      # There is now a conflict with the tabu package, full_width=T fails with longtable
+      #       if (ncol(tab)>4) {
+      #         kout <- kableExtra::kable_styling(kout,full_width = TRUE,latex_options = c('repeat_header'))
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       } else {
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       }
     } else {
       kout <- knitr::kable(tab, format = out_fmt,
                            booktabs=TRUE,
@@ -2617,16 +3011,17 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            linesep='',
                            caption=caption,
                            align = alignSpec)
-      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout,full_width = T)
+      #      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout, full_width = TRUE)
     }
     kout <- kableExtra::add_indent(kout,positions = to_indent)
     if (length(to_bold)>0){
       kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
     }
+    if (!missing(fontsize)){
+      kout <- kableExtra::kable_styling(kout,font_size = fontsize)
+    }
     kout
   }
-  # }
-  
 }
 
 #' Combine two table columns into a single column with levels of one nested within levels of the other.
@@ -2658,7 +3053,11 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' # m2$Response = 'horsepower'
 #' # rbind(m1,m2)
 #' # nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
-nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=T,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
+nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
+  
+  # ensure that the data are sorted by the header column and covariates in the order they first appear
+  data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
+  data <- data[order(data[[head_col]],data[[to_col]]),]
   data[[to_col]] <- as.character(data[[to_col]])
   new_row = data[1,]
   for (i in 1:ncol(new_row)) new_row[1,i] <- NA
@@ -2667,7 +3066,6 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
     header_index = which(!duplicated(data[[head_col]]) & !is.na(data[[head_col]]))[1]
     new_row[[to_col]] <- data[[head_col]][header_index]
     
-    #    data <- tibble::add_row(data,new_row, .before = header_index)
     if (header_index>1){
       data = rbind(data[1:(header_index-1),],new_row,data[(header_index):nrow(data),])
     } else {
@@ -2692,26 +3090,66 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
   outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
 }
 
+#' Outputs a descriptive covariate table 
 #'
-#'Returns a dataframe corresponding to a descriptive table for printing in Rmarkdown
-#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
-#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#' Returns a data frame corresponding to a descriptive table. 
+#' This is a wrapper function around covsum for use in Rmarkdown documents
+#'
+#'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
+#'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
+#'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
+#'The statistical test used can be displayed by specifying show.tests=TRUE.
+#'
+#'Further formatting options are available using tableOnly=TRUE and outputting the table with a call to outTable. 
 #'
 #'@param data dataframe containing data
 #'@param covs character vector with the names of columns to include in table
 #'@param maincov covariate to stratify table by
-#'@param caption character containing table caption
-#'@param tableOnly should a dataframe or a formatted print object be returned
+#'@param caption character containing table caption. If caption = NULL then 
+#'notes about unstable estimates and p-value adjustments will be added to the
+#'caption. To suppress the caption completely set caption='none'.
+#'@param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a 
+#'formatted printed object is returned (default).
 #'@param covTitle character with the names of the covariate column
+#'@param digits number of digits for summarizing mean data
+#'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
+#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
+#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#'@param all.stats boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.
+#'@param pvalue boolean indicating if you want p-values included in the table
+#'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
+#'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
+#'@param full boolean indicating if you want the full sample included in the table, ignored if maincov is NULL
+#'@param include_missing Option to include NA values of maincov. NAs will not be included in statistical tests
+#'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
+#'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
+#'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param chunk_label only used if output is to Word to allow cross-referencing
-#'@param ... additional options passed to function  \code{\link{covsum}}
 #'@keywords dataframe
 #'@return A formatted table displaying a summary of the covariates stratified by maincov
 #'@export
-#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, and \code{\link{anova}}
-rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',chunk_label,...){
+#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}},  \code{\link{anova}}, and \code{\link{outTable}}
+#' @examples
+#' rm_covsum(data=mtcars,maincov = 'Gears',
+#' covs=c('mpg','Cylinders','qsec'),show.tests=T)
+#' 
+#' # To make custom changes or change the fontsize in PDF/HTML
+#' tab <- rm_covsum(data=mtcars,maincov = 'Gears',
+#' covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+#' outTable(tab, fontsize=7)
+#' 
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
+                      digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
+                      testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
+                      full=TRUE,include_missing=FALSE,percentage=c('column','row'),
+                      excludeLevels=NULL,numobs=NULL,chunk_label){
   
-  tab <- covsum(data,covs,maincov,markup=FALSE,sanitize=FALSE,...)
+  argList <- as.list(match.call(expand.dots = TRUE)[-1])
+  argsToPass <- intersect(names(formals(covsum)),names(argList))
+  covsumArgs <- argList[names(argList) %in% argsToPass]
+  covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
+  tab <- do.call(covsum,covsumArgs)
   to_bold = numeric(0)
   if ('p-value' %in% names(tab)) {
     # format p-values nicely
@@ -2722,10 +3160,8 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
   } 
   nice_var_names = gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
-  # if (IQR) {
-  #   tab$Covariate <- gsub('[(]Q1,Q3[)]','(IQR)',tab$Covariate)
-  # }
   if (covTitle !='Covariate') names(tab[1]) <-covTitle
+  if (nicenames) {names(tab) <- gsub('_|[.]',' ',names(tab))}  
   if (tableOnly){
     return(tab)
   }
@@ -2735,7 +3171,6 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
     } else
       caption = 'Summary sample statistics.'
   }
-  
   outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
@@ -2752,15 +3187,16 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param removeInf boolean indicating if infinite estimates should be removed from the table
-#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #'@param ... additional options passed to function  \code{\link{uvsum}}
 #' @export
 #'
-rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,HolmGlobalp=FALSE,chunk_label,...){
+rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,...){
   
   # get the table
   tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
+  #  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
   
   cap_warn <- character(0)
   if (removeInf){
@@ -2768,28 +3204,34 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
     inf_values =  grep('Inf',tab[,2])
     if (length(inf_values)>0){
       tab[inf_values,2:4] <-NA
-      cap_warn <- paste0(cap_warn,'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
-      
+      cap_warn <- paste0(cap_warn,ifelse(identical(cap_warn,character(0)),'',', '),'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
     }
   }
   
-  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
-  if (HolmGlobalp){
-    p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
-    tab$"Holm Adj p" = p_sig
-  } else {
-    p_sig <- tab$`Global p-value`
-  }
+  # perform p-value adjustment on the global p-values
+  p_sig <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  
+  # if an adjustment was made, add this to the cap_warn text
+  if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
+  
+  #   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
+  # if (HolmGlobalp){
+  #   p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
+  #   tab$"Holm Adj p" = p_sig
+  # } else {
+  #   p_sig <- tab$`Global p-value`
+  # }
   
   to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  nice_var_names = gsub('[_.]',' ',covs)
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  nice_var_names <- gsub('[_.]',' ',covs)
   to_indent <- which(!tab$Covariate %in% nice_var_names )
   
   tab[["p-value"]] <- formatp(tab[["p-value"]])
-  tab[["Global p-value"]] <- formatp(tab[["Global p-value"]])
-  if (HolmGlobalp){
-    tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
-  }
+  tab[["Global p-value"]] <- formatp(p_sig)
+  # if (HolmGlobalp){
+  #   tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
+  # }
   
   # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
@@ -2815,54 +3257,47 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
 
 
 
-
-#' Output a multivariable model nicely in Rmarkdown
-#' The default output is a kable table for use in pdfs or html, but pander tables can be produced
-#' for Word documents by specifying options('doc_type'='doc') in the setup chunk of the markdown document.
+#' Format a regression model nicely for Rmarkdown
+#' 
+#' This is a wrapper around mvsum for use with Rmarkdown
 #'
 #' @param model model fit
-#' @param data data that model was fit on
+#' @param data data that model was fit on (an attempt will be made to extract
+#' this from the model)
 #' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param HolmGlobalp boolean indicting if a Holm-corrected p-value should be presented
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @export
-rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,HolmGlobalp=FALSE,chunk_label){
+rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label){
   
   # get the table
   tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
   
-  
   # Reduce the number of significant digits in p-values
   p_val <-  formatp(tab$`p-value`)
-  g_p_val = formatp(tab$`Global p-value`)
-  # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
-  if (HolmGlobalp){
-    gp <- stats::p.adjust(tab$`Global p-value`,method='holm')
-  } else {
-    gp <- tab$`Global p-value`
-  }
+  gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
+  
   to_bold <- which(as.numeric(gp)<0.05)
-  to_indent <- which(is.na(g_p_val))
+  to_indent <- which(is.na(gp))
   
   tab$`p-value` <- p_val
-  tab$`Global p-value` <- g_p_val
+  tab$`Global p-value` <- formatp(gp)
   
-  # Reorder
-  if (HolmGlobalp){
-    tab$`Holm Adj p` <- formatp(gp)
-  }
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  
   # TO DO: possibly automate this... need to extract response from mvsum
   # if(is.null(caption)){
   #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
   # } else if (caption=='none') {
   #   caption=NULL
   # }
+  #response <- names(model$model)[1]
   
-  
-  # If all outcomes are contunous (and so all p-values are NA), remove this column
+  # If all outcomes are continuous (and so all p-values are NA), remove this column
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
   
   if (tableOnly){
@@ -2872,6 +3307,70 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
+}
+
+#' Combine univariate and multivariable regression tables
+#' 
+#' This function will combine rm_uvsum and rm_mvsum outputs into a single table
+#' The tableOnly argument must be set to TRUE when tables to be combined are
+#' created. The resulting table will be in the same order as the uvsum table
+#' and will contain the same columns as the uvsum and mvsum tables, but the 
+#' p-values will be combined into a single column. There must be variable over-
+#' lap between the uvsum and mvsum tables and all variables in the mvsum table
+#' must also appear in the uvsum table.
+#' 
+#'
+#' @param uvsumTable Output from rm_uvsum, with tableOnly=T 
+#' @param mvsumTable  Output from rm_mvsum. with tableOnly=T
+#' @param caption table caption
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @export
+rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label){ 
+  # Check that tables are data frames and not kable objects
+  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
+  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
+  # Check that the first columns have the same name
+  if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
+  # Check that there is overlap between the variables
+  if (length(intersect(uvsumTable[,1],mvsumTable[,1]))==0) stop('There are no overlaping variables between the models, tables couldn\'t be combined.')
+  # Check that all the variables in the multivariate model are in the univariate model
+  if (length(setdiff(mvsumTable[,1],uvsumTable[,1]))>0) {
+    stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
+               '\nRun uvsum with all the variables in the multivariable model.'))
+  }
+  # identify the rows to be indented
+  to_indent <- numeric(0)
+  if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
+  x <- lapply(list(uvsumTable,mvsumTable), function(t) {
+    p_cols <- grep('p-value',names(t))
+    # add a column for the variable name
+    vname <- character(nrow(t))
+    vname[1] <- t$Covariate[1]
+    p_var <- ifelse('Global p-value' %in% names(t),'Global p-value','p-value')
+    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t[[p_var]][i]),vname[i-1],t$Covariate[i])
+    t$var_level <- paste(vname,t[,1],sep='_')
+    if (length(p_cols)==2){
+      t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
+    } else {t$p <- t[,grep('p-value',names(t))] }
+    return(t[,setdiff(1:ncol(t),p_cols)])
+  })
+  x[[1]]$varOrder = 1:nrow(x[[1]])
+  names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
+  names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
+  for (vn in setdiff(names(x[[2]])[3:ncol(x[[2]])],'var_level')) names(x[[2]]) <- gsub(vn, paste(vn,'(adj)'),names(x[[2]]))
+  out <- merge(x[[1]],x[[2]],by='var_level',all=T)
+  out <- out[,-which(names(out)=='var_level')]
+  out <- out[,-grep('[.]y',names(out))]
+  names(out) <- gsub('[.]x','',names(out))
+  out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
+  
+  if (tableOnly) return(out)
+  
+  to_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
+  outTable(tab=out,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
 
 #'Print Event time summary
@@ -2945,4 +3444,7 @@ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
     cat("\n",out,"\n")
   })
 }
+
+
+
 
