@@ -1,6 +1,21 @@
+<<<<<<< HEAD
 .Rproj.user/
 .DS_Store
 .Rhistory
 reportRx.Rproj
 man/
 .Rproj.user
+=======
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.pdf
+*.tar.gz
+*.Rproj
+/img
+.DS_Store
+inst/doc
+old_functions.R
+test_ggkmcif.R
+>>>>>>> fcb7a3def9c5f40e1b27d1b6a542cf0d651fb41a

@@ -1,2 +1,15 @@
+<<<<<<< HEAD
 ^.*\.Rproj$
 ^\.Rproj\.user$
+=======
+^.[.]bib$
+^.[.]csl$
+^.[.]doc*$
+^[.].[.]Rproj$
+^[.]]Rproj[.]user$
+^.*\.Rproj$
+^\.Rproj\.user$
+^bibfile\.bib$
+^test_reportRx_functions\.Rmd$
+^wordTemplate\.docx$
+>>>>>>> fcb7a3def9c5f40e1b27d1b6a542cf0d651fb41a
