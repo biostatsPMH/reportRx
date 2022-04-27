@@ -137,6 +137,16 @@ pvalue<-function(x){
   else return(signif(x,2))
 }
 
+formatp<- function(pvalues){
+  p_out <- sapply(pvalues, function(x){
+    
+    xsig <-suppressWarnings(as.numeric(x))
+    nsmall <- ifelse(xsig<0.1,3,2)
+    x <- ifelse(x=='excl','excl',ifelse(is.na(nsmall),NA_character_,ifelse(xsig<0.001,"<0.001",format(round(xsig,nsmall),nsmall))))})
+  p_out = unname(p_out)
+  return(p_out)
+}
+
 sanitize <- function(str) {
   result <- str
   result <- gsub("\\\\", "SANITIZE.BACKSLASH", result)
@@ -506,15 +516,7 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
   structure(fun, class = "labeller")
 }
 
-formatp<- function(pvalues){
-  p_out <- sapply(pvalues, function(x){
-    
-    xsig <-suppressWarnings(as.numeric(x))
-    nsmall <- ifelse(xsig<0.1,3,2)
-    x <- ifelse(x=='excl','excl',ifelse(is.na(nsmall),NA_character_,ifelse(xsig<0.001,"<0.001",format(round(xsig,nsmall),nsmall))))})
-  p_out = unname(p_out)
-  return(p_out)
-}
+
 
 # formatp<- function(pvalues,sigdigits=2){
 #   p_out <- sapply(pvalues, function(x){

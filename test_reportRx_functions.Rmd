@@ -585,6 +585,23 @@ rm_covsum(data=mtcars2,
 
 ```
 
+
+```{r, eval=F}
+# ReportRx Code Dependencies
+exportedFunctions <- ls("package:reportRx")
+
+# get all functions inside the package using asNamespace
+all_funs <- unclass(lsf.str(envir = asNamespace("reportRx"), all.names = T))
+# get only non exported funs
+hiddenFunctions <- setdiff(all_funs, exportedFunctions)
+
+RxFuns <- data.frame(fName = c(exportedFunctions,hiddenFunctions),
+                     fStatus = c(rep('Exported',length(exportedFunctions)),
+                                 rep('Hidden',length(hiddenFunctions))))
+
+RxFuns %>% write.csv('../reportRxFunctionList.csv')
+```
+
 \newpage
 
 # References
