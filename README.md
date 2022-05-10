@@ -4,6 +4,7 @@
 # reportRx
 
 <!-- badges: start -->
+
 <!-- badges: end -->
 
 This is a revisited version of the original reportRx package described
