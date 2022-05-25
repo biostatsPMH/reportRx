@@ -3126,6 +3126,8 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 #'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
 #'@param numobs named list overriding the number of people you expect to have the covariate
 #'@param chunk_label only used if output is to Word to allow cross-referencing
+#'@param markup boolean indicating if you want latex markup
+#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
 #'@keywords dataframe
 #'@return A formatted table displaying a summary of the covariates stratified by maincov
 #'@export
@@ -3143,7 +3145,7 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
                       digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
                       testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
                       full=TRUE,include_missing=FALSE,percentage=c('column','row'),
-                      excludeLevels=NULL,numobs=NULL,chunk_label){
+                      excludeLevels=NULL,numobs=NULL,markup=TRUE, sanitize= TRUE,chunk_label){
   
   argList <- as.list(match.call(expand.dots = TRUE)[-1])
   argsToPass <- intersect(names(formals(covsum)),names(argList))
@@ -3189,13 +3191,28 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @param removeInf boolean indicating if infinite estimates should be removed from the table
 #' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
-#'@param ... additional options passed to function  \code{\link{uvsum}}
-#' @export
-#'
-rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,...){
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param corstr character string specifying the correlation structure. Only used for geeglm. The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
+#' @param strata character vector of covariates to stratify by. Only used for coxph and crr
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings with a space
+#' @param testing boolean to indicate if you want to print out the covariates before the model fits.
+#' @param showN boolean indicating if you want to show sample sizes
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @param reflevel manual specification of the reference level. Only used for ordinal This will allow you to see which model is not fitting if the function throws an error
+#' @export 
+#' @example 
+#' rm_uvsum(response = 'Status',
+#' covs=c('wt.loss','Sex','ph.ecog','meal.cal','age'),data=lung,CIwidth=.9)
+
+rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,markup = T,sanitize = T,
+                     nicenames = T,testing = F,showN = T,CIwidth = 0.95,reflevel){
   
   # get the table
-  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,...)
+  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,nicenames = T,testing = F,showN = T,CIwidth = 0.95,reflevel)
   #  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
   
   cap_warn <- character(0)
@@ -3270,8 +3287,14 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings with a space
 #' @export
-rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label){
+#' @examples
+#' glm_fit = glm(Status~Sex:age+wt.loss,data=lung,family = 'binomial')
+#' rm_mvsum(glm_fit)
+rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
   
   # get the table
   tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
@@ -3325,6 +3348,8 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param 
 #' @export
 rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label){ 
   # Check that tables are data frames and not kable objects
