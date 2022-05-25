@@ -342,7 +342,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
 {
   # New LA 18 Feb, test for presence of variables in data and convert character to factor
   missing_vars = setdiff(covs,names(data))
-  if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',missing_vars))  }
+  if (length(missing_vars)>0){  stop(paste('These covariates are not in the data:',paste0(missing_vars,collapse=",")))}
   for (v in c(maincov,covs)) if (class(data[[v]])[1]=='character') data[[v]] <- factor(data[[v]])
   
   missing_testcat <- missing(testcat)
@@ -693,7 +693,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
     missing_vars = setdiff(c(response, covs), names(data))
     if (length(missing_vars) > 0) {
       stop(paste("These covariates are not in the data:", 
-                 missing_vars))
+                 paste0(missing_vars,collapse=",")))
     }
     for (v in covs) {
       if (class(data[[v]])[1] %in% c("character", "ordered")) 
