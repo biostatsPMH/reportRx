@@ -1,0 +1,68 @@
+---
+title: "reportRx TestFile"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+  bookdown::word_document2:
+    reference_docx: 'wordTemplate.docx'
+    toc: yes
+sansfont: Calibri Light
+mainfont: Calibri Light
+bibliography:
+  - bibfile.bib
+#csl: Vancouver.csl
+link-citations: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+#library(reportRx)
+library(tidyverse)
+devtools::load_all()
+```
+
+
+```{r echo=F}
+data(cancer, package='survival')
+lung <- cancer
+
+lung <- lung %>%
+  mutate(
+    Status=factor(status-1),
+    Sex = factor(sex,labels = c('Male','Female')),
+    AgeGroup = cut(age, breaks=seq(0,100,10)),
+    OneLevelFactor = factor(x='one level')
+  ) %>%
+  arrange(Status)
+
+lung$x_null = rnorm(nrow(lung))
+lung$x_pred = c(rnorm(sum(lung$Status==0),0,1),
+                rnorm(sum(lung$Status==1),1,1))
+set.seed(1)
+test_data = tibble(
+  y= rnorm(1000),
+  x0= geoR::rboxcox(1000, lambda=.5, mean=10, sd=2),
+  x1= x0+y
+)
+```
+
+If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table if being knit. I haven't figured out how to fix this yet, but it is on the todo list!
+
+```{r results='asis',echo=T}
+
+ pander::panderOptions('knitr.auto.asis', FALSE)
+v <-  names(lung)[1]
+  cat("One \n")
+
+  for (v in names(lung)[1:2]){
+  cat("\n")
+  print(rm_covsum(data=lung,covs=v))
+  cat("\n")
+}
+
+ pander::panderOptions('knitr.auto.asis', TRUE)
+
+```
+

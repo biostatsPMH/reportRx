@@ -3041,6 +3041,7 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' @param boldheaders Boolean should the header column values be bolded
 #' @param hdr_prefix character value that will prefix headers
 #' @param hdr_suffix character value that will suffix headers
+#' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
 #' @param tableOnly boolean indicating if the table should be formatted for printing or returned as a data frame
 #' @export
 #' @examples 
@@ -3053,13 +3054,29 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' # m2$Response = 'horsepower'
 #' # rbind(m1,m2)
 #' # nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
-nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',tableOnly=FALSE){
+nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
   
-  # ensure that the data are sorted by the header column and covariates in the order they first appear
+  # strip any grouped data or tibble properties
+  if ('data.frame' %in% class(data)){
+    data <- data.frame(data)
+  } else stop('data must be a data.frame')
+
+    # ensure that the data are sorted by the header column and covariates in the order they first appear
   data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
   data <- data[order(data[[head_col]],data[[to_col]]),]
   data[[to_col]] <- as.character(data[[to_col]])
   new_row = data[1,]
+  
+  # round and format numeric columns if digits is specified
+  if (!missing(digits)){
+    coltypes <- unlist(lapply(data, class))
+    numCols <- names(coltypes)[coltypes=='numeric']
+    colRound <- cbind(numCols,digits)
+    colDigits <- as.numeric(colRound[,2])
+    names(colDigits) <- colRound[,1]
+    for (v in numCols) data[[v]] <- sapply(data[[v]],function(x) niceNum(x,digits=colDigits[v]))
+  }
+  
   for (i in 1:ncol(new_row)) new_row[1,i] <- NA
   new_headers = unique(data[[head_col]])
   repeat{

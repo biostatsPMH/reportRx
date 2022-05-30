@@ -129,7 +129,7 @@ rm_covsum(data=test_empty,
 
 \newpage
 
-If you need to run an `rm_` function in a loop, you need to use this structure: Unfortunately, this produces a NULL after each table. I haven't figured out how to fix this yet, but it is on the todo list!
+If you need to run an `rm_` function in a loop, you need to use the following syntax. Unfortunately, this produces a NULL after each table when you knit to Word. This can be prevented by removing the `print` function wrapped around the `rm_covsum` call, but then nothing will print if you knit to pdf .... So, if you are going to flip back and forth, leave the print command and do a find and replace on the resulting NULL words in the Word document. 
 
 ```{r results='asis',echo=T}
 

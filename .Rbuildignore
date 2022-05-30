@@ -8,3 +8,4 @@
 ^bibfile\.bib$
 ^test_reportRx_functions\.Rmd$
 ^wordTemplate\.docx$
+^test_$
