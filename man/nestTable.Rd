@@ -10,9 +10,10 @@ nestTable(
   to_col,
   caption = NULL,
   indent = TRUE,
-  boldheaders = T,
+  boldheaders = TRUE,
   hdr_prefix = "",
   hdr_suffix = "",
+  digits = 2,
   tableOnly = FALSE
 )
 }
@@ -32,6 +33,8 @@ nestTable(
 \item{hdr_prefix}{character value that will prefix headers}
 
 \item{hdr_suffix}{character value that will suffix headers}
+
+\item{digits}{number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns}
 
 \item{tableOnly}{boolean indicating if the table should be formatted for printing or returned as a data frame}
 }

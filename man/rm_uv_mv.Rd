@@ -16,6 +16,8 @@ rm_uv_mv(uvsumTable, mvsumTable, caption = NULL, tableOnly = F, chunk_label)
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
+
+\item{id}{character vector which identifies clusters. Only used for geeglm}
 }
 \description{
 This function will combine rm_uvsum and rm_mvsum outputs into a single table

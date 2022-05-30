@@ -12,7 +12,10 @@ rm_mvsum(
   caption = NULL,
   tableOnly = FALSE,
   p.adjust = "none",
-  chunk_label
+  chunk_label,
+  markup = T,
+  sanitize = T,
+  nicenames = T
 )
 }
 \arguments{
@@ -32,7 +35,17 @@ this from the model)}
 \item{p.adjust}{p-adjustments to be performed (Global p-values only)}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
+
+\item{markup}{boolean indicating if you want latex markup}
+
+\item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
+
+\item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
 }
 \description{
 This is a wrapper around mvsum for use with Rmarkdown
+}
+\examples{
+glm_fit = glm(Status~Sex:age+wt.loss,data=lung,family = 'binomial')
+rm_mvsum(glm_fit)
 }

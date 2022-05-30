@@ -13,7 +13,18 @@ rm_uvsum(
   removeInf = T,
   p.adjust = "none",
   chunk_label,
-  ...
+  id = NULL,
+  corstr = NULL,
+  family = NULL,
+  type = NULL,
+  strata = 1,
+  markup = T,
+  sanitize = T,
+  nicenames = T,
+  testing = F,
+  showN = T,
+  CIwidth = 0.95,
+  reflevel
 )
 }
 \arguments{
@@ -33,8 +44,34 @@ rm_uvsum(
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 
-\item{...}{additional options passed to function  \code{\link{uvsum}}}
+\item{id}{character vector which identifies clusters. Only used for geeglm}
+
+\item{corstr}{character string specifying the correlation structure. Only used for geeglm. The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'}
+
+\item{family}{description of the error distribution and link function to be used in the model. Only used for geeglm}
+
+\item{type}{string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"}
+
+\item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
+
+\item{markup}{boolean indicating if you want latex markup}
+
+\item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
+
+\item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
+
+\item{testing}{boolean to indicate if you want to print out the covariates before the model fits.}
+
+\item{showN}{boolean indicating if you want to show sample sizes}
+
+\item{CIwidth}{width of confidence interval, default is 0.95}
+
+\item{reflevel}{manual specification of the reference level. Only used for ordinal This will allow you to see which model is not fitting if the function throws an error}
 }
 \description{
 Wrapper for the uvsum function for use with Rmarkdown.
+}
+\examples{
+rm_uvsum(response = 'Status',
+covs=c('wt.loss','Sex','ph.ecog','meal.cal','age'),data=lung,CIwidth=.9)
 }

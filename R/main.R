@@ -3221,7 +3221,7 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @param CIwidth width of confidence interval, default is 0.95
 #' @param reflevel manual specification of the reference level. Only used for ordinal This will allow you to see which model is not fitting if the function throws an error
 #' @export 
-#' @example 
+#' @examples 
 #' rm_uvsum(response = 'Status',
 #' covs=c('wt.loss','Sex','ph.ecog','meal.cal','age'),data=lung,CIwidth=.9)
 
@@ -3366,7 +3366,6 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @param id character vector which identifies clusters. Only used for geeglm
-#' @param 
 #' @export
 rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label){ 
   # Check that tables are data frames and not kable objects

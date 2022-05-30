@@ -12,7 +12,9 @@ plotuv(
   showPoints = TRUE,
   na.rm = TRUE,
   response_title = NULL,
-  return_plotlist = FALSE
+  return_plotlist = FALSE,
+  ncol = 2,
+  p_margins = c(0, 0.2, 1, 0.2)
 )
 }
 \arguments{
@@ -31,6 +33,10 @@ plotuv(
 \item{response_title}{character value with title of the plot}
 
 \item{return_plotlist}{boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details}
+
+\item{ncol}{the number of columns of plots to be display in the ggarrange call, defaults to 2}
+
+\item{p_margins}{sets the TRBL margins of the individual plots, defaults to c(0,0.2,1,.2)}
 }
 \description{
 This function is designed to accompany \code{\link{uvsum}} as a means

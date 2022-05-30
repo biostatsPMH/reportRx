@@ -25,6 +25,8 @@ rm_covsum(
   percentage = c("column", "row"),
   excludeLevels = NULL,
   numobs = NULL,
+  markup = TRUE,
+  sanitize = TRUE,
   chunk_label
 )
 }
@@ -72,6 +74,10 @@ formatted printed object is returned (default).}
 
 \item{numobs}{named list overriding the number of people you expect to have the covariate}
 
+\item{markup}{boolean indicating if you want latex markup}
+
+\item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
+
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \value{
@@ -93,8 +99,8 @@ Further formatting options are available using tableOnly=TRUE and outputting the
 rm_covsum(data=mtcars,maincov = 'Gears',
 covs=c('mpg','Cylinders','qsec'),show.tests=T)
 
-# To add change the table fontsize in PDF/HTML
-tab <-rm_covsum(data=mtcars,maincov = 'Gears',
+# To make custom changes or change the fontsize in PDF/HTML
+tab <- rm_covsum(data=mtcars,maincov = 'Gears',
 covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
 outTable(tab, fontsize=7)
 
