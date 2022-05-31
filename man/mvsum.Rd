@@ -33,6 +33,13 @@ with a space}
 \item{CIwidth}{width for confidence intervals, defaults to 0.95}
 }
 \description{
-Returns a dataframe corresponding to a univariate table
+Returns a dataframe with the model summary and global p-value for multi-level
+variables.
+}
+\details{
+Global p-values are likelihood ratio tests for lm, glm and polr models. For
+lme models an attempt is made to re-fit the model using ML and if,successful
+LRT is used to obtain a global p-value. If unsuccessful a Wald p-value is
+returned. For GEE and CRR models Wald global p-values are returned.
 }
 \keyword{dataframe}

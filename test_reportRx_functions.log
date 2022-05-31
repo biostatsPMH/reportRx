@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2022.2.3)  11 APR 2022 08:16
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2022.2.3)  31 MAY 2022 11:22
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1053,10 +1053,12 @@ LaTeX Font Info:    Font shape `TU/CalibriLight(0)/b/n' will be
 [2] [3] [4] [5] [6] [7]
 LaTeX Font Info:    Font shape `TU/lmtt/bx/n' in size <10> not available
 (Font)              Font shape `TU/lmtt/b/n' tried instead on input line 424.
-[8]
+[8] [9]
 File: test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf>
-[9] [10] [11]
+File: test_reportRx_functions_files/figure-latex/test-plotuv-2-1.pdf Graphic file (type pdf)
+<use test_reportRx_functions_files/figure-latex/test-plotuv-2-1.pdf>
+[10] [11] [12] [13]
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-6-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-6-1.pdf>
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-7-1.pdf Graphic file (type pdf)
@@ -1064,45 +1066,45 @@ File: test_reportRx_functions_files/figure-latex/unnamed-chunk-7-1.pdf Graphic f
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-7-2.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-7-2.pdf>
 
-Underfull \hbox (badness 10000) in paragraph at lines 693--694
+Underfull \hbox (badness 10000) in paragraph at lines 699--700
 []
  []
 
-[12] [13]
+[14] [15]
 Overfull \vbox (26.0599pt too high) has occurred while \output is active []
 
-[14]
-Overfull \hbox (1661.74498pt too wide) in paragraph at lines 711--711
+[16]
+Overfull \hbox (1661.74498pt too wide) in paragraph at lines 717--717
 []\TU/lmtt/m/n/10 ##   There are 228 patients. There were 165 (72\%) events. The median and range of the follow-up times is 255.5 (5-1022) days. The KM median event time is 310 with 95\% confidence Interval (285,363). The first and last event times occurred at 5 and 883 days respectively. The 365,720 and 883 day probabilities of 'survival' and their 95\% confidence intervals are 41 (34-49),12 (8-20) and 5 (2-12) percent.[] 
  []
 
-[15] [16] [17] [18] [19]
+[17] [18] [19] [20] [21]
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-20-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-20-1.pdf>
-[20] [21] [22]
-Overfull \hbox (3.96861pt too wide) in paragraph at lines 1148--1164
+[22] [23] [24]
+Overfull \hbox (3.96861pt too wide) in paragraph at lines 1154--1170
  [][] 
  []
 
 
-Overfull \hbox (3.96861pt too wide) in paragraph at lines 1172--1191
+Overfull \hbox (3.96861pt too wide) in paragraph at lines 1178--1197
  [][] 
  []
 
-[23]
+[25]
 LaTeX Font Info:    Font shape `TU/CalibriLight(0)/m/it' will be
-(Font)              scaled to size 10.0pt on input line 1201.
-[24] [25]
-Overfull \hbox (81.49498pt too wide) in paragraph at lines 1282--1282
+(Font)              scaled to size 10.0pt on input line 1207.
+[26] [27]
+Overfull \hbox (81.49498pt too wide) in paragraph at lines 1288--1288
 []\TU/lmtt/m/n/10 ## alternative hypothesis: true difference in means between group Male and group Female is not equal to 0[] 
  []
 
 
-Overfull \hbox (81.49498pt too wide) in paragraph at lines 1302--1302
+Overfull \hbox (81.49498pt too wide) in paragraph at lines 1308--1308
 []\TU/lmtt/m/n/10 ## alternative hypothesis: true difference in means between group Male and group Female is not equal to 0[] 
  []
 
-[26] (./test_reportRx_functions.aux)
+[28] (./test_reportRx_functions.aux)
 
 LaTeX Warning: There were multiply-defined labels.
 
@@ -1110,12 +1112,12 @@ Package rerunfilecheck Info: File `test_reportRx_functions.out' has not changed.
 (rerunfilecheck)             Checksum: 64C15FB739969D05A011C43B25BFF261;2565.
  ) 
 Here is how much of TeX's memory you used:
- 18892 strings out of 478190
- 349058 string characters out of 5854532
- 809017 words of memory out of 5000000
- 39205 multiletter control sequences out of 15000+600000
+ 18901 strings out of 478190
+ 349581 string characters out of 5854532
+ 809104 words of memory out of 5000000
+ 39213 multiletter control sequences out of 15000+600000
  473408 words of font info for 79 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 86i,10n,122p,487b,477s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 86i,10n,122p,534b,477s stack positions out of 5000i,500n,10000p,200000b,80000s
 
-Output written on test_reportRx_functions.pdf (26 pages).
+Output written on test_reportRx_functions.pdf (28 pages).

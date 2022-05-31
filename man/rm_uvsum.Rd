@@ -8,7 +8,8 @@ rm_uvsum(
   response,
   covs,
   data,
-  caption = NULL,
+  digits = 2,
+  caption = "none",
   tableOnly = FALSE,
   removeInf = T,
   p.adjust = "none",
@@ -18,13 +19,11 @@ rm_uvsum(
   family = NULL,
   type = NULL,
   strata = 1,
-  markup = T,
-  sanitize = T,
-  nicenames = T,
-  testing = F,
-  showN = T,
+  nicenames = TRUE,
+  testing = FALSE,
+  showN = TRUE,
   CIwidth = 0.95,
-  reflevel
+  reflevel = NULL
 )
 }
 \arguments{
@@ -35,7 +34,10 @@ models to}
 
 \item{data}{dataframe containing data}
 
-\item{caption}{table caption}
+\item{digits}{number of digits to round to}
+
+\item{caption}{table caption. If set to NULL the function will try to provide
+an informative caption. Default is none.}
 
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
@@ -63,11 +65,6 @@ include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"}
 \item{strata}{character vector of covariates to stratify by. Only used for
 coxph and crr}
 
-\item{markup}{boolean indicating if you want latex markup}
-
-\item{sanitize}{boolean indicating if you want to sanitize all strings to not
-break LaTeX}
-
 \item{nicenames}{booling indicating if you want to replace . and _ in strings
 with a space}
 
@@ -79,8 +76,8 @@ before the model fits.}
 \item{CIwidth}{width of confidence interval, default is 0.95}
 
 \item{reflevel}{manual specification of the reference level. Only used for
-ordinal This will allow you to see which model is not fitting if the
-function throws an error}
+ordinal regression This will allow you to see which model is not fitting if
+the function throws an error}
 }
 \description{
 Wrapper for the uvsum function for use with Rmarkdown.

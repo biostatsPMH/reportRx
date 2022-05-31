@@ -29,7 +29,7 @@ Imports:
     scales,
     survival,
     xtable
-Collate: 'helper.R' 'main.R' 'misc.R' 'globals.R' 'data.R'
+Collate: 'helper.R' 'main.R' 'globals.R' 'data.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
 NeedsCompilation: no
 Repository: CRAN

@@ -20,9 +20,4 @@ for.}
 This function will output a dataframe with usefull summary statistics from a
 coxph model
 }
-\examples{
-etsum(pembrolizumab,c('os_time','os_status'),"sex")
-etsum(pembrolizumab,c('os_time','os_status'))
-etsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3))
-}
 \keyword{dataframe}

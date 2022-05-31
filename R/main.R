@@ -1,60 +1,36 @@
-#' Plot KM curve
-#' 
-#' This function will plot a KM curve with possible stratification. You can
-#' specifyif you want a legend or confidence bands as well as the units of time
-#' used.
-#' 
-#' Note: This function is deprecated and will not be supported in future versions
-#' of reportRx. Please use ggkmcif.
-#' @param data dataframe containing your data
-#' @param response character vector with names of columns to use for response
-#' @param group string specifiying the column name of stratification variable
-#' @param pos what position you want the legend to be. Current option are
-#'  bottomleft and topright
-#' @param units string specifying what the unit of time is use lower case and
-#'  plural
-#' @param CI boolean to specify if you want confidence intervals
-#' @param legend boolean to specify if you want a legend
-#' @param title title of plot
-#' @importFrom graphics axis legend lines mtext par plot
-#' @keywords plot
+#' fit crr model
+#'
+#' Wrapper function to fit fine and gray competing risk model using function crr
+#' from package cmprsk
+#'
+#' @param f formula for the model. Currently the formula only works by using the name
+#' of the column in a dataframe. It does not work by using $ or [] notation.
+#' @param data dataframe containing data
+#' @keywords model
+#' @importFrom cmprsk crr
+#' @seealso
+#'   \code{\link{crr}}
+#' @examples 
+#' # From the crr help file:
+#' set.seed(10)
+#' ftime <- rexp(200)
+#' fstatus <- sample(0:2,200,replace=TRUE)
+#' cov <- matrix(runif(600),nrow=200)
+#' dimnames(cov)[[2]] <- c('x1','x2','x3')
+#' df <- data.frame(ftime,fstatus,cov)
+#' m1 <- crrRx(as.formula('ftime+fstatus~x1+x2+x3'),df)
+#' # Nicely output to report:
+#' rm_mvsum(m1,data=df,showN = TRUE)
 #' @export
-#' @examples
-#' plotkm(pembrolizumab,c('os_time','os_status'))
-plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,legend=T,title=""){
-  message('plotkm has been deprecated. Please use ggkmcif.')
-  if(class(group)=="numeric"){
-    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~1",sep="")),data=data)
-    sk<-summary(kfit)$table
-    levelnames<-paste("N=",sk[1],",Events=",sk[4]," (",round(sk[4]/sk[1],2)*100,"%)",sep="")
-    if(title=="")  title<-paste("KM-Curve for ",nicename(response[2]),sep="")
-    
-  }else if(length(group)>1){
-    return("Currently you can only stratify by 1 variable")
-  }else{
-    if(class(data[,group])!="factor")
-      stop("group must be a vactor variable. (Or leave unspecified for no group)")
-    lr<-survival::survdiff(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
-    lrpv<-1-pchisq(lr$chisq,length(lr$n)- 1)
-    levelnames<-levels(data[,group])
-    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
-    if(title=="") title<-paste("KM-Curve for ",nicename(response[2])," stratified by ",nicename(group),sep="")
-    levelnames<-sapply(1:length(levelnames),function(x){paste(levelnames[x]," n=",lr$n[x],sep="")})
-    
-  }
-  
-  
-  plot(kfit,mark.time=T,lty=1:length(levelnames),xlab=paste("Time (",cap(units),")",sep=""),
-       ylab="Suvival Probability ",cex=1.1,conf.int=CI,
-       main=title)
-  
-  
-  if(legend){
-    if(class(group)=="numeric"){legend(pos,levelnames,lty=1:length(levelnames),bty="n")
-    }else{ legend(pos,c(levelnames,paste("p-value=",pvalue(lrpv)," (Log Rank)",sep="")),
-                  col=c(rep(1,length(levelnames)),"white"),lty=1:(length(levelnames)+1),bty="n")}
-  }
+crrRx<-function(f,data){
+  k<-as.character(f)[3]
+  covs<-removedollar(k)
+  ff<-modelmatrix(f,data)
+  m1<-cmprsk::crr(ff[[1]][,1],ff[[1]][,2],ff[[2]])
+  m1$call<-paste("~",covs)
+  return(m1)
 }
+
 
 #' Get event time summary dataframe
 #'
@@ -68,11 +44,6 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
 #'   for.
 #' @keywords dataframe
 #' @importFrom stats reshape
-#' @export
-#' @examples
-#' etsum(pembrolizumab,c('os_time','os_status'),"sex")
-#' etsum(pembrolizumab,c('os_time','os_status'))
-#' etsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3))
 etsum<- function(data,response,group=1,times=c(12,24)){
   
   ### coerse data into a data.frame in case isn't
@@ -226,84 +197,6 @@ etsum<- function(data,response,group=1,times=c(12,24)){
   return(tab)
 }
 
-#' Print LaTeX event time summary
-#' 
-#' Wrapper for the etsum function that prints paragraphs of text in LaTeX
-#' 
-#' @param data dataframe containing data
-#' @param response character vector with names of columns to use for response
-#' @param group string specifying the column name of stratification variable
-#' @param times numeric vector of times you want survival time probabilities for.
-#' @param units string indicating the unit of time. Use lower case and plural.
-#' @keywords print
-#' @export
-#' @examples
-#' petsum(pembrolizumab,c('os_time','os_status'),"sex")
-#' petsum(pembrolizumab,c('os_time','os_status'))
-#' petsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3),"months")
-petsum<-function(data,response,group=1,times=c(12,14),units="months"){
-  t<-etsum(data,response,group,times)
-  
-  #plotkm(nona,response,group)
-  
-  names<-names(t)
-  if("strata"%in% names){
-    strta<-sapply(t[,"strata"],function(x) paste(x,": ",sep=""))
-    offset<-2
-    ofst<-1
-  }else{
-    strta=matrix(c("",""))
-    offset<-1
-    ofst<-0
-  }
-  
-  
-  out<-sapply(seq_len(nrow(t)),function(i){
-    
-    if(is.na(t[i,3])) {
-      km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
-    }else if (!is.na(t[i,5])){
-      km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
-    }else{
-      km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
-    
-    # if at least one event
-    if(t[i,2]!=0){
-      flet<-paste(" The first and last event times occurred at ",t[i,9],
-                  " and ",t[i,10]," ",units," respectively. ",sep="")
-      
-      psindex=14:(ncol(t)-ofst)
-      psindex=psindex[which(!is.na(t[i,psindex]))]
-      if(length(psindex)>1){
-        lastindex=psindex[length(psindex)]
-        firstindex=psindex[-length(psindex)]
-        ps<-paste("The ",paste(names[firstindex],collapse=", "),", and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
-                  " probabilities of 'survival' and their 95",sanitizestr("%")," confidence intervals are ",
-                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=", "),", and ",t[i,lastindex]," percent.",sep="")
-        
-      }else{
-        ps<-paste("The ",names[psindex]," ",substring(units,1,nchar(units)-1),
-                  " probability of 'survival' and 95",sanitizestr("%")," confidence interval is ",
-                  t[i,psindex]," percent.",sep="")
-      }
-      #if no events
-    }else{
-      km=""
-      ps=""
-      flet=""
-    }
-    
-    
-    out<-paste(lbld(sanitizestr(nicename(strta[i])))," There are ",t[i,1]," subjects There were ",t[i,2],
-               " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times among events and non-events is ",
-               t[i,6]," (",t[i,7],"-",t[i,8],") ",units,
-               ". The median and range of the follow-up times among non-events only is ", 
-               ifelse(is.na(t[i, 11]), "not computable (there were only events)", 
-                      paste0(t[i, 11], " (", t[i, 12], "-", t[i, 13], ") ", units)),      
-               ". ",km,flet,ps,sep="")
-    cat("\n",out,"\n")
-  })
-}
 
 
 #' Get covariate summary dataframe
@@ -353,7 +246,6 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 #' @param percentage choice of how percentages are presented ,one of
 #'   \emph{column} (default) or \emph{row}
 #' @keywords dataframe
-#' @export
 #' @seealso
 #'   \code{\link{fisher.test}},\code{\link{chisq.test}},
 #'   \code{\link{wilcox.test}},\code{\link{kruskal.test}},and
@@ -658,27 +550,6 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   return(table)
 }
 
-#' Print covariate summary Latex
-#' 
-#' Returns a dataframe corresponding to a descriptive table
-#' 
-#' @param data dataframe containing data
-#' @param covs character vector with the names of columns to include in table
-#' @param maincov covariate to stratify table by
-#' @param TeX boolean indicating if you want to be able to view extra long 
-#'  tables in the LaTeX pdf. If TeX is T then the table will not convert 
-#'  properly to docx
-#' @param ... additional options passed to function  \code{\link{covsum}}
-#' @keywords print
-#' @export
-pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
-  if(!TeX){
-    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
-  }else{
-    
-    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
-  }}
-
 #' Get univariate summary dataframe
 #'
 #' Returns a dataframe corresponding to a univariate regression table
@@ -691,6 +562,7 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #' @param covs character vector with the names of columns to fit univariate
 #'   models to
 #' @param data dataframe containing data
+#' @param digits number of digits to round to
 #' @param id character vector which identifies clusters. Only used for geeglm
 #' @param corstr character string specifying the correlation structure. Only
 #'   used for geeglm. The following are permitted: '"independence"',
@@ -720,10 +592,9 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
 #' @importFrom aod wald.test
 #' @importFrom geepack geeglm
 #' @importFrom stats na.omit
-#' @export
-uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL,
-                   type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
-                   testing = F, showN = T, CIwidth = 0.95, reflevel) 
+uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, family = NULL,
+                   type = NULL, strata = 1, markup = TRUE, sanitize = TRUE, nicenames = TRUE, 
+                   testing = FALSE, showN = TRUE, CIwidth = 0.95, reflevel=NULL) 
 {
   if (is.null(id)) {
     missing_vars = setdiff(c(response, covs), names(data))
@@ -773,7 +644,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           data[[response]] <- factor(data[[response]], 
                                      ordered = T)
         }
-        if (!missing(reflevel)) {
+        if (!is.null(reflevel)) {
           data[[response]] <- stats::relevel(data[[response]], 
                                              ref = reflevel)
         }
@@ -800,7 +671,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
       else if ("ordered" %in% class(data[[response[1]]])) {
         type <- "ordinal"
         beta <- "OR"
-        if (!missing(reflevel)) {
+        if (!is.null(reflevel)) {
           data[[response]] <- stats::relevel(data[[response]], 
                                              ref = reflevel)
         }
@@ -838,7 +709,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                                                                                                            collapse = "+"), sep = "")), data = data)
           hazardratio <- c("Reference", apply(matrix(summary(m2, 
                                                              conf.int = CIwidth)$conf.int[, c(1, 3, 4)], 
-                                                     ncol = 3), 1, psthr))
+                                                     ncol = 3), 1, psthr,digits))
           pvalue <- c("", sapply(summary(m2, conf.int = CIwidth)$coef[, 
                                                                       5], lpvalue))
           title <- c(x_var_str, "", "", lpvalue(summary(m2, 
@@ -850,7 +721,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                       data = data)
           hazardratio <- c("Reference", apply(matrix(summary(m2, 
                                                              conf.int = CIwidth)$conf.int[, c(1, 3, 4)], 
-                                                     ncol = 3), 1, psthr))
+                                                     ncol = 3), 1, psthr,digits))
           pvalue <- c("", sapply(summary(m2)$coef[, 
                                                   5], lpvalue))
           globalpvalue <- try(aod::wald.test(b = m2$coef, 
@@ -873,7 +744,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           Z_mult = qnorm(1 - (1 - CIwidth)/2)
           hazardratio <- c("Reference", apply(cbind(exp(m[-1, 
                                                           1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
-                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr))
+                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr,digits))
           pvalue <- c("", sapply(m[-1, 4], lpvalue))
           title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
@@ -896,7 +767,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
           hazardratio <- c("Reference", apply(cbind(m[-1, 
                                                       1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + 
-                                                      T_mult * m[-1, 2]), 1, psthr))
+                                                      T_mult * m[-1, 2]), 1, psthr,digits))
           pvalue <- c("", sapply(m[-1, 4], lpvalue))
           title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
@@ -922,7 +793,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           hazardratio <- c("Reference", apply(cbind(exp(m[, 
                                                           "Value"]), exp(m[, "Value"] - Z_mult * 
                                                                            m[, "Std..Error"]), exp(m[, "Value"] + 
-                                                                                                     Z_mult * m[, "Std..Error"])), 1, psthr))
+                                                                                                     Z_mult * m[, "Std..Error"])), 1, psthr,digits))
           pvalue <- c("", sapply(m$p_value, lpvalue))
           title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
@@ -952,7 +823,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                                                                                        "", "", "+"), paste(strata, 
                                                                                                            collapse = "+"), sep = "")), data = data)
           out <- matrix(c(x_var_str, psthr(summary(m2, 
-                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)]), 
+                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)],digits), 
                           "", lpvalue(summary(m2)$waldtest[3])), 
                         ncol = 4)
         }
@@ -965,7 +836,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
           out <- matrix(c(x_var_str, psthr(summary(m2, 
-                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)]), 
+                                                   conf.int = CIwidth)$conf.int[, c(1, 3, 4)],digits), 
                           "", lpvalue(globalpvalue)), ncol = 4)
         }
         else if (type == "logistic") {
@@ -978,9 +849,9 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           if (class(globalpvalue) == "try-error") 
             globalpvalue <- "NA"
           Z_mult = qnorm(1 - (1 - CIwidth)/2)
-          out <- matrix(c(x_var_str, psthr(c(exp(m[-1, 
-                                                   1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
-                                                                                                 1] + Z_mult * m[-1, 2]))), "", lpvalue(globalpvalue)), 
+          out <- matrix(c(x_var_str, psthr(c(exp(m[-1, 1]), 
+                                             exp(m[-1, 1] - Z_mult * m[-1, 2]), 
+                                             exp(m[-1,1] + Z_mult * m[-1, 2])),digits), "", lpvalue(globalpvalue)), 
                         ncol = 4)
         }
         else if (type == "linear" | type == "boxcox") {
@@ -999,8 +870,8 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           m <- summary(m2)$coefficients
           T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
           out <- matrix(c(x_var_str, psthr(c(m[-1, 1], 
-                                             m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + T_mult * 
-                                               m[-1, 2])), "", lpvalue(globalpvalue)), 
+                                             m[-1, 1] - T_mult * m[-1, 2], 
+                                             m[-1, 1] + T_mult * m[-1, 2]),digits), "", lpvalue(globalpvalue)), 
                         ncol = 4)
         }
         else if (type == "ordinal") {
@@ -1019,7 +890,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           Z_mult <- stats::qnorm(p = 1 - (1 - CIwidth)/2)
           out <- matrix(c(x_var_str, psthr(c(exp(m[, "Value"]), 
                                              exp(m[, "Value"] - Z_mult * m[, "Std..Error"]), 
-                                             exp(m[, "Value"] + Z_mult * m[, "Std..Error"]))), 
+                                             exp(m[, "Value"] + Z_mult * m[, "Std..Error"])),digits), 
                           "", lpvalue(globalpvalue)), ncol = 4)
         }
         if (showN) {
@@ -1134,7 +1005,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           Z_mult = qnorm(1 - (1 - CIwidth)/2)
           hazardratio <- c("Reference", apply(cbind(exp(m[-1, 
                                                           1]), exp(m[-1, 1] - Z_mult * m[-1, 2]), exp(m[-1, 
-                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr))
+                                                                                                        1] + Z_mult * m[-1, 2])), 1, psthr,digits))
           pvalue <- c("", sapply(m[-1, 4], lpvalue))
           title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
@@ -1149,7 +1020,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           T_mult = stats::qt(1 - (1 - CIwidth)/2, m2$df.residual)
           hazardratio <- c("Reference", apply(cbind(m[-1, 
                                                       1], m[-1, 1] - T_mult * m[-1, 2], m[-1, 1] + 
-                                                      T_mult * m[-1, 2]), 1, psthr))
+                                                      T_mult * m[-1, 2]), 1, psthr,digits))
           pvalue <- c("", sapply(m[-1, 4], lpvalue))
           title <- c(x_var_str, "", "", lpvalue(globalpvalue))
         }
@@ -1226,50 +1097,17 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 }
 
 
-#' Print univariate summary LaTeX table
-#'
-#' Returns a LaTeX table of the univariate summary
-#'
-#' @param response string vector with name of response
-#' @param covs character vector with the names of columns to fit univariate
-#'   models to
-#' @param data dataframe containing data
-#' @param id character vector which identifies clusters. Only used for geeglm
-#' @param corstr character string specifying the correlation structure. Only
-#'   used for geeglm. The following are permitted: '"independence"',
-#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
-#' @param family description of the error distribution and link function to be
-#'   used in the model. Only used for geeglm
-#' @param type string indicating he type of univariate model to fit. The
-#'   function will try and guess what type you want based on your response. If
-#'   you want to override this you can manually specify the type. Options in
-#'   clude "linear","logistic","coxph","crr","boxcox","logistic"
-#' @param strata character vector of covariates to stratify by. Only used for
-#'   coxph and crr
-#' @param TeX boolean indicating if you want to be able to view extra long
-#'   tables in the LaTeX pdf. If TeX is T then the table will not convert
-#'   properly to docx
-#' @param showN boolean indicating if you want to show sample sizes
-#' @param CIwidth width of confidence interval, default is 0.95
-#' @importFrom stats anova as.formula chisq.test coef fisher.test glm
-#'   kruskal.test lm median model.matrix pchisq qnorm sd time vcov wilcox.test
-#' @importFrom xtable xtable print.xtable
-#' @keywords dataframe
-#' @export
-puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
-  if(!TeX){
-    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
-  }else{
-    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
-  }
-  
-}
-
 ## TODO: Add support for svyglm and svycoxph functions. May need to check the feasibility of the global p-value here
 
 #' Get multivariate summary dataframe
 #'
-#' Returns a dataframe corresponding to a univariate table
+#' Returns a dataframe with the model summary and global p-value for multi-level
+#' variables.
+#'
+#' Global p-values are likelihood ratio tests for lm, glm and polr models. For
+#' lme models an attempt is made to re-fit the model using ML and if,successful
+#' LRT is used to obtain a global p-value. If unsuccessful a Wald p-value is
+#' returned. For GEE and CRR models Wald global p-values are returned.
 #'
 #' @param model fitted model object
 #' @param data dataframe containing data
@@ -1283,7 +1121,6 @@ puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,st
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @keywords dataframe
 #' @importFrom stats na.omit formula model.frame
-#' @export
 mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
                    CIwidth = 0.95) 
 {
@@ -1626,241 +1463,117 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
 }
 
 
-#' Print multivariate summary LaTeX table
+
+#' #' Plot CI curve
+#' #' 
+#' #' Plots a CI curve. Currently not very powerful. Only plots a single curve
+#' #' 
+#' #' @param data dataframe containing data
+#' #' @param response character vector or list of character vector. 
+#' #'  If a list it plot the '1' event for all outcomes on the same plot
+#' #' @param group string of the group want to stratify by
+#' #' @param units units of time
+#' #' @param main String corresponding to title
+#' #' @param CI Bool If True will plot CI and only the '1' event. If F will plot 
+#' #'  all events except for the final one
+#' #' @param legpos string indicating which position to put legend choies are "topright" etc
+#' #' @param xlim numeric vector corresponding to xlimits. Default is NULL
+#' #' @param outcomes character vector of the names of the different competing outcomes
+#' #' @importFrom cmprsk cuminc
+#' #' @keywords print
+#' #' @export
+#' plotci<-function (data,response,group=NULL,units = "months",main="Viral Infections",CI=F,legpos="topleft",xlim=NULL,outcomes=NULL){
+#'   if(!is.null(group)){
+#'     groups=levels(data[,group])
+#'   }
+#'   #If response is a list plot the '1' event for all outcomes on same plot
+#'   if(class(response)!="list"){
+#'     if(!is.null(group)){
+#'       groups=levels(data[,group])
+#'       fita <- cuminc(data[,response[1]],data[,response[2]],data[,group])
+#'     }else{
+#'       fita <- cuminc(data[,response[1]],data[,response[2]])
+#'     }
+#'     if(CI){
+#'       plot(fita[[1]]$time,sapply(fita[[1]]$est + 1.96 * sqrt(fita[[1]]$var),
+#'                                  function(x) min(x,1)),type = "l",lty = 2,main = paste("CI plot for ",
+#'                                                                                        sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+#'                                                                                                                                                  cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+#'                                                                                                                                                                                                      sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+#'       
+#'       lines(fita[[1]]$time,fita[[1]]$est)
+#'       lines(fita[[1]]$time,sapply(fita[[1]]$est - 1.96 * sqrt(fita[[1]]$var),
+#'                                   function(x) max(x,0)),lty = 2)
+#'     }else{
+#'       plot(fita[[1]]$time,fita[[1]]$est,
+#'            type = "l", main = paste("CI plot for ",
+#'                                     sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+#'                                                                                               cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+#'                                                                                                                                                   sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+#'       numoutcomes<-length(fita)-1
+#'       if(numoutcomes>1){
+#'         for (i in 2:numoutcomes){
+#'           lines(fita[[i]]$time,fita[[i]]$est,lty=i,lwd=2)
+#'         }
+#'         legend(legpos,outcomes,lty = 1:numoutcomes,bty = "n",lwd=2)
+#'       }
+#'     }
+#'     
+#'   }else{
+#'     d<-lapply(response,function(respons){
+#'       fita <- cuminc(data[,respons[1]],data[,respons[2]])
+#'       list(fita[[1]]$time,fita[[1]]$est)})
+#'     if(is.null(xlim)) xlim=c(0,ceiling(max(sapply(d,function(x) max(x[[1]])))))
+#'     plot(1,type="n",xlim=xlim,ylim=c(0,1),
+#'          ylab="Cumulative Incidence",xlab = paste("Time (",cap(units),")",sep = ""),main=paste("Cumulative Incidence plot for",main))
+#'     for(i in 1:length(d)){
+#'       lines(d[[i]][[1]],d[[i]][[2]],lty=i,lwd=2)
+#'     }
+#'     legend(legpos,sapply(response,function(x) x[2]) ,col =rep(1,length(response)),lty = 1:length(response),bty = "n",lwd=2)
+#'     
+#'   }
+#' }
 #' 
-#' Returns a LaTeX table of the multivariate summary.
 #' 
-#' @param model fitted model object
-#' @param data dataframe containing data
-#' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
-#' @param CIwidth width for confidence intervals, defaults to 0.95
-#' @keywords print
-#' @export
-
-pmvsum<-function(model,data,showN=FALSE,CIwidth=0.95){
-  print.xtable(xtable(mvsum(model=model,data=data,showN=showN,CIwidth=CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
-}
-
-
-#' Convert .TeX to .docx
-#'
-#' Converts the knitr-compiled .TeX file to a .docx file. The function calls
-#' ImageMagick to convert .pdf images into .png and then calls pandoc (included
-#' with RStudio) to convert the .Tex file into .docx.
-#'
-#' Note: This function is deprecated and will not be supported in future
-#' versions of reportRx. Instead the rm_ functions can be used to output to pdf,
-#' Word or HTML from an Rmarkdown document.
-#'
-#' @param dir full path of .TeX file directory
-#' @param fname .TeX file filename. Do not include extension.
-#' @param pdwd full path to pandoc. The default value is the usual installation
-#'   path for Windows systems if RStudio is installed.
-#' @param imwd full path to image magick. Only include if there is at least one
-#'   graphic.
-#' @keywords print
-#' @export
-makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
-  message('makedocx has been deprecated. Please create Word documents using Rmarkdown.')
-  oldwd<-getwd()
-  ### convert path to forward slashes if any
-  dir <- gsub("\\\\","/",dir)
-  setwd(dir)
-  if( grepl(" ",fname) ){## check whether fname has spaces,if it does rename it with a warning.
-    file.rename(from = fname,to = gsub(" ","-",fname))
-    fname <- gsub(" ","-",fname)
-    warning("Your fname has spaces,the new filename is: ",fname)
-  }
-  
-  if(imwd!="" & dir.exists(paste0(dir,"/figure"))){
-    setwd(imwd)
-    if( grepl("*ImageMagick-6[.]*",imwd) ){
-      exec <- "mogrify"
-    }else if ( grepl("*ImageMagick-7[.]*",imwd) ){
-      exec <- "magick mogrify"
-    }else warning("The installation path for ImageMagick has an unrecognized format.")
-    
-    command <- paste0(exec,' -path "',dir,'/figure/" ','-format png "',dir,'/figure/*.pdf"')
-    shell(command)
-  }
-  setwd(dir)
-  ### The lines below ammend the issue with newer versions of pandoc with the kframe environment
-  ## read the original .tex file
-  tx  <- readLines(paste0(fname,'.tex'),warn=FALSE)
-  ## rename the environment to something simpler as suggested by John MacFarlane in the pandoc-discuss thread
-  tx2 <- gsub(pattern = "\\begin{document}",
-              replace = "\\renewenvironment{kframe}{}{}\\begin{document}",
-              x = tx,fixed = TRUE)
-  ## create a file with the workaround for the kframe environment and use it in the pandoc call below
-  zz <- file(paste0(fname,'_cp.tex'),"wb")
-  writeLines(tx2,con=zz)
-  close(zz)
-  
-  command <- paste0('"',pdwd,'/pandoc" -o ',fname,'.docx ',fname,'_cp.tex ',
-                    "--default-image-extension=png ")
-  shell(command)
-  # remove the files created
-  file.remove(paste0(fname,'_cp.tex'))
-  pngfiles = list.files(paste0(dir,'/figure/'),pattern = "*.png",full.names = TRUE)
-  file.remove(pngfiles)
-  setwd(oldwd)
-}
-
-
-#' Plot CI curve
-#' 
-#' Plots a CI curve. Currently not very powerful. Only plots a single curve
-#' 
-#' @param data dataframe containing data
-#' @param response character vector or list of character vector. 
-#'  If a list it plot the '1' event for all outcomes on the same plot
-#' @param group string of the group want to stratify by
-#' @param units units of time
-#' @param main String corresponding to title
-#' @param CI Bool If True will plot CI and only the '1' event. If F will plot 
-#'  all events except for the final one
-#' @param legpos string indicating which position to put legend choies are "topright" etc
-#' @param xlim numeric vector corresponding to xlimits. Default is NULL
-#' @param outcomes character vector of the names of the different competing outcomes
-#' @importFrom cmprsk cuminc
-#' @keywords print
-#' @export
-plotci<-function (data,response,group=NULL,units = "months",main="Viral Infections",CI=F,legpos="topleft",xlim=NULL,outcomes=NULL){
-  if(!is.null(group)){
-    groups=levels(data[,group])
-  }
-  #If response is a list plot the '1' event for all outcomes on same plot
-  if(class(response)!="list"){
-    if(!is.null(group)){
-      groups=levels(data[,group])
-      fita <- cuminc(data[,response[1]],data[,response[2]],data[,group])
-    }else{
-      fita <- cuminc(data[,response[1]],data[,response[2]])
-    }
-    if(CI){
-      plot(fita[[1]]$time,sapply(fita[[1]]$est + 1.96 * sqrt(fita[[1]]$var),
-                                 function(x) min(x,1)),type = "l",lty = 2,main = paste("CI plot for ",
-                                                                                       sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
-                                                                                                                                                 cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
-                                                                                                                                                                                                     sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
-      
-      lines(fita[[1]]$time,fita[[1]]$est)
-      lines(fita[[1]]$time,sapply(fita[[1]]$est - 1.96 * sqrt(fita[[1]]$var),
-                                  function(x) max(x,0)),lty = 2)
-    }else{
-      plot(fita[[1]]$time,fita[[1]]$est,
-           type = "l", main = paste("CI plot for ",
-                                    sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
-                                                                                              cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
-                                                                                                                                                  sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
-      numoutcomes<-length(fita)-1
-      if(numoutcomes>1){
-        for (i in 2:numoutcomes){
-          lines(fita[[i]]$time,fita[[i]]$est,lty=i,lwd=2)
-        }
-        legend(legpos,outcomes,lty = 1:numoutcomes,bty = "n",lwd=2)
-      }
-    }
-    
-  }else{
-    d<-lapply(response,function(respons){
-      fita <- cuminc(data[,respons[1]],data[,respons[2]])
-      list(fita[[1]]$time,fita[[1]]$est)})
-    if(is.null(xlim)) xlim=c(0,ceiling(max(sapply(d,function(x) max(x[[1]])))))
-    plot(1,type="n",xlim=xlim,ylim=c(0,1),
-         ylab="Cumulative Incidence",xlab = paste("Time (",cap(units),")",sep = ""),main=paste("Cumulative Incidence plot for",main))
-    for(i in 1:length(d)){
-      lines(d[[i]][[1]],d[[i]][[2]],lty=i,lwd=2)
-    }
-    legend(legpos,sapply(response,function(x) x[2]) ,col =rep(1,length(response)),lty = 1:length(response),bty = "n",lwd=2)
-    
-  }
-}
-
-
-#' Get CI cinfidence interval
-#' 
-#' Returns the confidence interval of a CI at a specified time. 
-#' 
-#' Currently not very powerful. Only works on single strata.
-#' 
-#' @param data dataframe containing data
-#' @param response character vector of response
-#' @param times numeric vector specifying single time to get CI for
-#' @param units string specifying the unit of times
-#' @param outcomes character vector specifying names of competing outcomes.
-#'  Leave NULL if there is only one outcome
-#' @param decimals positive integer corresponding to the number of decimals
-#' @keywords print
-#' @export
-citime<-function (data,response,times,units="Years",outcomes=NULL,decimals=2)
-{
-  out<-sapply(times,function(time){
-    fita <- cuminc(data[,response[1]],data[,response[2]])
-    numoutcomes<-length(fita)-1
-    sapply(1:numoutcomes,function(i){
-      index <- max(which(fita[[i]]$time <= time))
-      est <- fita[[i]]$est[index]
-      pm <- 1.96 * sqrt(fita[[i]]$var[index])
-      psthr(c(est,max(est - pm,0),min(est + pm,1)),decimals)
-    })
-  })
-  if (class(out)!="matrix")
-    out<-t(out)
-  out<-data.frame(out,stringsAsFactors=F)
-  rownames(out)<-NULL
-  if(!is.null(outcomes)){
-    out<-cbind(outcomes,out)
-    colnames(out)<-c("Outcome",paste(times,units))
-  }else{
-    colnames(out)<-paste(times,units)
-  }
-  return(out)
-}
-
-
-#' Create a forest plot
-#'
-#' Create a forest plot. All entries with cutoff=T will be plotted with an NA
-#' rather than their original value.
-#'
-#' @param data dataframe containing data
-#' @param xlab String corresponding to xlabel. By default is set to
-#'   names(data)[2]
-#' @param ylab String corresponding to ylabel. By default is set to
-#'   names(data)[1]
-#' @param main String corresponding to main title. By default is set to "Forest
-#'   plot for subgroup analysis"
-#' @param space numeric corresponding to offset of y label. Should be positive
-#'   if y label is on top of the names of the y axis
-#' @param bool A boolean vector. All entries with T will be invisible in the
-#'   plot
-#' @param xlim vector of length 2 corresponding to limits of x-axis. Default to
-#'   NULL.
-#' @importFrom graphics abline axis legend lines mtext par plot segments
-#' @keywords print
-#' @export
-forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,xlim=NULL)
-{
-  if (is.null(xlab))
-    xlab <- names(data)[2]
-  if (is.null(ylab))
-    ylab <- names(data)[1]
-  if (is.null(main))
-    main <- "Forest plot for subgroup analysis"
-  par(oma = c(0,space,0,0))
-  l1 <- nrow(data)
-  colors<- ifelse(bool,"white","black")
-  if(is.null(xlim)) xlim<-c(0,max(data[!bool,4]))
-  plot(data[,2],c(1:l1),col = colors,pch = "|",bg = colors,
-       yaxt = "n",xlim = xlim,ylab = "",xlab = "",
-       main = main)
-  abline(v = 1,col = "red",lty = 2)
-  graphics::segments(data[,3],c(1:l1),data[,4],c(1:l1),col=colors)
-  axis(2,at = c(1:l1),labels = data[,1],las = 1,cex.axis = 0.8)
-  mtext(side = 1,xlab,line = 2)
-  mtext(side = 2,ylab,line = space + 2.5)
-}
+#' #' Get CI cinfidence interval
+#' #' 
+#' #' Returns the confidence interval of a CI at a specified time. 
+#' #' 
+#' #' Currently not very powerful. Only works on single strata.
+#' #' 
+#' #' @param data dataframe containing data
+#' #' @param response character vector of response
+#' #' @param times numeric vector specifying single time to get CI for
+#' #' @param units string specifying the unit of times
+#' #' @param outcomes character vector specifying names of competing outcomes.
+#' #'  Leave NULL if there is only one outcome
+#' #' @param decimals positive integer corresponding to the number of decimals
+#' #' @keywords print
+#' #' @export
+#' citime<-function (data,response,times,units="Years",outcomes=NULL,decimals=2)
+#' {
+#'   out<-sapply(times,function(time){
+#'     fita <- cuminc(data[,response[1]],data[,response[2]])
+#'     numoutcomes<-length(fita)-1
+#'     sapply(1:numoutcomes,function(i){
+#'       index <- max(which(fita[[i]]$time <= time))
+#'       est <- fita[[i]]$est[index]
+#'       pm <- 1.96 * sqrt(fita[[i]]$var[index])
+#'       psthr(c(est,max(est - pm,0),min(est + pm,1)),decimals)
+#'     })
+#'   })
+#'   if (class(out)!="matrix")
+#'     out<-t(out)
+#'   out<-data.frame(out,stringsAsFactors=F)
+#'   rownames(out)<-NULL
+#'   if(!is.null(outcomes)){
+#'     out<-cbind(outcomes,out)
+#'     colnames(out)<-c("Outcome",paste(times,units))
+#'   }else{
+#'     colnames(out)<-paste(times,units)
+#'   }
+#'   return(out)
+#' }
 
 
 #' Create a forest plot using ggplot2
@@ -1883,6 +1596,9 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 #' @importFrom scales log_breaks
 #' @keywords plot
 #' @export
+#' @examples 
+#' glm_fit = glm(change_ctdna_group~sex+age+baseline_ctdna+l_size, data=pembrolizumab,family = 'binomial')
+#' forestplot2(glm_fit)
 forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',showEst=TRUE,rmRef=FALSE,logScale=TRUE,nxTicks=5){
   
   if (class(model)[1]=='glm'){
@@ -2150,6 +1866,1001 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
                                                ncol=ncol,
                                                nrow=ceiling(length(plist)/ncol)))
   }}
+
+
+
+
+# Rmarkdown Reporting --------------------------------------------------------------
+
+#' Print tables to PDF/Latex HTML or Word
+#'
+#' Output the table nicely to whatever format is appropriate. This is the output
+#' function used by the rm_* printing functions.
+#'
+#' Entire rows can be bolded, and the first column can be indented. Currently
+#' there is no support for cell-specific formatting. By default, underscores in
+#' column names are converted to spaces. To disable this set rm_ to FALSE
+#'
+#' @param tab a table to format
+#' @param to_indent numeric vector the length of nrow(tab) indicating which rows
+#'   to indent
+#' @param to_bold numeric vector the length of nrow(tab) indicating which rows
+#'   to bold
+#' @param caption table caption
+#' @param digits number of digits to round numeric columns to, wither a single
+#'   number or a vector corresponding to the number of numeric columns
+#' @param align string specifying column alignment, defaults to left alignment
+#'   of the first column and right alignment of all other columns
+#' @param fontsize PDF/HTML output only, manually set the table fontsize
+#' @param chunk_label only used knitting to Word docs to allow cross-referencing
+#' @export
+outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
+  
+  # strip tibble aspects
+  tab=as.data.frame(tab)
+  rownames(tab) <- NULL
+  
+  # define column alignment
+  if (missing(align)){
+    alignSpec = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep='')
+  } else{
+    alignSpec = gsub('[^lrc]+','',paste(align,collapse=''))
+    alignSpec = substr(alignSpec,1,ncol(tab))
+    if (nchar(alignSpec)<ncol(tab)) {
+      lastchar = substr(alignSpec,nchar(alignSpec),nchar(alignSpec))
+      alignSpec <- paste0(alignSpec,paste(rep(lastchar,ncol(tab)-nchar(alignSpec)),collapse=''))
+    }
+    if (!identical(alignSpec, align)){ warning(paste0('Argument align did not conform to expectations, align="',alignSpec,'" used instead'))}
+  }
+  # round and format numeric columns if digits is specified
+  if (!missing(digits)){
+    coltypes <- unlist(lapply(tab, class))
+    numCols <- names(coltypes)[coltypes=='numeric']
+    colRound <- cbind(numCols,digits)
+    colDigits <- as.numeric(colRound[,2])
+    names(colDigits) <- colRound[,1]
+    for (v in numCols) tab[[v]] <- sapply(tab[[v]],function(x) niceNum(x,digits=colDigits[v]))
+  }
+  out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
+                   ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
+                          ifelse(knitr::is_latex_output(),'latex','html')))
+  
+  chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
+  
+  if (is.null(to_indent)) to_indent = numeric(0)
+  to_indent = as.vector(to_indent)
+  
+  
+  if (out_fmt=='doc'){
+    caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
+    tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
+    tab[tab==''] <-'&nbsp;'
+    
+    tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
+    if (length(to_bold)>0) {
+      pander::pander(tab,
+                     caption=caption,
+                     emphasize.strong.rows=to_bold,
+                     split.table=Inf, split.cells=15,
+                     justify = alignSpec)
+      
+    } else {
+      pander::pander(tab,
+                     caption=caption,
+                     split.table=Inf, split.cells=15,
+                     justify = alignSpec)
+    }
+  } else {  # For PDF, HTML
+    # set NA to empty in kable
+    options(knitr.kable.NA = '')
+    if(!is.null(caption)) caption <- sanitize(caption)
+    # kout <- knitr::kable(tab, format = out_fmt,
+    #                      booktabs=TRUE,
+    #                      longtable=TRUE,
+    #                      linesep='',
+    #                      caption=caption,
+    #                      align =alignSpec)
+    # kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+    
+    # This may not work as expected if a small table is split over pages
+    # better to also repeat table headers
+    if (nrow(tab)>30){
+      kout <- knitr::kable(tab, format = out_fmt,
+                           booktabs=TRUE,
+                           longtable=TRUE,
+                           linesep='',
+                           caption=caption,
+                           align =alignSpec)
+      kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      # There is now a conflict with the tabu package, full_width=T fails with longtable
+      #       if (ncol(tab)>4) {
+      #         kout <- kableExtra::kable_styling(kout,full_width = TRUE,latex_options = c('repeat_header'))
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       } else {
+      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
+      #       }
+    } else {
+      kout <- knitr::kable(tab, format = out_fmt,
+                           booktabs=TRUE,
+                           longtable=FALSE,
+                           linesep='',
+                           caption=caption,
+                           align = alignSpec)
+      #      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout, full_width = TRUE)
+    }
+    kout <- kableExtra::add_indent(kout,positions = to_indent)
+    if (length(to_bold)>0){
+      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
+    }
+    if (!missing(fontsize)){
+      kout <- kableExtra::kable_styling(kout,font_size = fontsize)
+    }
+    kout
+  }
+}
+
+#' Combine two table columns into a single column with levels of one nested
+#' within levels of the other.
+#'
+#' This function accepts a data frame (via the data argument) and combines two
+#' columns into a single column with values from the head_col serving as headers
+#' and values of the to_col displayed underneath each header. The resulting
+#' table is then passed to outTable for printing and output, to use the grouped
+#' table as a data frame specify tableOnly=TRUE. By default the headers will be
+#' bolded and the remaining values indented.
+#'
+#' Note that it is possible to combine multiple tables (more than two) with this
+#' function.
+#'
+#' @param data dataframe
+#' @param head_col character value specifying the column name with the headers
+#' @param to_col character value specifying the column name to add the headers
+#'   into
+#' @param caption table caption
+#' @param indent Boolean should the original values in the to_col be indented
+#' @param boldheaders Boolean should the header column values be bolded
+#' @param hdr_prefix character value that will prefix headers
+#' @param hdr_suffix character value that will suffix headers
+#' @param digits number of digits to round numeric columns to, wither a single
+#'   number or a vector corresponding to the number of numeric columns
+#' @param tableOnly boolean indicating if the table should be formatted for
+#'   printing or returned as a data frame
+#' @export
+#' @examples
+#' ## Investigate models to predict baseline ctDNA and tumour size and display together
+#' ## (not clinically useful!)
+#' fit1 <- lm(baseline_ctdna~age+l_size+pdl1,data=pembrolizumab)
+#' m1 <- rm_mvsum(fit1,tableOnly=TRUE)
+#' m1$Response = 'ctDNA'
+#' fit2 <- lm(l_size~age+baseline_ctdna+pdl1,data=pembrolizumab)
+#' m2 <- rm_mvsum(fit2,tableOnly=TRUE)
+#' m2$Response = 'Tumour Size'
+#' rbind(m1,m2)
+#' nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
+nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
+  
+  # strip any grouped data or tibble properties
+  if ('data.frame' %in% class(data)){
+    data <- data.frame(data)
+  } else stop('data must be a data.frame')
+
+    # ensure that the data are sorted by the header column and covariates in the order they first appear
+  data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
+  data <- data[order(data[[head_col]],data[[to_col]]),]
+  data[[to_col]] <- as.character(data[[to_col]])
+  new_row = data[1,]
+  
+  # round and format numeric columns if digits is specified
+  if (!missing(digits)){
+    coltypes <- unlist(lapply(data, class))
+    numCols <- names(coltypes)[coltypes=='numeric']
+    colRound <- cbind(numCols,digits)
+    colDigits <- as.numeric(colRound[,2])
+    names(colDigits) <- colRound[,1]
+    for (v in numCols) data[[v]] <- sapply(data[[v]],function(x) niceNum(x,digits=colDigits[v]))
+  }
+  
+  for (i in 1:ncol(new_row)) new_row[1,i] <- NA
+  new_headers = unique(data[[head_col]])
+  repeat{
+    header_index = which(!duplicated(data[[head_col]]) & !is.na(data[[head_col]]))[1]
+    new_row[[to_col]] <- data[[head_col]][header_index]
+    
+    if (header_index>1){
+      data = rbind(data[1:(header_index-1),],new_row,data[(header_index):nrow(data),])
+    } else {
+      data = rbind(new_row,data)
+    }
+    
+    data[[head_col]][data[[head_col]]==new_row[[to_col]]] <- NA
+    if (sum(is.na(data[[head_col]]))==nrow(data)) break
+  }
+  header_rows <- which(data[[to_col]] %in% new_headers)
+  to_indent <- which(!(data[[to_col]] %in% new_headers) )
+  
+  data[[to_col]][header_rows] <- paste0(hdr_prefix,data[[to_col]][header_rows],hdr_suffix)
+  
+  # data <- dplyr::select(data,-all_of(head_col))
+  data <- data[,setdiff(names(data),head_col)]
+  
+  if (tableOnly){
+    return(data)
+  }
+  if (boldheaders) to_bold = header_rows else to_bold=numeric(0)
+  outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
+}
+
+#' Outputs a descriptive covariate table
+#'
+#' Returns a data frame corresponding to a descriptive table.
+#'
+#' Comparisons for categorical variables default to chi-square tests, but if
+#' there are counts of <5 then the Fisher Exact test will be used and if this is
+#' unsuccessful then a second attempt will be made computing p-values using MC
+#' simulation. If testcont='ANOVA' then the t-test with unequal variance will be
+#' used for two groups and an ANOVA will be used for three or more. The
+#' statistical test used can be displayed by specifying show.tests=TRUE.
+#'
+#' Further formatting options are available using tableOnly=TRUE and outputting
+#' the table with a call to outTable.
+#'
+#' @param data dataframe containing data
+#' @param covs character vector with the names of columns to include in table
+#' @param maincov covariate to stratify table by
+#' @param caption character containing table caption. If caption = NULL then
+#'   notes about unstable estimates and p-value adjustments will be added to the
+#'   caption. To suppress the caption completely set caption='none'.
+#' @param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a
+#'   formatted printed object is returned (default).
+#' @param covTitle character with the names of the covariate column
+#' @param digits number of digits for summarizing mean data
+#' @param digits.cat number of digits for the proportions when summarizing
+#'   categorical data (default: 0)
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param IQR boolean indicating if you want to display the inter quantile range
+#'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#' @param all.stats boolean indicating if all summary statistics (Q1,Q3 +
+#'   min,max on a separate line) should be displayed. Overrides IQR.
+#' @param pvalue boolean indicating if you want p-values included in the table
+#' @param show.tests boolean indicating if the type of statistical used should
+#'   be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#' @param testcont test of choice for continuous variables,one of
+#'   \emph{rank-sum} (default) or \emph{ANOVA}
+#' @param testcat test of choice for categorical variables,one of
+#'   \emph{Chi-squared} (default) or \emph{Fisher}
+#' @param full boolean indicating if you want the full sample included in the
+#'   table, ignored if maincov is NULL
+#' @param include_missing Option to include NA values of maincov. NAs will not
+#'   be included in statistical tests
+#' @param percentage choice of how percentages are presented ,one of
+#'   \emph{column} (default) or \emph{row}
+#' @param excludeLevels a named list of covariate levels to exclude from
+#'   statistical tests in the form list(varname =c('level1','level2')). These
+#'   levels will be excluded from association tests, but not the table. This can
+#'   be useful for levels where there is a logical skip (ie not missing, but not
+#'   presented). Ignored if pvalue=FALSE.
+#' @param numobs named list overriding the number of people you expect to have
+#'   the covariate
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @keywords dataframe
+#' @return A formatted table displaying a summary of the covariates stratified
+#'   by maincov
+#' @export
+#' @seealso \code{\link{fisher.test}}, \code{\link{chisq.test}},
+#'   \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
+#'   and \code{\link{outTable}}
+#' @examples
+#' rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
+#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
+#'
+#' # To make custom changes or change the fontsize in PDF/HTML
+#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
+#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
+#' outTable(tab, fontsize=7)
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
+                      digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
+                      testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
+                      full=TRUE,include_missing=FALSE,percentage=c('column','row'),
+                      excludeLevels=NULL,numobs=NULL,markup=TRUE, sanitize= TRUE,chunk_label){
+  
+  argList <- as.list(match.call(expand.dots = TRUE)[-1])
+  argsToPass <- intersect(names(formals(covsum)),names(argList))
+  covsumArgs <- argList[names(argList) %in% argsToPass]
+  covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
+  tab <- do.call(covsum,covsumArgs)
+  to_bold = numeric(0)
+  if ('p-value' %in% names(tab)) {
+    # format p-values nicely
+    p_vals <- tab[['p-value']]
+    new_p <- sapply(p_vals,formatp)
+    tab[['p-value']] <- new_p
+    to_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
+  } 
+  nice_var_names = gsub('[_.]',' ',covs)
+  to_indent <- which(!tab$Covariate %in% nice_var_names )
+  if (covTitle !='Covariate') names(tab[1]) <-covTitle
+  if (nicenames) {names(tab) <- gsub('_|[.]',' ',names(tab))}  
+  if (tableOnly){
+    return(tab)
+  }
+  if (is.null(caption)) {
+    if (!is.null(maincov)){
+      caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
+    } else
+      caption = 'Summary sample statistics.'
+  }
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+  
+}
+
+#' Output several univariate models nicely in a single table
+#'
+#' Wrapper for the uvsum function for use with Rmarkdown.
+#'
+#' @param response string vector with name of response
+#' @param covs character vector with the names of columns to fit univariate
+#'   models to
+#' @param data dataframe containing data
+#' @param digits number of digits to round to
+#' @param caption table caption. If set to NULL the function will try to provide
+#'   an informative caption. Default is none.
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param removeInf boolean indicating if infinite estimates should be removed
+#'   from the table
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param corstr character string specifying the correlation structure. Only
+#'   used for geeglm. The following are permitted: '"independence"',
+#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be
+#'   used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options
+#'   include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
+#' @param strata character vector of covariates to stratify by. Only used for
+#'   coxph and crr
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param testing boolean to indicate if you want to print out the covariates
+#'   before the model fits.
+#' @param showN boolean indicating if you want to show sample sizes
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @param reflevel manual specification of the reference level. Only used for
+#'   ordinal regression This will allow you to see which model is not fitting if
+#'   the function throws an error
+#' @export
+#' @examples
+#' rm_uvsum(response = 'change_ctdna_group',
+#' covs=c('age','sex','baseline_ctdna','l_size'),data=pembrolizumab,CIwidth=.9)
+rm_uvsum <- function(response, covs , data , digits=2, caption='none',
+                     tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,
+                     id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,
+                     nicenames = TRUE,testing = FALSE,showN = TRUE,CIwidth = 0.95,reflevel=NULL){
+  
+  # get the table
+  tab <- uvsum(response,covs,data,digits=digits,markup = FALSE,sanitize=FALSE,id = id,
+               corstr = corstr,family = family,type = type,strata = strata,
+               nicenames = nicenames,testing = testing,showN = showN,
+               CIwidth = CIwidth,reflevel=reflevel)
+
+  cap_warn <- character(0)
+  if (removeInf){
+    # Do not display unstable estimates
+    inf_values =  grep('Inf',tab[,2])
+    if (length(inf_values)>0){
+      tab[inf_values,2:4] <-NA
+      cap_warn <- paste0(cap_warn,ifelse(identical(cap_warn,character(0)),'',', '),'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
+    }
+  }
+  
+  # perform p-value adjustment on the global p-values
+  p_sig <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  
+  # if an adjustment was made, add this to the cap_warn text
+  if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
+  
+  to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  nice_var_names <- gsub('[_.]',' ',covs)
+  to_indent <- which(!tab$Covariate %in% nice_var_names )
+  
+  tab[["p-value"]] <- formatp(tab[["p-value"]])
+  tab[["Global p-value"]] <- formatp(p_sig)
+
+  # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
+  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
+    tab <- tab[,-which(names(tab)=="p-value")]
+    names(tab) <- gsub('Global p-value','p-value',names(tab))
+  }
+  
+  if (tableOnly){
+    if (length(cap_warn)>0) warning(cap_warn)
+    return(tab)
+  }
+  if(is.null(caption)){
+    if (length(response)==2) {outcome = 'survival'} else{ outcome = niceStr(response)}
+    caption = paste0('Univariate analysis of predictors of ',outcome,'.',cap_warn)
+  } else if (caption=='none' & identical(cap_warn,character(0))) {
+    caption=NULL
+  } else caption = paste0(caption,cap_warn)
+  
+  outTable(tab=tab, 
+           to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+}
+
+
+
+#' Format a regression model nicely for Rmarkdown
+#'
+#' Multivariable (or univariate) regression models are re-formatted for
+#' reporting and a global p-value is added for the evaluation of factor
+#' variables.
+#'
+#' Global p-values are likelihood ratio tests for lm, glm and polr models. For
+#' lme models an attempt is made to re-fit the model using ML and if,successful
+#' LRT is used to obtain a global p-value. If unsuccessful a Wald p-value is
+#' returned. For GEE and CRR models Wald global p-values are returned.
+#'
+#' @param model model fit
+#' @param data data that model was fit on (an attempt will be made to extract
+#'   this from the model)
+#' @param showN boolean indicating sample sizes should be shown for each
+#'   comparison, can be useful for interactions
+#' @param CIwidth width for confidence intervals, defaults to 0.95
+#' @param caption table caption
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param p.adjust p-adjustments to be performed (Global p-values only)
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @export
+#' @examples
+#' glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
+#' data=pembrolizumab,family = 'binomial')
+#' rm_mvsum(glm_fit)
+rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
+  
+  # get the table
+  tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
+  
+  # Reduce the number of significant digits in p-values
+  p_val <-  formatp(tab$`p-value`)
+  gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
+  
+  to_bold <- which(as.numeric(gp)<0.05)
+  to_indent <- which(is.na(gp))
+  
+  tab$`p-value` <- p_val
+  tab$`Global p-value` <- formatp(gp)
+  
+  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  
+  # TO DO: possibly automate this... need to extract response from mvsum
+  # if(is.null(caption)){
+  #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
+  # } else if (caption=='none') {
+  #   caption=NULL
+  # }
+  #response <- names(model$model)[1]
+  
+  # If all outcomes are continuous (and so all p-values are NA), remove this column
+  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
+  
+  if (tableOnly){
+    return(tab)
+  }
+  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+  
+}
+
+#' Combine univariate and multivariable regression tables
+#' 
+#' This function will combine rm_uvsum and rm_mvsum outputs into a single table
+#' The tableOnly argument must be set to TRUE when tables to be combined are
+#' created. The resulting table will be in the same order as the uvsum table
+#' and will contain the same columns as the uvsum and mvsum tables, but the 
+#' p-values will be combined into a single column. There must be variable over-
+#' lap between the uvsum and mvsum tables and all variables in the mvsum table
+#' must also appear in the uvsum table.
+#' 
+#' 
+#' @param uvsumTable Output from rm_uvsum, with tableOnly=TRUE 
+#' @param mvsumTable  Output from rm_mvsum, with tableOnly=TRUE
+#' @param caption table caption
+#' @param tableOnly boolean indicating if unformatted table should be returned
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @export
+rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=FALSE,chunk_label){ 
+  # Check that tables are data frames and not kable objects
+  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
+  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
+  # Check that the first columns have the same name
+  if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
+  # Check that there is overlap between the variables
+  if (length(intersect(uvsumTable[,1],mvsumTable[,1]))==0) stop('There are no overlaping variables between the models, tables couldn\'t be combined.')
+  # Check that all the variables in the multivariate model are in the univariate model
+  if (length(setdiff(mvsumTable[,1],uvsumTable[,1]))>0) {
+    stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
+               '\nRun uvsum with all the variables in the multivariable model.'))
+  }
+  # identify the rows to be indented
+  to_indent <- numeric(0)
+  if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
+  x <- lapply(list(uvsumTable,mvsumTable), function(t) {
+    p_cols <- grep('p-value',names(t))
+    # add a column for the variable name
+    vname <- character(nrow(t))
+    vname[1] <- t$Covariate[1]
+    p_var <- ifelse('Global p-value' %in% names(t),'Global p-value','p-value')
+    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t[[p_var]][i]),vname[i-1],t$Covariate[i])
+    t$var_level <- paste(vname,t[,1],sep='_')
+    if (length(p_cols)==2){
+      t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
+    } else {t$p <- t[,grep('p-value',names(t))] }
+    return(t[,setdiff(1:ncol(t),p_cols)])
+  })
+  x[[1]]$varOrder = 1:nrow(x[[1]])
+  names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
+  names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
+  for (vn in setdiff(names(x[[2]])[3:ncol(x[[2]])],'var_level')) names(x[[2]]) <- gsub(vn, paste(vn,'(adj)'),names(x[[2]]))
+  out <- merge(x[[1]],x[[2]],by='var_level',all=T)
+  out <- out[,-which(names(out)=='var_level')]
+  out <- out[,-grep('[.]y',names(out))]
+  names(out) <- gsub('[.]x','',names(out))
+  out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
+  
+  if (tableOnly) return(out)
+  
+  to_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
+  outTable(tab=out,to_indent=to_indent,to_bold=to_bold,
+           caption=caption,
+           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
+}
+
+#' Print Event time summary
+#' 
+#' Wrapper for the etsum function that prints paragraphs of text in R Markdown
+#' 
+#' @param data data frame containing data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifying the column name of stratification variable
+#' @param times numeric vector of times you want survival time probabilities for.
+#' @param units string indicating the unit of time. Use lower case and plural.
+#' @keywords print
+#' @export
+#' @examples
+#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
+#' rm_etsum(pembrolizumab,c("os_time","os_status"))
+#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
+rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
+  t<-etsum(data,response,group,times)
+  
+  names<-names(t)
+  if("strata"%in% names){
+    strta<-sapply(t[,"strata"],function(x) paste(x,": ",sep=""))
+    offset<-2
+    ofst<-1
+  }else{
+    strta=matrix(c("",""))
+    offset<-1
+    ofst<-0
+  }
+  
+  
+  out<-sapply(seq_len(nrow(t)),function(i){
+    
+    if(is.na(t[i,3])) {km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
+    }else if (!is.na(t[i,5])){km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
+    }else{km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
+    
+    # if at least one event
+    if(t[i,2]!=0){
+      flet<-paste(" The first and last event times occurred at ",t[i,9],
+                  " and ",t[i,10]," ",units," respectively. ",sep="")
+      
+      psindex=14:(ncol(t)-ofst)
+      psindex=psindex[which(!is.na(t[i,psindex]))]
+      if(length(psindex)>1){
+        lastindex=psindex[length(psindex)]
+        firstindex=psindex[-length(psindex)]
+        ps<-paste("The ",paste(names[firstindex],collapse=",")," and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
+                  " probabilities of 'survival' and their 95",sanitizestr("%")," confidence intervals are ",
+                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=",")," and ",t[i,lastindex]," percent.",sep="")
+        
+      }else{
+        ps<-paste("The ",names[psindex]," ",substring(units,1,nchar(units)-1),
+                  " probability of 'survival' and 95",sanitizestr("%")," confidence interval is ",
+                  t[i,psindex]," percent.",sep="")
+      }
+      #if no events
+    }else{
+      km=""
+      ps=""
+      flet=""
+    }
+    
+    
+    out<-paste0(ifelse(strta[i]=='','',paste0('**',sanitizestr(nicename(strta[i])),'**'))," There are ",t[i,1]," patients. There were ",t[i,2],
+                " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times is ",
+                t[i,6]," (",t[i,7],"-",t[i,8],") ",units,". ",km,flet,ps,sep="")
+    cat("\n",out,"\n")
+  })
+}
+
+# Historical Wrappers & Functions --------------------------------------------------------------
+#' Plot KM curve
+#' 
+#' This function will plot a KM curve with possible stratification. You can
+#' specifyif you want a legend or confidence bands as well as the units of time
+#' used.
+#' 
+#' Note: This function is deprecated and will not be supported in future versions
+#' of reportRx. Please use ggkmcif.
+#' @param data dataframe containing your data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifiying the column name of stratification variable
+#' @param pos what position you want the legend to be. Current option are
+#'  bottomleft and topright
+#' @param units string specifying what the unit of time is use lower case and
+#'  plural
+#' @param CI boolean to specify if you want confidence intervals
+#' @param legend boolean to specify if you want a legend
+#' @param title title of plot
+#' @importFrom graphics axis legend lines mtext par plot
+#' @keywords plot
+#' @export
+#' @examples
+#' plotkm(pembrolizumab,c('os_time','os_status'))
+plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,legend=T,title=""){
+  message('plotkm has been deprecated. Please use ggkmcif.')
+  if(class(group)=="numeric"){
+    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~1",sep="")),data=data)
+    sk<-summary(kfit)$table
+    levelnames<-paste("N=",sk[1],",Events=",sk[4]," (",round(sk[4]/sk[1],2)*100,"%)",sep="")
+    if(title=="")  title<-paste("KM-Curve for ",nicename(response[2]),sep="")
+    
+  }else if(length(group)>1){
+    return("Currently you can only stratify by 1 variable")
+  }else{
+    if(class(data[,group])!="factor")
+      stop("group must be a vactor variable. (Or leave unspecified for no group)")
+    lr<-survival::survdiff(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
+    lrpv<-1-pchisq(lr$chisq,length(lr$n)- 1)
+    levelnames<-levels(data[,group])
+    kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
+    if(title=="") title<-paste("KM-Curve for ",nicename(response[2])," stratified by ",nicename(group),sep="")
+    levelnames<-sapply(1:length(levelnames),function(x){paste(levelnames[x]," n=",lr$n[x],sep="")})
+    
+  }
+  
+  
+  plot(kfit,mark.time=T,lty=1:length(levelnames),xlab=paste("Time (",cap(units),")",sep=""),
+       ylab="Suvival Probability ",cex=1.1,conf.int=CI,
+       main=title)
+  
+  
+  if(legend){
+    if(class(group)=="numeric"){legend(pos,levelnames,lty=1:length(levelnames),bty="n")
+    }else{ legend(pos,c(levelnames,paste("p-value=",pvalue(lrpv)," (Log Rank)",sep="")),
+                  col=c(rep(1,length(levelnames)),"white"),lty=1:(length(levelnames)+1),bty="n")}
+  }
+}
+
+#' Print LaTeX event time summary
+#' 
+#' Wrapper for the etsum function that prints paragraphs of text in LaTeX
+#' 
+#' @param data dataframe containing data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifying the column name of stratification variable
+#' @param times numeric vector of times you want survival time probabilities for.
+#' @param units string indicating the unit of time. Use lower case and plural.
+#' @keywords print
+#' @export
+#' @examples
+#' petsum(pembrolizumab,c('os_time','os_status'),"sex")
+#' petsum(pembrolizumab,c('os_time','os_status'))
+#' petsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3),"months")
+petsum<-function(data,response,group=1,times=c(12,14),units="months"){
+  t<-etsum(data,response,group,times)
+  
+  #plotkm(nona,response,group)
+  
+  names<-names(t)
+  if("strata"%in% names){
+    strta<-sapply(t[,"strata"],function(x) paste(x,": ",sep=""))
+    offset<-2
+    ofst<-1
+  }else{
+    strta=matrix(c("",""))
+    offset<-1
+    ofst<-0
+  }
+  
+  
+  out<-sapply(seq_len(nrow(t)),function(i){
+    
+    if(is.na(t[i,3])) {
+      km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
+    }else if (!is.na(t[i,5])){
+      km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
+    }else{
+      km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
+    
+    # if at least one event
+    if(t[i,2]!=0){
+      flet<-paste(" The first and last event times occurred at ",t[i,9],
+                  " and ",t[i,10]," ",units," respectively. ",sep="")
+      
+      psindex=14:(ncol(t)-ofst)
+      psindex=psindex[which(!is.na(t[i,psindex]))]
+      if(length(psindex)>1){
+        lastindex=psindex[length(psindex)]
+        firstindex=psindex[-length(psindex)]
+        ps<-paste("The ",paste(names[firstindex],collapse=", "),", and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
+                  " probabilities of 'survival' and their 95",sanitizestr("%")," confidence intervals are ",
+                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=", "),", and ",t[i,lastindex]," percent.",sep="")
+        
+      }else{
+        ps<-paste("The ",names[psindex]," ",substring(units,1,nchar(units)-1),
+                  " probability of 'survival' and 95",sanitizestr("%")," confidence interval is ",
+                  t[i,psindex]," percent.",sep="")
+      }
+      #if no events
+    }else{
+      km=""
+      ps=""
+      flet=""
+    }
+    
+    
+    out<-paste(lbld(sanitizestr(nicename(strta[i])))," There are ",t[i,1]," subjects There were ",t[i,2],
+               " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times among events and non-events is ",
+               t[i,6]," (",t[i,7],"-",t[i,8],") ",units,
+               ". The median and range of the follow-up times among non-events only is ", 
+               ifelse(is.na(t[i, 11]), "not computable (there were only events)", 
+                      paste0(t[i, 11], " (", t[i, 12], "-", t[i, 13], ") ", units)),      
+               ". ",km,flet,ps,sep="")
+    cat("\n",out,"\n")
+  })
+}
+
+
+#' Print covariate summary Latex
+#' 
+#' Returns a dataframe corresponding to a descriptive table
+#' 
+#' @param data dataframe containing data
+#' @param covs character vector with the names of columns to include in table
+#' @param maincov covariate to stratify table by
+#' @param TeX boolean indicating if you want to be able to view extra long 
+#'  tables in the LaTeX pdf. If TeX is T then the table will not convert 
+#'  properly to docx
+#' @param ... additional options passed to function  \code{\link{covsum}}
+#' @keywords print
+#' @export
+pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
+  if(!TeX){
+    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+  }else{
+    
+    print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+  }}
+
+
+#' Print univariate summary LaTeX table
+#'
+#' Returns a LaTeX table of the univariate summary
+#'
+#' @param response string vector with name of response
+#' @param covs character vector with the names of columns to fit univariate
+#'   models to
+#' @param data dataframe containing data
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param corstr character string specifying the correlation structure. Only
+#'   used for geeglm. The following are permitted: '"independence"',
+#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be
+#'   used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options in
+#'   clude "linear","logistic","coxph","crr","boxcox","logistic"
+#' @param strata character vector of covariates to stratify by. Only used for
+#'   coxph and crr
+#' @param TeX boolean indicating if you want to be able to view extra long
+#'   tables in the LaTeX pdf. If TeX is T then the table will not convert
+#'   properly to docx
+#' @param showN boolean indicating if you want to show sample sizes
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @importFrom stats anova as.formula chisq.test coef fisher.test glm
+#'   kruskal.test lm median model.matrix pchisq qnorm sd time vcov wilcox.test
+#' @importFrom xtable xtable print.xtable
+#' @keywords dataframe
+#' @export
+puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
+  if(!TeX){
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+  }else{
+    print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
+  }
+  
+}
+
+#' Print multivariate summary LaTeX table
+#' 
+#' Returns a LaTeX table of the multivariate summary.
+#' 
+#' @param model fitted model object
+#' @param data dataframe containing data
+#' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
+#' @param CIwidth width for confidence intervals, defaults to 0.95
+#' @keywords print
+#' @export
+
+pmvsum<-function(model,data,showN=FALSE,CIwidth=0.95){
+  print.xtable(xtable(mvsum(model=model,data=data,showN=showN,CIwidth=CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
+}
+
+
+#' Convert .TeX to .docx
+#'
+#' Converts the knitr-compiled .TeX file to a .docx file. The function calls
+#' ImageMagick to convert .pdf images into .png and then calls pandoc (included
+#' with RStudio) to convert the .Tex file into .docx.
+#'
+#' Note: This function is deprecated and will not be supported in future
+#' versions of reportRx. Instead the rm_ functions can be used to output to pdf,
+#' Word or HTML from an Rmarkdown document.
+#'
+#' @param dir full path of .TeX file directory
+#' @param fname .TeX file filename. Do not include extension.
+#' @param pdwd full path to pandoc. The default value is the usual installation
+#'   path for Windows systems if RStudio is installed.
+#' @param imwd full path to image magick. Only include if there is at least one
+#'   graphic.
+#' @keywords print
+#' @export
+makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
+  message('makedocx has been deprecated. Please create Word documents using Rmarkdown.')
+  oldwd<-getwd()
+  ### convert path to forward slashes if any
+  dir <- gsub("\\\\","/",dir)
+  setwd(dir)
+  if( grepl(" ",fname) ){## check whether fname has spaces,if it does rename it with a warning.
+    file.rename(from = fname,to = gsub(" ","-",fname))
+    fname <- gsub(" ","-",fname)
+    warning("Your fname has spaces,the new filename is: ",fname)
+  }
+  
+  if(imwd!="" & dir.exists(paste0(dir,"/figure"))){
+    setwd(imwd)
+    if( grepl("*ImageMagick-6[.]*",imwd) ){
+      exec <- "mogrify"
+    }else if ( grepl("*ImageMagick-7[.]*",imwd) ){
+      exec <- "magick mogrify"
+    }else warning("The installation path for ImageMagick has an unrecognized format.")
+    
+    command <- paste0(exec,' -path "',dir,'/figure/" ','-format png "',dir,'/figure/*.pdf"')
+    shell(command)
+  }
+  setwd(dir)
+  ### The lines below ammend the issue with newer versions of pandoc with the kframe environment
+  ## read the original .tex file
+  tx  <- readLines(paste0(fname,'.tex'),warn=FALSE)
+  ## rename the environment to something simpler as suggested by John MacFarlane in the pandoc-discuss thread
+  tx2 <- gsub(pattern = "\\begin{document}",
+              replace = "\\renewenvironment{kframe}{}{}\\begin{document}",
+              x = tx,fixed = TRUE)
+  ## create a file with the workaround for the kframe environment and use it in the pandoc call below
+  zz <- file(paste0(fname,'_cp.tex'),"wb")
+  writeLines(tx2,con=zz)
+  close(zz)
+  
+  command <- paste0('"',pdwd,'/pandoc" -o ',fname,'.docx ',fname,'_cp.tex ',
+                    "--default-image-extension=png ")
+  shell(command)
+  # remove the files created
+  file.remove(paste0(fname,'_cp.tex'))
+  pngfiles = list.files(paste0(dir,'/figure/'),pattern = "*.png",full.names = TRUE)
+  file.remove(pngfiles)
+  setwd(oldwd)
+}
+
+#' fit box cox transformed linear model
+#'
+#' Wrapper function to fit fine and gray competing risk model using function crr
+#' from package cmprsk
+#'
+#' @param f formula for the model. Currently the formula only works by using the name
+#' of the column in a dataframe. It does not work by using $ or [] notation.
+#' @param data dataframe containing data
+#' @param lambda boolean indicating if you want to output the lamda used in the boxcox transformation. If so the function will return a list of length 2 with the model as the first element and a vector of length 2 as the second.
+#' @keywords model
+#' @export
+boxcoxfitRx<-function(f,data,lambda=F){
+  x<-as.character(f)[3]
+  y<-as.character(f)[2]
+  time<- gsub("\\s","",unlist(strsplit(y,"+",fixed=T))[1])
+  covs<-removedollar(x)
+  tempindexboxcoxfitRx<-seq_len(nrow(data))
+  df1<-data.frame(tempindexboxcoxfitRx,data)
+  f2<-as.formula(paste("tempindexboxcoxfitRx+",y,"~",x))
+  temp<-modelmatrix(f2,df1)
+  ff<-list(temp[[1]][,-1,drop=F],temp[[2,drop=F]])
+  temp<-temp[[1]][,1,drop=F]
+  lambda1<-unlist(unlist(geoR::boxcoxfit(ff[[1]],ff[[2]],lambda2=T))[1:2])
+  ff[[1]]<-((ff[[1]]+lambda1[2])^lambda1[1]-1)/lambda1[1]
+  df<-merge(df1,temp,by="tempindexboxcoxfitRx")[,-1,drop=F]
+  df[,time]<-ff[[1]]
+  out<-lm(f,data=df)
+  out$call<-paste("~",covs)
+  if(lambda)  return(list(out,lambda1))
+  return(out)
+}
+
+
+
+#' Create a forest plot
+#'
+#' Create a forest plot. All entries with cutoff=T will be plotted with an NA
+#' rather than their original value.
+#'
+#' @param data dataframe containing data
+#' @param xlab String corresponding to xlabel. By default is set to
+#'   names(data)[2]
+#' @param ylab String corresponding to ylabel. By default is set to
+#'   names(data)[1]
+#' @param main String corresponding to main title. By default is set to "Forest
+#'   plot for subgroup analysis"
+#' @param space numeric corresponding to offset of y label. Should be positive
+#'   if y label is on top of the names of the y axis
+#' @param bool A boolean vector. All entries with T will be invisible in the
+#'   plot
+#' @param xlim vector of length 2 corresponding to limits of x-axis. Default to
+#'   NULL.
+#' @importFrom graphics abline axis legend lines mtext par plot segments
+#' @keywords print
+#' @export
+forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,xlim=NULL)
+{
+  if (is.null(xlab))
+    xlab <- names(data)[2]
+  if (is.null(ylab))
+    ylab <- names(data)[1]
+  if (is.null(main))
+    main <- "Forest plot for subgroup analysis"
+  par(oma = c(0,space,0,0))
+  l1 <- nrow(data)
+  colors<- ifelse(bool,"white","black")
+  if(is.null(xlim)) xlim<-c(0,max(data[!bool,4]))
+  plot(data[,2],c(1:l1),col = colors,pch = "|",bg = colors,
+       yaxt = "n",xlim = xlim,ylab = "",xlab = "",
+       main = main)
+  abline(v = 1,col = "red",lty = 2)
+  graphics::segments(data[,3],c(1:l1),data[,4],c(1:l1),col=colors)
+  axis(2,at = c(1:l1),labels = data[,1],las = 1,cex.axis = 0.8)
+  mtext(side = 1,xlab,line = 2)
+  mtext(side = 2,ylab,line = space + 2.5)
+}
+
+# Survival Curves --------------------------------------------------------------
 
 
 #' Plot KM and CIF curves with ggplot
@@ -2979,17 +3690,18 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   
 }
 
-
+modify_ggkmcif <- function(list_gg){
+  .Deprecated("ggkmcif_paste")
+  ggkmcif_paste(list_gg)
+}
 
 #' Plot KM and CIF curves with ggplot
 #' 
-#' This function put together a survival curve, and a number at risk table
-#' 
-#' 
+#' This function puts together a survival curve, and a number at risk table
 #' 
 #' @param list_gg list containing the results of ggkmcif
 #' @export
-modify_ggkmcif <- function(list_gg){
+ggkmcif_paste <- function(list_gg){
   gA <- ggplotGrob(list_gg[[1]])
   gB <- ggplotGrob(list_gg[[2]])
   gC <- ggplotGrob(list_gg[[3]])
@@ -3002,639 +3714,3 @@ modify_ggkmcif <- function(list_gg){
                           clip = FALSE, nrow = 3, ncol = 1,
                           heights = unit(c(2, .1, .25), c("null", "null", "null")))
 }
-
-
-# Rmarkdown Reporting --------------------------------------------------------------
-
-#' Print tables to PDF/Latex HTML or Word
-#'
-#' Output the table nicely to whatever format is appropriate. This is the output
-#' function used by the rm_* printing functions.
-#'
-#' Entire rows can be bolded, and the first column can be indented. Currently
-#' there is no support for cell-specific formatting. By default, underscores in
-#' column names are converted to spaces. To disable this set rm_ to FALSE
-#'
-#' @param tab a table to format
-#' @param to_indent numeric vector the length of nrow(tab) indicating which rows
-#'   to indent
-#' @param to_bold numeric vector the length of nrow(tab) indicating which rows
-#'   to bold
-#' @param caption table caption
-#' @param digits number of digits to round numeric columns to, wither a single
-#'   number or a vector corresponding to the number of numeric columns
-#' @param align string specifying column alignment, defaults to left alignment
-#'   of the first column and right alignment of all other columns
-#' @param fontsize PDF/HTML output only, manually set the table fontsize
-#' @param chunk_label only used knitting to Word docs to allow cross-referencing
-#' @export
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
-  
-  # strip tibble aspects
-  tab=as.data.frame(tab)
-  rownames(tab) <- NULL
-  
-  # define column alignment
-  if (missing(align)){
-    alignSpec = paste(c('l',rep('r',ncol(tab)-1)),collapse = '',sep='')
-  } else{
-    alignSpec = gsub('[^lrc]+','',paste(align,collapse=''))
-    alignSpec = substr(alignSpec,1,ncol(tab))
-    if (nchar(alignSpec)<ncol(tab)) {
-      lastchar = substr(alignSpec,nchar(alignSpec),nchar(alignSpec))
-      alignSpec <- paste0(alignSpec,paste(rep(lastchar,ncol(tab)-nchar(alignSpec)),collapse=''))
-    }
-    if (!identical(alignSpec, align)){ warning(paste0('Argument align did not conform to expectations, align="',alignSpec,'" used instead'))}
-  }
-  # round and format numeric columns if digits is specified
-  if (!missing(digits)){
-    coltypes <- unlist(lapply(tab, class))
-    numCols <- names(coltypes)[coltypes=='numeric']
-    colRound <- cbind(numCols,digits)
-    colDigits <- as.numeric(colRound[,2])
-    names(colDigits) <- colRound[,1]
-    for (v in numCols) tab[[v]] <- sapply(tab[[v]],function(x) niceNum(x,digits=colDigits[v]))
-  }
-  out_fmt = ifelse(is.null(knitr::pandoc_to()),'html',
-                   ifelse(knitr::pandoc_to(c('doc','docx')),'doc',
-                          ifelse(knitr::is_latex_output(),'latex','html')))
-  
-  chunk_label = ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label)
-  
-  if (is.null(to_indent)) to_indent = numeric(0)
-  to_indent = as.vector(to_indent)
-  
-  
-  if (out_fmt=='doc'){
-    caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
-    tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
-    tab[tab==''] <-'&nbsp;'
-    
-    tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
-    if (length(to_bold)>0) {
-      pander::pander(tab,
-                     caption=caption,
-                     emphasize.strong.rows=to_bold,
-                     split.table=Inf, split.cells=15,
-                     justify = alignSpec)
-      
-    } else {
-      pander::pander(tab,
-                     caption=caption,
-                     split.table=Inf, split.cells=15,
-                     justify = alignSpec)
-    }
-  } else {  # For PDF, HTML
-    # set NA to empty in kable
-    options(knitr.kable.NA = '')
-    if(!is.null(caption)) caption <- sanitize(caption)
-    # kout <- knitr::kable(tab, format = out_fmt,
-    #                      booktabs=TRUE,
-    #                      longtable=TRUE,
-    #                      linesep='',
-    #                      caption=caption,
-    #                      align =alignSpec)
-    # kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-    
-    # This may not work as expected if a small table is split over pages
-    # better to also repeat table headers
-    if (nrow(tab)>30){
-      kout <- knitr::kable(tab, format = out_fmt,
-                           booktabs=TRUE,
-                           longtable=TRUE,
-                           linesep='',
-                           caption=caption,
-                           align =alignSpec)
-      kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      # There is now a conflict with the tabu package, full_width=T fails with longtable
-      #       if (ncol(tab)>4) {
-      #         kout <- kableExtra::kable_styling(kout,full_width = TRUE,latex_options = c('repeat_header'))
-      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      #       } else {
-      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      #       }
-    } else {
-      kout <- knitr::kable(tab, format = out_fmt,
-                           booktabs=TRUE,
-                           longtable=FALSE,
-                           linesep='',
-                           caption=caption,
-                           align = alignSpec)
-      #      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout, full_width = TRUE)
-    }
-    kout <- kableExtra::add_indent(kout,positions = to_indent)
-    if (length(to_bold)>0){
-      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
-    }
-    if (!missing(fontsize)){
-      kout <- kableExtra::kable_styling(kout,font_size = fontsize)
-    }
-    kout
-  }
-}
-
-#' Combine two table columns into a single column with levels of one nested
-#' within levels of the other.
-#'
-#' This function accepts a data frame (via the data argument) and combines two
-#' columns into a single column with values from the head_col serving as headers
-#' and values of the to_col displayed underneath each header. The resulting
-#' table is then passed to outTable for printing and output, to use the grouped
-#' table as a data frame specify tableOnly=TRUE. By default the headers will be
-#' bolded and the remaining values indented.
-#'
-#' Note that it is possible to combine multiple tables (more than two) with this
-#' function.
-#'
-#' @param data dataframe
-#' @param head_col character value specifying the column name with the headers
-#' @param to_col character value specifying the column name to add the headers
-#'   into
-#' @param caption table caption
-#' @param indent Boolean should the original values in the to_col be indented
-#' @param boldheaders Boolean should the header column values be bolded
-#' @param hdr_prefix character value that will prefix headers
-#' @param hdr_suffix character value that will suffix headers
-#' @param digits number of digits to round numeric columns to, wither a single
-#'   number or a vector corresponding to the number of numeric columns
-#' @param tableOnly boolean indicating if the table should be formatted for
-#'   printing or returned as a data frame
-#' @export
-#' @examples
-#' ## Investigate models to predict baseline ctDNA and tumour size and display together
-#' ## (not clinically useful!)
-#' fit1 <- lm(baseline_ctdna~age+l_size+pdl1,data=pembrolizumab)
-#' m1 <- rm_mvsum(fit1,tableOnly=TRUE)
-#' m1$Response = 'ctDNA'
-#' fit2 <- lm(l_size~age+baseline_ctdna+pdl1,data=pembrolizumab)
-#' m2 <- rm_mvsum(fit2,tableOnly=TRUE)
-#' m2$Response = 'Tumour Size'
-#' rbind(m1,m2)
-#' nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
-nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
-  
-  # strip any grouped data or tibble properties
-  if ('data.frame' %in% class(data)){
-    data <- data.frame(data)
-  } else stop('data must be a data.frame')
-
-    # ensure that the data are sorted by the header column and covariates in the order they first appear
-  data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
-  data <- data[order(data[[head_col]],data[[to_col]]),]
-  data[[to_col]] <- as.character(data[[to_col]])
-  new_row = data[1,]
-  
-  # round and format numeric columns if digits is specified
-  if (!missing(digits)){
-    coltypes <- unlist(lapply(data, class))
-    numCols <- names(coltypes)[coltypes=='numeric']
-    colRound <- cbind(numCols,digits)
-    colDigits <- as.numeric(colRound[,2])
-    names(colDigits) <- colRound[,1]
-    for (v in numCols) data[[v]] <- sapply(data[[v]],function(x) niceNum(x,digits=colDigits[v]))
-  }
-  
-  for (i in 1:ncol(new_row)) new_row[1,i] <- NA
-  new_headers = unique(data[[head_col]])
-  repeat{
-    header_index = which(!duplicated(data[[head_col]]) & !is.na(data[[head_col]]))[1]
-    new_row[[to_col]] <- data[[head_col]][header_index]
-    
-    if (header_index>1){
-      data = rbind(data[1:(header_index-1),],new_row,data[(header_index):nrow(data),])
-    } else {
-      data = rbind(new_row,data)
-    }
-    
-    data[[head_col]][data[[head_col]]==new_row[[to_col]]] <- NA
-    if (sum(is.na(data[[head_col]]))==nrow(data)) break
-  }
-  header_rows <- which(data[[to_col]] %in% new_headers)
-  to_indent <- which(!(data[[to_col]] %in% new_headers) )
-  
-  data[[to_col]][header_rows] <- paste0(hdr_prefix,data[[to_col]][header_rows],hdr_suffix)
-  
-  # data <- dplyr::select(data,-all_of(head_col))
-  data <- data[,setdiff(names(data),head_col)]
-  
-  if (tableOnly){
-    return(data)
-  }
-  if (boldheaders) to_bold = header_rows else to_bold=numeric(0)
-  outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
-}
-
-#' Outputs a descriptive covariate table
-#'
-#' Returns a data frame corresponding to a descriptive table.
-#'
-#' Comparisons for categorical variables default to chi-square tests, but if
-#' there are counts of <5 then the Fisher Exact test will be used and if this is
-#' unsuccessful then a second attempt will be made computing p-values using MC
-#' simulation. If testcont='ANOVA' then the t-test with unequal variance will be
-#' used for two groups and an ANOVA will be used for three or more. The
-#' statistical test used can be displayed by specifying show.tests=TRUE.
-#'
-#' Further formatting options are available using tableOnly=TRUE and outputting
-#' the table with a call to outTable.
-#'
-#' @param data dataframe containing data
-#' @param covs character vector with the names of columns to include in table
-#' @param maincov covariate to stratify table by
-#' @param caption character containing table caption. If caption = NULL then
-#'   notes about unstable estimates and p-value adjustments will be added to the
-#'   caption. To suppress the caption completely set caption='none'.
-#' @param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a
-#'   formatted printed object is returned (default).
-#' @param covTitle character with the names of the covariate column
-#' @param digits number of digits for summarizing mean data
-#' @param digits.cat number of digits for the proportions when summarizing
-#'   categorical data (default: 0)
-#' @param nicenames booling indicating if you want to replace . and _ in strings
-#'   with a space
-#' @param IQR boolean indicating if you want to display the inter quantile range
-#'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
-#' @param all.stats boolean indicating if all summary statistics (Q1,Q3 +
-#'   min,max on a separate line) should be displayed. Overrides IQR.
-#' @param pvalue boolean indicating if you want p-values included in the table
-#' @param show.tests boolean indicating if the type of statistical used should
-#'   be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
-#' @param testcont test of choice for continuous variables,one of
-#'   \emph{rank-sum} (default) or \emph{ANOVA}
-#' @param testcat test of choice for categorical variables,one of
-#'   \emph{Chi-squared} (default) or \emph{Fisher}
-#' @param full boolean indicating if you want the full sample included in the
-#'   table, ignored if maincov is NULL
-#' @param include_missing Option to include NA values of maincov. NAs will not
-#'   be included in statistical tests
-#' @param percentage choice of how percentages are presented ,one of
-#'   \emph{column} (default) or \emph{row}
-#' @param excludeLevels a named list of covariate levels to exclude from
-#'   statistical tests in the form list(varname =c('level1','level2')). These
-#'   levels will be excluded from association tests, but not the table. This can
-#'   be useful for levels where there is a logical skip (ie not missing, but not
-#'   presented). Ignored if pvalue=FALSE.
-#' @param numobs named list overriding the number of people you expect to have
-#'   the covariate
-#' @param chunk_label only used if output is to Word to allow cross-referencing
-#' @param markup boolean indicating if you want latex markup
-#' @param sanitize boolean indicating if you want to sanitize all strings to not
-#'   break LaTeX
-#' @keywords dataframe
-#' @return A formatted table displaying a summary of the covariates stratified
-#'   by maincov
-#' @export
-#' @seealso \code{\link{fisher.test}}, \code{\link{chisq.test}},
-#'   \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
-#'   and \code{\link{outTable}}
-#' @examples
-#' rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
-#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
-#'
-#' # To make custom changes or change the fontsize in PDF/HTML
-#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
-#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
-#' outTable(tab, fontsize=7)
-rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
-                      digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
-                      testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
-                      full=TRUE,include_missing=FALSE,percentage=c('column','row'),
-                      excludeLevels=NULL,numobs=NULL,markup=TRUE, sanitize= TRUE,chunk_label){
-  
-  argList <- as.list(match.call(expand.dots = TRUE)[-1])
-  argsToPass <- intersect(names(formals(covsum)),names(argList))
-  covsumArgs <- argList[names(argList) %in% argsToPass]
-  covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
-  tab <- do.call(covsum,covsumArgs)
-  to_bold = numeric(0)
-  if ('p-value' %in% names(tab)) {
-    # format p-values nicely
-    p_vals <- tab[['p-value']]
-    new_p <- sapply(p_vals,formatp)
-    tab[['p-value']] <- new_p
-    to_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
-  } 
-  nice_var_names = gsub('[_.]',' ',covs)
-  to_indent <- which(!tab$Covariate %in% nice_var_names )
-  if (covTitle !='Covariate') names(tab[1]) <-covTitle
-  if (nicenames) {names(tab) <- gsub('_|[.]',' ',names(tab))}  
-  if (tableOnly){
-    return(tab)
-  }
-  if (is.null(caption)) {
-    if (!is.null(maincov)){
-      caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
-    } else
-      caption = 'Summary sample statistics.'
-  }
-  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
-           caption=caption,
-           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-  
-}
-
-#' Output several univariate models nicely in a single table
-#'
-#' Wrapper for the uvsum function for use with Rmarkdown.
-#'
-#' @param response string vector with name of response
-#' @param covs character vector with the names of columns to fit univariate
-#'   models to
-#' @param data dataframe containing data
-#' @param caption table caption
-#' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param removeInf boolean indicating if infinite estimates should be removed
-#'   from the table
-#' @param p.adjust p-adjustments to be performed (Global p-values only)
-#' @param chunk_label only used if output is to Word to allow cross-referencing
-#' @param id character vector which identifies clusters. Only used for geeglm
-#' @param corstr character string specifying the correlation structure. Only
-#'   used for geeglm. The following are permitted: '"independence"',
-#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
-#' @param family description of the error distribution and link function to be
-#'   used in the model. Only used for geeglm
-#' @param type string indicating he type of univariate model to fit. The
-#'   function will try and guess what type you want based on your response. If
-#'   you want to override this you can manually specify the type. Options
-#'   include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
-#' @param strata character vector of covariates to stratify by. Only used for
-#'   coxph and crr
-#' @param markup boolean indicating if you want latex markup
-#' @param sanitize boolean indicating if you want to sanitize all strings to not
-#'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
-#'   with a space
-#' @param testing boolean to indicate if you want to print out the covariates
-#'   before the model fits.
-#' @param showN boolean indicating if you want to show sample sizes
-#' @param CIwidth width of confidence interval, default is 0.95
-#' @param reflevel manual specification of the reference level. Only used for
-#'   ordinal This will allow you to see which model is not fitting if the
-#'   function throws an error
-#' @export
-#' @examples
-#' rm_uvsum(response = 'change_ctdna_group',
-#' covs=c('age','sex','baseline_ctdna','l_size'),data=pembrolizumab,CIwidth=.9)
-rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,markup = T,sanitize = T,
-                     nicenames = T,testing = F,showN = T,CIwidth = 0.95,reflevel){
-  
-  # get the table
-  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=FALSE,id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,nicenames = T,testing = F,showN = T,CIwidth = 0.95,reflevel)
-  #  tab <- uvsum(response,covs,data,markup = FALSE,sanitize=T)
-  
-  cap_warn <- character(0)
-  if (removeInf){
-    # Do not display unstable estimates
-    inf_values =  grep('Inf',tab[,2])
-    if (length(inf_values)>0){
-      tab[inf_values,2:4] <-NA
-      cap_warn <- paste0(cap_warn,ifelse(identical(cap_warn,character(0)),'',', '),'Covariates with unstable estimates:',paste(tab$Covariate[inf_values],collapse=','),'.')
-    }
-  }
-  
-  # perform p-value adjustment on the global p-values
-  p_sig <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
-  
-  # if an adjustment was made, add this to the cap_warn text
-  if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
-  
-  #   # If HolmGlobalp = T then report an extra column with the adjusted p and only bold these values
-  # if (HolmGlobalp){
-  #   p_sig <- stats::p.adjust(tab$`Global p-value`,method='holm')
-  #   tab$"Holm Adj p" = p_sig
-  # } else {
-  #   p_sig <- tab$`Global p-value`
-  # }
-  
-  to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  nice_var_names <- gsub('[_.]',' ',covs)
-  to_indent <- which(!tab$Covariate %in% nice_var_names )
-  
-  tab[["p-value"]] <- formatp(tab[["p-value"]])
-  tab[["Global p-value"]] <- formatp(p_sig)
-  # if (HolmGlobalp){
-  #   tab[["Holm Adj p"]] <- formatp(tab[["Holm Adj p"]])
-  # }
-  
-  # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
-  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
-    tab <- tab[,-which(names(tab)=="p-value")]
-    names(tab) <- gsub('Global p-value','p-value',names(tab))
-  }
-  
-  if (tableOnly){
-    if (length(cap_warn)>0) warning(cap_warn)
-    return(tab)
-  }
-  if(is.null(caption)){
-    if (length(response)==2) {outcome = 'survival'} else{ outcome = niceStr(response)}
-    caption = paste0('Univariate analysis of predictors of ',outcome,'.',cap_warn)
-  } else if (caption=='none' & identical(cap_warn,character(0))) {
-    caption=NULL
-  } else caption = paste0(caption,cap_warn)
-  
-  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
-           caption=caption,
-           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-}
-
-
-
-#' Format a regression model nicely for Rmarkdown
-#' 
-#' @param model model fit
-#' @param data data that model was fit on (an attempt will be made to extract
-#'   this from the model)
-#' @param showN boolean indicating sample sizes should be shown for each
-#'   comparison, can be useful for interactions
-#' @param CIwidth width for confidence intervals, defaults to 0.95
-#' @param caption table caption
-#' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param p.adjust p-adjustments to be performed (Global p-values only)
-#' @param chunk_label only used if output is to Word to allow cross-referencing
-#' @param markup boolean indicating if you want latex markup
-#' @param sanitize boolean indicating if you want to sanitize all strings to not
-#'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
-#'   with a space
-#' @export
-#' @examples
-#' glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
-#' data=pembrolizumab,family = 'binomial')
-#' rm_mvsum(glm_fit)
-rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
-  
-  # get the table
-  tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
-  
-  # Reduce the number of significant digits in p-values
-  p_val <-  formatp(tab$`p-value`)
-  gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
-  if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
-  
-  to_bold <- which(as.numeric(gp)<0.05)
-  to_indent <- which(is.na(gp))
-  
-  tab$`p-value` <- p_val
-  tab$`Global p-value` <- formatp(gp)
-  
-  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  
-  # TO DO: possibly automate this... need to extract response from mvsum
-  # if(is.null(caption)){
-  #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
-  # } else if (caption=='none') {
-  #   caption=NULL
-  # }
-  #response <- names(model$model)[1]
-  
-  # If all outcomes are continuous (and so all p-values are NA), remove this column
-  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
-  
-  if (tableOnly){
-    return(tab)
-  }
-  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
-           caption=caption,
-           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-  
-}
-
-#' Combine univariate and multivariable regression tables
-#' 
-#' This function will combine rm_uvsum and rm_mvsum outputs into a single table
-#' The tableOnly argument must be set to TRUE when tables to be combined are
-#' created. The resulting table will be in the same order as the uvsum table
-#' and will contain the same columns as the uvsum and mvsum tables, but the 
-#' p-values will be combined into a single column. There must be variable over-
-#' lap between the uvsum and mvsum tables and all variables in the mvsum table
-#' must also appear in the uvsum table.
-#' 
-#' 
-#' @param uvsumTable Output from rm_uvsum, with tableOnly=TRUE 
-#' @param mvsumTable  Output from rm_mvsum, with tableOnly=TRUE
-#' @param caption table caption
-#' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param chunk_label only used if output is to Word to allow cross-referencing
-#' @export
-rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=FALSE,chunk_label){ 
-  # Check that tables are data frames and not kable objects
-  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
-  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
-  # Check that the first columns have the same name
-  if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
-  # Check that there is overlap between the variables
-  if (length(intersect(uvsumTable[,1],mvsumTable[,1]))==0) stop('There are no overlaping variables between the models, tables couldn\'t be combined.')
-  # Check that all the variables in the multivariate model are in the univariate model
-  if (length(setdiff(mvsumTable[,1],uvsumTable[,1]))>0) {
-    stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
-               '\nRun uvsum with all the variables in the multivariable model.'))
-  }
-  # identify the rows to be indented
-  to_indent <- numeric(0)
-  if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
-  x <- lapply(list(uvsumTable,mvsumTable), function(t) {
-    p_cols <- grep('p-value',names(t))
-    # add a column for the variable name
-    vname <- character(nrow(t))
-    vname[1] <- t$Covariate[1]
-    p_var <- ifelse('Global p-value' %in% names(t),'Global p-value','p-value')
-    for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t[[p_var]][i]),vname[i-1],t$Covariate[i])
-    t$var_level <- paste(vname,t[,1],sep='_')
-    if (length(p_cols)==2){
-      t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
-    } else {t$p <- t[,grep('p-value',names(t))] }
-    return(t[,setdiff(1:ncol(t),p_cols)])
-  })
-  x[[1]]$varOrder = 1:nrow(x[[1]])
-  names(x[[1]])[2] <- paste('Unadjusted',names(x[[1]])[2])
-  names(x[[2]])[2] <- paste('Adjusted',names(x[[2]])[2])
-  for (vn in setdiff(names(x[[2]])[3:ncol(x[[2]])],'var_level')) names(x[[2]]) <- gsub(vn, paste(vn,'(adj)'),names(x[[2]]))
-  out <- merge(x[[1]],x[[2]],by='var_level',all=T)
-  out <- out[,-which(names(out)=='var_level')]
-  out <- out[,-grep('[.]y',names(out))]
-  names(out) <- gsub('[.]x','',names(out))
-  out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
-  
-  if (tableOnly) return(out)
-  
-  to_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
-  outTable(tab=out,to_indent=to_indent,to_bold=to_bold,
-           caption=caption,
-           chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
-}
-
-#' Print Event time summary
-#' 
-#' Wrapper for the etsum function that prints paragraphs of text in R Markdown
-#' 
-#' @param data data frame containing data
-#' @param response character vector with names of columns to use for response
-#' @param group string specifying the column name of stratification variable
-#' @param times numeric vector of times you want survival time probabilities for.
-#' @param units string indicating the unit of time. Use lower case and plural.
-#' @keywords print
-#' @export
-#' @examples
-#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
-#' rm_etsum(pembrolizumab,c("os_time","os_status"))
-#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
-rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
-  t<-etsum(data,response,group,times)
-  
-  names<-names(t)
-  if("strata"%in% names){
-    strta<-sapply(t[,"strata"],function(x) paste(x,": ",sep=""))
-    offset<-2
-    ofst<-1
-  }else{
-    strta=matrix(c("",""))
-    offset<-1
-    ofst<-0
-  }
-  
-  
-  out<-sapply(seq_len(nrow(t)),function(i){
-    
-    if(is.na(t[i,3])) {km<-paste("The KM median event time has not been achieved due to lack of events.",sep="")
-    }else if (!is.na(t[i,5])){km<-paste("The KM median event time is ",t[i,3]," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,5],").",sep="")
-    }else{km<-paste("The KM median event time is ",t[i,3]," ",units," with 95",sanitizestr("%")," confidence Interval (",t[i,4],",",t[i,10],").",sep="")}
-    
-    # if at least one event
-    if(t[i,2]!=0){
-      flet<-paste(" The first and last event times occurred at ",t[i,9],
-                  " and ",t[i,10]," ",units," respectively. ",sep="")
-      
-      psindex=14:(ncol(t)-ofst)
-      psindex=psindex[which(!is.na(t[i,psindex]))]
-      if(length(psindex)>1){
-        lastindex=psindex[length(psindex)]
-        firstindex=psindex[-length(psindex)]
-        ps<-paste("The ",paste(names[firstindex],collapse=",")," and ",names[lastindex]," " ,substring(units,1,nchar(units)-1),
-                  " probabilities of 'survival' and their 95",sanitizestr("%")," confidence intervals are ",
-                  paste(sapply(t[i,firstindex],function(x) paste(x)),collapse=",")," and ",t[i,lastindex]," percent.",sep="")
-        
-      }else{
-        ps<-paste("The ",names[psindex]," ",substring(units,1,nchar(units)-1),
-                  " probability of 'survival' and 95",sanitizestr("%")," confidence interval is ",
-                  t[i,psindex]," percent.",sep="")
-      }
-      #if no events
-    }else{
-      km=""
-      ps=""
-      flet=""
-    }
-    
-    
-    out<-paste0(ifelse(strta[i]=='','',paste0('**',sanitizestr(nicename(strta[i])),'**'))," There are ",t[i,1]," patients. There were ",t[i,2],
-                " (",round(100*t[i,2]/t[i,1],0),sanitizestr("%"),") events. The median and range of the follow-up times is ",
-                t[i,6]," (",t[i,7],"-",t[i,8],") ",units,". ",km,flet,ps,sep="")
-    cat("\n",out,"\n")
-  })
-}
-
-
-
-

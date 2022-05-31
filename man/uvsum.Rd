@@ -8,18 +8,19 @@ uvsum(
   response,
   covs,
   data,
+  digits = 2,
   id = NULL,
   corstr = NULL,
   family = NULL,
   type = NULL,
   strata = 1,
-  markup = T,
-  sanitize = T,
-  nicenames = T,
-  testing = F,
-  showN = T,
+  markup = TRUE,
+  sanitize = TRUE,
+  nicenames = TRUE,
+  testing = FALSE,
+  showN = TRUE,
   CIwidth = 0.95,
-  reflevel
+  reflevel = NULL
 )
 }
 \arguments{
@@ -29,6 +30,8 @@ uvsum(
 models to}
 
 \item{data}{dataframe containing data}
+
+\item{digits}{number of digits to round to}
 
 \item{id}{character vector which identifies clusters. Only used for geeglm}
 

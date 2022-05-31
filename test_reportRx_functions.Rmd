@@ -179,6 +179,7 @@ Tables \@ref(tab:test-uv-logistic-1), \@ref(tab:test-uv-logistic-2) and \@ref(ta
 rm_uvsum(response = 'Status',
          covs=c('age','Sex','wt.loss'),
          data=lung,
+         digits=3,
          type='logistic',
          chunk_label = 'test-uv-logistic-1' )
 
@@ -202,8 +203,6 @@ rm_uvsum(response = 'Status',
          CIwidth=.99,
          chunk_label='test-uv-logistic-3')
 
-
-
 ```
 
 ### Test Linear
@@ -212,10 +211,10 @@ rm_uvsum(response = 'wt.loss',
          covs=c('Status','Sex','ph.ecog','meal.cal','age'),
          data=lung,
          CIwidth=.95)
-rm_uvsum(response = 'wt.loss',
-         covs=c('age'),
-         data=lung,
-         CIwidth=.90)
+# rm_uvsum(response = 'wt.loss',
+#          covs=c('age'),
+#          data=lung,
+#          CIwidth=.90)
 
 ```
 

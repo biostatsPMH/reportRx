@@ -46,7 +46,15 @@ break LaTeX}
 with a space}
 }
 \description{
-Format a regression model nicely for Rmarkdown
+Multivariable (or univariate) regression models are re-formatted for
+reporting and a global p-value is added for the evaluation of factor
+variables.
+}
+\details{
+Global p-values are likelihood ratio tests for lm, glm and polr models. For
+lme models an attempt is made to re-fit the model using ML and if,successful
+LRT is used to obtain a global p-value. If unsuccessful a Wald p-value is
+returned. For GEE and CRR models Wald global p-values are returned.
 }
 \examples{
 glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,

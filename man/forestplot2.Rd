@@ -2,7 +2,75 @@
 % Please edit documentation in R/main.R
 \name{forestplot2}
 \alias{forestplot2}
-\title{Create a forest plot using ggplot2}
+\title{#' Plot CI curve
+#' 
+#' Plots a CI curve. Currently not very powerful. Only plots a single curve
+#' 
+#' @param data dataframe containing data
+#' @param response character vector or list of character vector. 
+#'  If a list it plot the '1' event for all outcomes on the same plot
+#' @param group string of the group want to stratify by
+#' @param units units of time
+#' @param main String corresponding to title
+#' @param CI Bool If True will plot CI and only the '1' event. If F will plot 
+#'  all events except for the final one
+#' @param legpos string indicating which position to put legend choies are "topright" etc
+#' @param xlim numeric vector corresponding to xlimits. Default is NULL
+#' @param outcomes character vector of the names of the different competing outcomes
+#' @importFrom cmprsk cuminc
+#' @keywords print
+#' @export
+plotci<-function (data,response,group=NULL,units = "months",main="Viral Infections",CI=F,legpos="topleft",xlim=NULL,outcomes=NULL){
+  if(!is.null(group)){
+    groups=levels(data[,group])
+  }
+  #If response is a list plot the '1' event for all outcomes on same plot
+  if(class(response)!="list"){
+    if(!is.null(group)){
+      groups=levels(data[,group])
+      fita <- cuminc(data[,response[1]],data[,response[2]],data[,group])
+    }else{
+      fita <- cuminc(data[,response[1]],data[,response[2]])
+    }
+    if(CI){
+      plot(fita[[1]]$time,sapply(fita[[1]]$est + 1.96 * sqrt(fita[[1]]$var),
+                                 function(x) min(x,1)),type = "l",lty = 2,main = paste("CI plot for ",
+                                                                                       sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+                                                                                                                                                 cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+                                                                                                                                                                                                     sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+      
+      lines(fita[[1]]$time,fita[[1]]$est)
+      lines(fita[[1]]$time,sapply(fita[[1]]$est - 1.96 * sqrt(fita[[1]]$var),
+                                  function(x) max(x,0)),lty = 2)
+    }else{
+      plot(fita[[1]]$time,fita[[1]]$est,
+           type = "l", main = paste("CI plot for ",
+                                    sanitizestr(nicename(response[2])),sep = ""),xlab = paste("Time (",
+                                                                                              cap(units),")",sep = ""),ylim = c(0,1),ylab = paste("Incidence of ",
+                                                                                                                                                  sanitizestr(nicename(response[2])),sep = ""),xlim=xlim)
+      numoutcomes<-length(fita)-1
+      if(numoutcomes>1){
+        for (i in 2:numoutcomes){
+          lines(fita[[i]]$time,fita[[i]]$est,lty=i,lwd=2)
+        }
+        legend(legpos,outcomes,lty = 1:numoutcomes,bty = "n",lwd=2)
+      }
+    }
+    
+  }else{
+    d<-lapply(response,function(respons){
+      fita <- cuminc(data[,respons[1]],data[,respons[2]])
+      list(fita[[1]]$time,fita[[1]]$est)})
+    if(is.null(xlim)) xlim=c(0,ceiling(max(sapply(d,function(x) max(x[[1]])))))
+    plot(1,type="n",xlim=xlim,ylim=c(0,1),
+         ylab="Cumulative Incidence",xlab = paste("Time (",cap(units),")",sep = ""),main=paste("Cumulative Incidence plot for",main))
+    for(i in 1:length(d)){
+      lines(d[[i]][[1]],d[[i]][[2]],lty=i,lwd=2)
+    }
+    legend(legpos,sapply(response,function(x) x[2]) ,col =rep(1,length(response)),lty = 1:length(response),bty = "n",lwd=2)
+    
+  }
+}}
 \usage{
 forestplot2(
   model,
@@ -36,7 +104,53 @@ regression}
 produce}
 }
 \description{
+#' Get CI cinfidence interval
+#' 
+#' Returns the confidence interval of a CI at a specified time. 
+#' 
+#' Currently not very powerful. Only works on single strata.
+#' 
+#' @param data dataframe containing data
+#' @param response character vector of response
+#' @param times numeric vector specifying single time to get CI for
+#' @param units string specifying the unit of times
+#' @param outcomes character vector specifying names of competing outcomes.
+#'  Leave NULL if there is only one outcome
+#' @param decimals positive integer corresponding to the number of decimals
+#' @keywords print
+#' @export
+citime<-function (data,response,times,units="Years",outcomes=NULL,decimals=2)
+{
+  out<-sapply(times,function(time){
+    fita <- cuminc(data[,response[1]],data[,response[2]])
+    numoutcomes<-length(fita)-1
+    sapply(1:numoutcomes,function(i){
+      index <- max(which(fita[[i]]$time <= time))
+      est <- fita[[i]]$est[index]
+      pm <- 1.96 * sqrt(fita[[i]]$var[index])
+      psthr(c(est,max(est - pm,0),min(est + pm,1)),decimals)
+    })
+  })
+  if (class(out)!="matrix")
+    out<-t(out)
+  out<-data.frame(out,stringsAsFactors=F)
+  rownames(out)<-NULL
+  if(!is.null(outcomes)){
+    out<-cbind(outcomes,out)
+    colnames(out)<-c("Outcome",paste(times,units))
+  }else{
+    colnames(out)<-paste(times,units)
+  }
+  return(out)
+}
+Create a forest plot using ggplot2
+}
+\details{
 This function will accept a log or logistic regression fit from glm, and
 display the OR or RR for each variable on the appropriate log scale.
+}
+\examples{
+glm_fit = glm(change_ctdna_group~sex+age+baseline_ctdna+l_size, data=pembrolizumab,family = 'binomial')
+forestplot2(glm_fit)
 }
 \keyword{plot}
