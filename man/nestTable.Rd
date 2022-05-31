@@ -2,7 +2,8 @@
 % Please edit documentation in R/main.R
 \name{nestTable}
 \alias{nestTable}
-\title{Combine two table columns into a single column with levels of one nested within levels of the other.}
+\title{Combine two table columns into a single column with levels of one nested
+within levels of the other.}
 \usage{
 nestTable(
   data,
@@ -22,7 +23,8 @@ nestTable(
 
 \item{head_col}{character value specifying the column name with the headers}
 
-\item{to_col}{character value specifying the column name to add the headers into}
+\item{to_col}{character value specifying the column name to add the headers
+into}
 
 \item{caption}{table caption}
 
@@ -34,26 +36,33 @@ nestTable(
 
 \item{hdr_suffix}{character value that will suffix headers}
 
-\item{digits}{number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns}
+\item{digits}{number of digits to round numeric columns to, wither a single
+number or a vector corresponding to the number of numeric columns}
 
-\item{tableOnly}{boolean indicating if the table should be formatted for printing or returned as a data frame}
+\item{tableOnly}{boolean indicating if the table should be formatted for
+printing or returned as a data frame}
 }
 \description{
-This function accepts a data frame (via the data argument) and combines two columns into
-a single column with values from the head_col serving as headers and values of the to_col displayed
-underneath each header. The resulting table is then passed to outTable for printing and output, to use the 
-grouped table as a data frame specify tableOnly=TRUE.
-By default the headers will be bolded and the remaining values indented. 
-Note that it is possible to combine multiple tables (more than two) with this function.
+This function accepts a data frame (via the data argument) and combines two
+columns into a single column with values from the head_col serving as headers
+and values of the to_col displayed underneath each header. The resulting
+table is then passed to outTable for printing and output, to use the grouped
+table as a data frame specify tableOnly=TRUE. By default the headers will be
+bolded and the remaining values indented.
+}
+\details{
+Note that it is possible to combine multiple tables (more than two) with this
+function.
 }
 \examples{
-## Create models to predict mileage and horsepower and show the outputs together
-# fit1 <- lm(mpg~cyl+disp+wt,data=mtcars)
-# m1 <- rm_mvsum(fit1,tableOnly=T)
-# m1$Response = 'mileage'
-# fit2 <- lm(hp~cyl+disp+wt,data=mtcars)
-# m2 <- rm_mvsum(fit2,tableOnly=T)
-# m2$Response = 'horsepower'
-# rbind(m1,m2)
-# nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
+## Investigate models to predict baseline ctDNA and tumour size and display together
+## (not clinically useful!)
+fit1 <- lm(baseline_ctdna~age+l_size+pdl1,data=pembrolizumab)
+m1 <- rm_mvsum(fit1,tableOnly=TRUE)
+m1$Response = 'ctDNA'
+fit2 <- lm(l_size~age+baseline_ctdna+pdl1,data=pembrolizumab)
+m2 <- rm_mvsum(fit2,tableOnly=TRUE)
+m2$Response = 'Tumour Size'
+rbind(m1,m2)
+nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
 }

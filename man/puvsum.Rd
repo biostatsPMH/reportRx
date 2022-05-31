@@ -21,22 +21,31 @@ puvsum(
 \arguments{
 \item{response}{string vector with name of response}
 
-\item{covs}{character vector with the names of columns to fit univariate models to}
+\item{covs}{character vector with the names of columns to fit univariate
+models to}
 
 \item{data}{dataframe containing data}
 
 \item{id}{character vector which identifies clusters. Only used for geeglm}
 
-\item{corstr}{character string specifying the correlation structure. Only used for geeglm. 
-The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'}
+\item{corstr}{character string specifying the correlation structure. Only
+used for geeglm. The following are permitted: '"independence"',
+'"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'}
 
-\item{family}{description of the error distribution and link function to be used in the model. Only used for geeglm}
+\item{family}{description of the error distribution and link function to be
+used in the model. Only used for geeglm}
 
-\item{type}{string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options in clude "linear","logistic","coxph","crr","boxcox","logistic"}
+\item{type}{string indicating he type of univariate model to fit. The
+function will try and guess what type you want based on your response. If
+you want to override this you can manually specify the type. Options in
+clude "linear","logistic","coxph","crr","boxcox","logistic"}
 
-\item{strata}{character vector of covariates to stratify by. Only used for coxph and crr}
+\item{strata}{character vector of covariates to stratify by. Only used for
+coxph and crr}
 
-\item{TeX}{boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx}
+\item{TeX}{boolean indicating if you want to be able to view extra long
+tables in the LaTeX pdf. If TeX is T then the table will not convert
+properly to docx}
 
 \item{showN}{boolean indicating if you want to show sample sizes}
 

@@ -21,10 +21,8 @@ petsum(data, response, group = 1, times = c(12, 14), units = "months")
 Wrapper for the etsum function that prints paragraphs of text in LaTeX
 }
 \examples{
-require(survival)
-lung$sex<-factor(lung$sex)
-petsum(lung,c("time","status"),"sex")
-petsum(lung,c("time","status"))
-petsum(lung,c("time","status"),"sex",c(1,2,3),"months")
+petsum(pembrolizumab,c('os_time','os_status'),"sex")
+petsum(pembrolizumab,c('os_time','os_status'))
+petsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3),"months")
 }
 \keyword{print}

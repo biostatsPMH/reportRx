@@ -13,16 +13,16 @@ etsum(data, response, group = 1, times = c(12, 24))
 
 \item{group}{string specifiying the column name of stratification variable}
 
-\item{times}{numeric vector of times you want survival time provbabilities for.}
+\item{times}{numeric vector of times you want survival time provbabilities
+for.}
 }
 \description{
-This function will output a dataframe with usefull summary statistics from a coxph model
+This function will output a dataframe with usefull summary statistics from a
+coxph model
 }
 \examples{
-require(survival)
-lung$sex<-factor(lung$sex)
-etsum(lung,c("time","status"),"sex")
-etsum(lung,c("time","status"))
-etsum(lung,c("time","status"),"sex",c(1,2,3))
+etsum(pembrolizumab,c('os_time','os_status'),"sex")
+etsum(pembrolizumab,c('os_time','os_status'))
+etsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3))
 }
 \keyword{dataframe}

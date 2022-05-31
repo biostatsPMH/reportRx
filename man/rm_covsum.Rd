@@ -37,75 +37,95 @@ rm_covsum(
 
 \item{maincov}{covariate to stratify table by}
 
-\item{caption}{character containing table caption. If caption = NULL then 
+\item{caption}{character containing table caption. If caption = NULL then
 notes about unstable estimates and p-value adjustments will be added to the
 caption. To suppress the caption completely set caption='none'.}
 
-\item{tableOnly}{Logical, if TRUE then a dataframe is returned, otherwise a 
+\item{tableOnly}{Logical, if TRUE then a dataframe is returned, otherwise a
 formatted printed object is returned (default).}
 
 \item{covTitle}{character with the names of the covariate column}
 
 \item{digits}{number of digits for summarizing mean data}
 
-\item{digits.cat}{number of digits for the proportions when summarizing categorical data (default: 0)}
+\item{digits.cat}{number of digits for the proportions when summarizing
+categorical data (default: 0)}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
+\item{nicenames}{booling indicating if you want to replace . and _ in strings
+with a space}
 
-\item{IQR}{boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
+\item{IQR}{boolean indicating if you want to display the inter quantile range
+(Q1,Q3) as opposed to (min,max) in the summary for continuous variables}
 
-\item{all.stats}{boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.}
+\item{all.stats}{boolean indicating if all summary statistics (Q1,Q3 +
+min,max on a separate line) should be displayed. Overrides IQR.}
 
 \item{pvalue}{boolean indicating if you want p-values included in the table}
 
-\item{show.tests}{boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.}
+\item{show.tests}{boolean indicating if the type of statistical used should
+be shown in a column beside the pvalues. Ignored if pvalue=FALSE.}
 
-\item{testcont}{test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}}
+\item{testcont}{test of choice for continuous variables,one of
+\emph{rank-sum} (default) or \emph{ANOVA}}
 
-\item{testcat}{test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}}
+\item{testcat}{test of choice for categorical variables,one of
+\emph{Chi-squared} (default) or \emph{Fisher}}
 
-\item{full}{boolean indicating if you want the full sample included in the table, ignored if maincov is NULL}
+\item{full}{boolean indicating if you want the full sample included in the
+table, ignored if maincov is NULL}
 
-\item{include_missing}{Option to include NA values of maincov. NAs will not be included in statistical tests}
+\item{include_missing}{Option to include NA values of maincov. NAs will not
+be included in statistical tests}
 
-\item{percentage}{choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}}
+\item{percentage}{choice of how percentages are presented ,one of
+\emph{column} (default) or \emph{row}}
 
-\item{excludeLevels}{a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.}
+\item{excludeLevels}{a named list of covariate levels to exclude from
+statistical tests in the form list(varname =c('level1','level2')). These
+levels will be excluded from association tests, but not the table. This can
+be useful for levels where there is a logical skip (ie not missing, but not
+presented). Ignored if pvalue=FALSE.}
 
-\item{numobs}{named list overriding the number of people you expect to have the covariate}
+\item{numobs}{named list overriding the number of people you expect to have
+the covariate}
 
 \item{markup}{boolean indicating if you want latex markup}
 
-\item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
+\item{sanitize}{boolean indicating if you want to sanitize all strings to not
+break LaTeX}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \value{
-A formatted table displaying a summary of the covariates stratified by maincov
+A formatted table displaying a summary of the covariates stratified
+  by maincov
 }
 \description{
-Returns a data frame corresponding to a descriptive table. 
-This is a wrapper function around covsum for use in Rmarkdown documents
+Returns a data frame corresponding to a descriptive table.
 }
 \details{
-Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
-test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
-If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
-The statistical test used can be displayed by specifying show.tests=TRUE.
+Comparisons for categorical variables default to chi-square tests, but if
+there are counts of <5 then the Fisher Exact test will be used and if this is
+unsuccessful then a second attempt will be made computing p-values using MC
+simulation. If testcont='ANOVA' then the t-test with unequal variance will be
+used for two groups and an ANOVA will be used for three or more. The
+statistical test used can be displayed by specifying show.tests=TRUE.
 
-Further formatting options are available using tableOnly=TRUE and outputting the table with a call to outTable.
+Further formatting options are available using tableOnly=TRUE and outputting
+the table with a call to outTable.
 }
 \examples{
-rm_covsum(data=mtcars,maincov = 'Gears',
-covs=c('mpg','Cylinders','qsec'),show.tests=T)
+rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
+covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
 
 # To make custom changes or change the fontsize in PDF/HTML
-tab <- rm_covsum(data=mtcars,maincov = 'Gears',
-covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
+covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 outTable(tab, fontsize=7)
-
 }
 \seealso{
-\code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}},  \code{\link{anova}}, and \code{\link{outTable}}
+\code{\link{fisher.test}}, \code{\link{chisq.test}},
+  \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
+  and \code{\link{outTable}}
 }
 \keyword{dataframe}

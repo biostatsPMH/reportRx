@@ -11,14 +11,20 @@ makedocx(dir, fname, pdwd = "C:/PROGRA~1/RStudio/bin/pandoc", imwd = "")
 
 \item{fname}{.TeX file filename. Do not include extension.}
 
-\item{pdwd}{full path to pandoc. The default value is the usual installation path for Windows systems if RStudio is installed.}
+\item{pdwd}{full path to pandoc. The default value is the usual installation
+path for Windows systems if RStudio is installed.}
 
-\item{imwd}{full path to image magick. Only include if there is at least one graphic.}
+\item{imwd}{full path to image magick. Only include if there is at least one
+graphic.}
 }
 \description{
-Converts the knitr-compiled .TeX file to a .docx file. The function calls ImageMagick to convert .pdf images into .png and then calls pandoc (included with RStudio) to convert the .Tex file into .docx.
+Converts the knitr-compiled .TeX file to a .docx file. The function calls
+ImageMagick to convert .pdf images into .png and then calls pandoc (included
+with RStudio) to convert the .Tex file into .docx.
 }
 \details{
-Note: This function is deprecated and will not be supported in future versions of reportRx. Instead the rm_ functions can be used to output to pdf, Word or HTML from an Rmarkdown document.
+Note: This function is deprecated and will not be supported in future
+versions of reportRx. Instead the rm_ functions can be used to output to pdf,
+Word or HTML from an Rmarkdown document.
 }
 \keyword{print}

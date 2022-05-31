@@ -24,44 +24,46 @@ plotuv(
 
 \item{data}{dataframe containing your data}
 
-\item{showN}{boolean indicating whether sample sizes should be shown on the plots}
+\item{showN}{boolean indicating whether sample sizes should be shown on the
+plots}
 
-\item{showPoints}{boolean indicating whether individual data points should be shown when n>20 in a category}
+\item{showPoints}{boolean indicating whether individual data points should be
+shown when n>20 in a category}
 
 \item{na.rm}{boolean indicating whether na values should be shown or removed}
 
 \item{response_title}{character value with title of the plot}
 
-\item{return_plotlist}{boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details}
+\item{return_plotlist}{boolean indicating that the list of plots should be
+returned instead of a plot, useful for applying changes to the plot, see
+details}
 
-\item{ncol}{the number of columns of plots to be display in the ggarrange call, defaults to 2}
+\item{ncol}{the number of columns of plots to be display in the ggarrange
+call, defaults to 2}
 
-\item{p_margins}{sets the TRBL margins of the individual plots, defaults to c(0,0.2,1,.2)}
+\item{p_margins}{sets the TRBL margins of the individual plots, defaults to
+c(0,0.2,1,.2)}
 }
 \description{
-This function is designed to accompany \code{\link{uvsum}} as a means
-of visualising the results, and uses similar syntax.
+This function is designed to accompany \code{\link{uvsum}} as a means of
+visualising the results, and uses similar syntax.
 }
 \details{
-Plots are displayed as follows:
-If response is continuous
-  For a numeric predictor scatterplot
-  For a categorical predictor: 
-    If 20+ observations available boxplot, otherwise dotplot with median line
-If response is a factor
-  For a numeric predictor:
-      If 20+ observations available boxplot, otherwise dotplot with median line
-  For a categorical predictor barplot
-Response variables are shown on the ordinate (y-axis) and covariates on the abscissa (x-axis)
+Plots are displayed as follows: If response is continuous For a numeric
+predictor scatterplot For a categorical predictor: If 20+ observations
+available boxplot, otherwise dotplot with median line If response is a factor
+For a numeric predictor: If 20+ observations available boxplot, otherwise
+dotplot with median line For a categorical predictor barplot Response
+variables are shown on the ordinate (y-axis) and covariates on the abscissa
+(x-axis)
 }
 \examples{
-## Run multiple univariate analyses on the mtcars dataset to predict mpg and 
+## Run multiple univariate analyses on the pembrolizumab dataset to predict cbr and
 ## then visualise the relationships.
-# rm_uvsum(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
-# plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
-## Set cylinder to a factor and re-run
-# mtcars$cyl = factor(mtcars$cyl)
-# plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+rm_uvsum(data=pembrolizumab,
+response='cbr',covs=c('age','sex','l_size','baseline_ctdna'))
+plotuv(data=pembrolizumab,  response='cbr',
+covs=c('age','sex','l_size','baseline_ctdna'),showN=TRUE)
 }
 \seealso{
 \code{\link{ggplot}} and \code{\link{ggarrange}}

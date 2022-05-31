@@ -22,9 +22,11 @@ plotkm(
 
 \item{group}{string specifiying the column name of stratification variable}
 
-\item{pos}{what position you want the legend to be. Current option are bottomleft and topright}
+\item{pos}{what position you want the legend to be. Current option are
+bottomleft and topright}
 
-\item{units}{string specifying what the unit of time is use lower case and plural}
+\item{units}{string specifying what the unit of time is use lower case and
+plural}
 
 \item{CI}{boolean to specify if you want confidence intervals}
 
@@ -33,16 +35,15 @@ plotkm(
 \item{title}{title of plot}
 }
 \description{
-This function will plot a KM curve with possible stratification. You can specifyif you want
-a legend or confidence bands as well as the units of time used.
+This function will plot a KM curve with possible stratification. You can
+specifyif you want a legend or confidence bands as well as the units of time
+used.
 }
 \details{
-Note: This function is deprecated and will not be supported in future versions of reportRx. Please use ggkmcif.
+Note: This function is deprecated and will not be supported in future versions
+of reportRx. Please use ggkmcif.
 }
 \examples{
-require(survival)
-lung$sex<-factor(lung$sex)
-plotkm(lung,c("time","status"))
-plotkm(lung,c("time","status"),"sex")
+plotkm(pembrolizumab,c('os_time','os_status'))
 }
 \keyword{plot}

@@ -18,26 +18,30 @@ outTable(
 \arguments{
 \item{tab}{a table to format}
 
-\item{to_indent}{numeric vector the length of nrow(tab) indicating which rows to indent}
+\item{to_indent}{numeric vector the length of nrow(tab) indicating which rows
+to indent}
 
-\item{to_bold}{numeric vector the length of nrow(tab) indicating which rows to bold}
+\item{to_bold}{numeric vector the length of nrow(tab) indicating which rows
+to bold}
 
 \item{caption}{table caption}
 
-\item{digits}{number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns}
+\item{digits}{number of digits to round numeric columns to, wither a single
+number or a vector corresponding to the number of numeric columns}
 
-\item{align}{string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns}
+\item{align}{string specifying column alignment, defaults to left alignment
+of the first column and right alignment of all other columns}
 
 \item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 
 \item{fontsize}{PDF/HTML output only, manually set the table fontsize}
 }
 \description{
-Output the table nicely to whatever format is appropriate. 
-This is the output function used by the rm_* printing functions.
+Output the table nicely to whatever format is appropriate. This is the output
+function used by the rm_* printing functions.
 }
 \details{
-Entire rows can be bolded, and the first column can be indented. Currently 
+Entire rows can be bolded, and the first column can be indented. Currently
 there is no support for cell-specific formatting. By default, underscores in
 column names are converted to spaces. To disable this set rm_ to FALSE
 }

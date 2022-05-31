@@ -16,13 +16,15 @@ forestplot2(
 )
 }
 \arguments{
-\item{model}{an object output from the glm function, must be from a logistic regression}
+\item{model}{an object output from the glm function, must be from a logistic
+regression}
 
 \item{conf.level}{controls the width of the confidence interval}
 
 \item{orderByRisk}{logical, should the plot be ordered by risk}
 
-\item{colours}{can specify colours for risks less than, 1 and greater tham 1.0. Default is red, black, green}
+\item{colours}{can specify colours for risks less than, 1 and greater than
+1.0. Default is red, black, green}
 
 \item{showEst}{logical, should the risks be displayed on the plot in text}
 
@@ -30,10 +32,11 @@ forestplot2(
 
 \item{logScale}{logical, should OR/RR be shown on log scale, defaults to TRUE}
 
-\item{nxTicks}{Number of tick marks supplied to the log_breaks function to produce}
+\item{nxTicks}{Number of tick marks supplied to the log_breaks function to
+produce}
 }
 \description{
-This function will accept a log or logistic regression fit from glm, and display the
-OR or RR for each variable on the appropriate log scale.
+This function will accept a log or logistic regression fit from glm, and
+display the OR or RR for each variable on the appropriate log scale.
 }
 \keyword{plot}

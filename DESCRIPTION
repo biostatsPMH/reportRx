@@ -29,7 +29,7 @@ Imports:
     scales,
     survival,
     xtable
-Collate: 'helper.R' 'main.R' 'misc.R' 'globals.R'
+Collate: 'helper.R' 'main.R' 'misc.R' 'globals.R' 'data.R'
 Packaged: 2013-12-17 20:18:01 UTC; ryan
 NeedsCompilation: no
 Repository: CRAN
@@ -41,3 +41,6 @@ Suggests:
     rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
+LazyData: true

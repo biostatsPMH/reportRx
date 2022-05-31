@@ -21,6 +21,9 @@ Leave NULL if there is only one outcome}
 \item{decimals}{positive integer corresponding to the number of decimals}
 }
 \description{
-Returns the confidence interval of a CI at a specified time. Currently not very powerful. Only works on single strata.
+Returns the confidence interval of a CI at a specified time.
+}
+\details{
+Currently not very powerful. Only works on single strata.
 }
 \keyword{print}

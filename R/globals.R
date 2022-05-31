@@ -1,1 +1,1 @@
-utils::globalVariables(c('surv','lower','upper','n.censor','n.risk','x','y'))
+utils::globalVariables(c('surv','strata','lower','upper','n.censor','n.risk','x','y','count'))

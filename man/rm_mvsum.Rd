@@ -24,7 +24,8 @@ rm_mvsum(
 \item{data}{data that model was fit on (an attempt will be made to extract
 this from the model)}
 
-\item{showN}{boolean indicating sample sizes should be shown for each comparison, can be useful for interactions}
+\item{showN}{boolean indicating sample sizes should be shown for each
+comparison, can be useful for interactions}
 
 \item{CIwidth}{width for confidence intervals, defaults to 0.95}
 
@@ -38,14 +39,17 @@ this from the model)}
 
 \item{markup}{boolean indicating if you want latex markup}
 
-\item{sanitize}{boolean indicating if you want to sanitize all strings to not break LaTeX}
+\item{sanitize}{boolean indicating if you want to sanitize all strings to not
+break LaTeX}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings with a space}
+\item{nicenames}{booling indicating if you want to replace . and _ in strings
+with a space}
 }
 \description{
-This is a wrapper around mvsum for use with Rmarkdown
+Format a regression model nicely for Rmarkdown
 }
 \examples{
-glm_fit = glm(Status~Sex:age+wt.loss,data=lung,family = 'binomial')
+glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
+data=pembrolizumab,family = 'binomial')
 rm_mvsum(glm_fit)
 }

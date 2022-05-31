@@ -13,7 +13,9 @@ pcovsum(data, covs, maincov = NULL, TeX = FALSE, ...)
 
 \item{maincov}{covariate to stratify table by}
 
-\item{TeX}{boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx}
+\item{TeX}{boolean indicating if you want to be able to view extra long 
+tables in the LaTeX pdf. If TeX is T then the table will not convert 
+properly to docx}
 
 \item{...}{additional options passed to function  \code{\link{covsum}}}
 }

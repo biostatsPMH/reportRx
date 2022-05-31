@@ -21,10 +21,8 @@ rm_etsum(data, response, group = 1, times = c(12, 14), units = "months")
 Wrapper for the etsum function that prints paragraphs of text in R Markdown
 }
 \examples{
-require(survival)
-cancer$sex<-factor(cancer$sex)
-rm_etsum(cancer,c("time","status"),"sex")
-rm_etsum(cancer,c("time","status"))
-rm_etsum(cancer,c("time","status"),"sex",c(1,2,3),"months")
+rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
+rm_etsum(pembrolizumab,c("os_time","os_status"))
+rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
 }
 \keyword{print}

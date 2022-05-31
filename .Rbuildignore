@@ -9,3 +9,5 @@
 ^test_reportRx_functions\.Rmd$
 ^wordTemplate\.docx$
 ^test_$
+^data-raw$
+^.*\.orig$

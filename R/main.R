@@ -1,14 +1,18 @@
 #' Plot KM curve
-#'
-#'This function will plot a KM curve with possible stratification. You can specifyif you want
-#'a legend or confidence bands as well as the units of time used.
-#'
-#' Note: This function is deprecated and will not be supported in future versions of reportRx. Please use ggkmcif.
+#' 
+#' This function will plot a KM curve with possible stratification. You can
+#' specifyif you want a legend or confidence bands as well as the units of time
+#' used.
+#' 
+#' Note: This function is deprecated and will not be supported in future versions
+#' of reportRx. Please use ggkmcif.
 #' @param data dataframe containing your data
 #' @param response character vector with names of columns to use for response
 #' @param group string specifiying the column name of stratification variable
-#' @param pos what position you want the legend to be. Current option are bottomleft and topright
-#' @param units string specifying what the unit of time is use lower case and plural
+#' @param pos what position you want the legend to be. Current option are
+#'  bottomleft and topright
+#' @param units string specifying what the unit of time is use lower case and
+#'  plural
 #' @param CI boolean to specify if you want confidence intervals
 #' @param legend boolean to specify if you want a legend
 #' @param title title of plot
@@ -16,10 +20,7 @@
 #' @keywords plot
 #' @export
 #' @examples
-#' require(survival)
-#' lung$sex<-factor(lung$sex)
-#' plotkm(lung,c("time","status"))
-#' plotkm(lung,c("time","status"),"sex")
+#' plotkm(pembrolizumab,c('os_time','os_status'))
 plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,legend=T,title=""){
   message('plotkm has been deprecated. Please use ggkmcif.')
   if(class(group)=="numeric"){
@@ -33,7 +34,7 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
   }else{
     if(class(data[,group])!="factor")
       stop("group must be a vactor variable. (Or leave unspecified for no group)")
-    lr<-survdiff(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
+    lr<-survival::survdiff(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
     lrpv<-1-pchisq(lr$chisq,length(lr$n)- 1)
     levelnames<-levels(data[,group])
     kfit<-survival::survfit(as.formula(paste("Surv(",response[1],",",response[2],")~",paste(group,collapse="+"),sep="")),data=data)
@@ -55,22 +56,23 @@ plotkm<-function(data,response,group=1,pos="bottomleft",units="months",CI=F,lege
   }
 }
 
-#'Get event time summary dataframe
+#' Get event time summary dataframe
 #'
-#'This function will output a dataframe with usefull summary statistics from a coxph model
+#' This function will output a dataframe with usefull summary statistics from a
+#' coxph model
 #'
-#'@param data dataframe containing data
-#'@param response character vector with names of columns to use for response
-#'@param group string specifiying the column name of stratification variable
-#'@param times numeric vector of times you want survival time provbabilities for.
-#'@keywords dataframe
-#'@export
-#'@examples
-#'require(survival)
-#'lung$sex<-factor(lung$sex)
-#'etsum(lung,c("time","status"),"sex")
-#'etsum(lung,c("time","status"))
-#'etsum(lung,c("time","status"),"sex",c(1,2,3))
+#' @param data dataframe containing data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifiying the column name of stratification variable
+#' @param times numeric vector of times you want survival time provbabilities
+#'   for.
+#' @keywords dataframe
+#' @importFrom stats reshape
+#' @export
+#' @examples
+#' etsum(pembrolizumab,c('os_time','os_status'),"sex")
+#' etsum(pembrolizumab,c('os_time','os_status'))
+#' etsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3))
 etsum<- function(data,response,group=1,times=c(12,24)){
   
   ### coerse data into a data.frame in case isn't
@@ -140,7 +142,7 @@ etsum<- function(data,response,group=1,times=c(12,24)){
     
     # tab <- reshape::cast(tab, strata ~ times, value="SR")
     ### avoid the 'reshape' package dependency with rshape function
-    tab <- reshape(tab[,c("strata","times","SR")], v.names="SR", timevar="times", idvar="strata", direction="wide")
+    tab <- stats::reshape(tab[,c("strata","times","SR")], v.names="SR", timevar="times", idvar="strata", direction="wide")
     names(tab) <- gsub("SR[.]","",names(tab))
     
     names <- names(tab)
@@ -224,23 +226,21 @@ etsum<- function(data,response,group=1,times=c(12,24)){
   return(tab)
 }
 
-#'Print LaTeX event time summary
-#'
-#'Wrapper for the etsum function that prints paragraphs of text in LaTeX
-#'
-#'@param data dataframe containing data
-#'@param response character vector with names of columns to use for response
-#'@param group string specifying the column name of stratification variable
-#'@param times numeric vector of times you want survival time probabilities for.
-#'@param units string indicating the unit of time. Use lower case and plural.
-#'@keywords print
-#'@export
-#'@examples
-#'require(survival)
-#'lung$sex<-factor(lung$sex)
-#'petsum(lung,c("time","status"),"sex")
-#'petsum(lung,c("time","status"))
-#'petsum(lung,c("time","status"),"sex",c(1,2,3),"months")
+#' Print LaTeX event time summary
+#' 
+#' Wrapper for the etsum function that prints paragraphs of text in LaTeX
+#' 
+#' @param data dataframe containing data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifying the column name of stratification variable
+#' @param times numeric vector of times you want survival time probabilities for.
+#' @param units string indicating the unit of time. Use lower case and plural.
+#' @keywords print
+#' @export
+#' @examples
+#' petsum(pembrolizumab,c('os_time','os_status'),"sex")
+#' petsum(pembrolizumab,c('os_time','os_status'))
+#' petsum(pembrolizumab,c('os_time','os_status'),"sex",c(1,2,3),"months")
 petsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   
@@ -306,37 +306,58 @@ petsum<-function(data,response,group=1,times=c(12,14),units="months"){
 }
 
 
-#'Get covariate summary dataframe
+#' Get covariate summary dataframe
 #'
-#'Returns a dataframe corresponding to a descriptive table. 
+#' Returns a dataframe corresponding to a descriptive table.
 #'
-#'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
-#'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
-#'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
-#'The statistical test used can be displayed by specifying show.tests=TRUE.
+#' Comparisons for categorical variables default to chi-square tests, but if
+#' there are counts of <5 then the Fisher Exact test will be used and if this is
+#' unsuccessful then a second attempt will be made computing p-values using MC
+#' simulation. If testcont='ANOVA' then the t-test with unequal variance will be
+#' used for two groups and an ANOVA will be used for three or more. The
+#' statistical test used can be displayed by specifying show.tests=TRUE.
 #'
-#'@param data dataframe containing data
-#'@param covs character vector with the names of columns to include in table
-#'@param maincov covariate to stratify table by
-#'@param digits number of digits for summarizing mean data
-#'@param numobs named list overriding the number of people you expect to have the covariate
-#'@param markup boolean indicating if you want latex markup
-#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
-#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
-#'@param all.stats boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.
-#'@param pvalue boolean indicating if you want p-values included in the table
-#'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
-#'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
-#'@param full boolean indicating if you want the full sample included in the table, ignored if maincov is NULL
-#'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
-#'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
-#'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
-#'@param include_missing Option to include NA values of maincov. NAs will not be included in statistical tests
-#'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
-#'@keywords dataframe
-#'@export
-#'@seealso \code{\link{fisher.test}},\code{\link{chisq.test}},\code{\link{wilcox.test}},\code{\link{kruskal.test}},and \code{\link{anova}}
+#' @param data dataframe containing data
+#' @param covs character vector with the names of columns to include in table
+#' @param maincov covariate to stratify table by
+#' @param digits number of digits for summarizing mean data
+#' @param numobs named list overriding the number of people you expect to have
+#'   the covariate
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param IQR boolean indicating if you want to display the inter quantile range
+#'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#' @param all.stats boolean indicating if all summary statistics (Q1,Q3 +
+#'   min,max on a separate line) should be displayed. Overrides IQR.
+#' @param pvalue boolean indicating if you want p-values included in the table
+#' @param show.tests boolean indicating if the type of statistical used should
+#'   be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#' @param excludeLevels a named list of covariate levels to exclude from
+#'   statistical tests in the form list(varname =c('level1','level2')). These
+#'   levels will be excluded from association tests, but not the table. This can
+#'   be useful for levels where there is a logical skip (ie not missing, but not
+#'   presented). Ignored if pvalue=FALSE.
+#' @param full boolean indicating if you want the full sample included in the
+#'   table, ignored if maincov is NULL
+#' @param digits.cat number of digits for the proportions when summarizing
+#'   categorical data (default: 0)
+#' @param testcont test of choice for continuous variables,one of
+#'   \emph{rank-sum} (default) or \emph{ANOVA}
+#' @param testcat test of choice for categorical variables,one of
+#'   \emph{Chi-squared} (default) or \emph{Fisher}
+#' @param include_missing Option to include NA values of maincov. NAs will not
+#'   be included in statistical tests
+#' @param percentage choice of how percentages are presented ,one of
+#'   \emph{column} (default) or \emph{row}
+#' @keywords dataframe
+#' @export
+#' @seealso
+#'   \code{\link{fisher.test}},\code{\link{chisq.test}},
+#'   \code{\link{wilcox.test}},\code{\link{kruskal.test}},and
+#'   \code{\link{anova}}
 covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanitize=TRUE,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,excludeLevels=NULL,full=TRUE,
                    digits.cat = 0,testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),include_missing=FALSE,percentage=c('column','row'))
 {
@@ -637,17 +658,19 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
   return(table)
 }
 
-#'Print covariate summary Latex
-#'
-#'Returns a dataframe corresponding to a descriptive table
-#'
-#'@param data dataframe containing data
-#'@param covs character vector with the names of columns to include in table
-#'@param maincov covariate to stratify table by
-#'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
-#'@param ... additional options passed to function  \code{\link{covsum}}
-#'@keywords print
-#'@export
+#' Print covariate summary Latex
+#' 
+#' Returns a dataframe corresponding to a descriptive table
+#' 
+#' @param data dataframe containing data
+#' @param covs character vector with the names of columns to include in table
+#' @param maincov covariate to stratify table by
+#' @param TeX boolean indicating if you want to be able to view extra long 
+#'  tables in the LaTeX pdf. If TeX is T then the table will not convert 
+#'  properly to docx
+#' @param ... additional options passed to function  \code{\link{covsum}}
+#' @keywords print
+#' @export
 pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
   if(!TeX){
     print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
@@ -656,35 +679,48 @@ pcovsum<-function(data,covs,maincov=NULL,TeX=FALSE,...){
     print.xtable(xtable(covsum(data,covs,maincov,...)),include.rownames=F,sanitize.text.function=identity,table.placement="H",floating=FALSE,tabular.environment="longtable")
   }}
 
-#'Get univariate summary dataframe
+#' Get univariate summary dataframe
 #'
-#'Returns a dataframe corresponding to a univariate regression table
+#' Returns a dataframe corresponding to a univariate regression table
 #'
-#'Univariate summaries for a number of covariates, the type of model can be specified. 
-#'If unspecified the function will guess the appropriate model based on the response variable.
-#'@param response string vector with name of response
-#'@param covs character vector with the names of columns to fit univariate models to
-#'@param data dataframe containing data
-#'@param id character vector which identifies clusters. Only used for geeglm
-#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
-#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
-#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
-#'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-#'Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
-#'@param strata character vector of covariates to stratify by. Only used for coxph and crr
-#'@param markup boolean indicating if you want latex markup
-#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
-#'@param testing boolean to indicate if you want to print out the covariates before the model fits.
-#'@param showN boolean indicating if you want to show sample sizes
-#'@param CIwidth width of confidence interval, default is 0.95
-#'@param reflevel manual specification of the reference level. Only used for ordinal
-#'This will allow you to see which model is not fitting if the function throws an error
-#'@keywords dataframe
+#' Univariate summaries for a number of covariates, the type of model can be
+#' specified. If unspecified the function will guess the appropriate model based
+#' on the response variable.
+#'
+#' @param response string vector with name of response
+#' @param covs character vector with the names of columns to fit univariate
+#'   models to
+#' @param data dataframe containing data
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param corstr character string specifying the correlation structure. Only
+#'   used for geeglm. The following are permitted: '"independence"',
+#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be
+#'   used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options
+#'   include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
+#' @param strata character vector of covariates to stratify by. Only used for
+#'   coxph and crr
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param testing boolean to indicate if you want to print out the covariates
+#'   before the model fits.
+#' @param showN boolean indicating if you want to show sample sizes
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @param reflevel manual specification of the reference level. Only used for
+#'   ordinal This will allow you to see which model is not fitting if the
+#'   function throws an error
+#' @keywords dataframe
 #' @importFrom survival coxph Surv
 #' @importFrom aod wald.test
 #' @importFrom geepack geeglm
-#'@export
+#' @importFrom stats na.omit
+#' @export
 uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL,
                    type = NULL, strata = 1, markup = T, sanitize = T, nicenames = T, 
                    testing = F, showN = T, CIwidth = 0.95, reflevel) 
@@ -828,7 +864,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
                                      x_var, sep = "")), family = "binomial", 
                     data = data)
           m2_null <- stats::update(m2,formula=as.formula(paste0(response,'~1')),data=m2$model)
-          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          globalpvalue <- try(as.vector(stats::na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
           # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
           #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
           if (class(globalpvalue) == "try-error") 
@@ -852,7 +888,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           }
           m <- summary(m2)$coefficients
           m2_null <- lm(formula=as.formula(paste0(response,'~1')),data=m2$model)
-          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
+          globalpvalue <- try(as.vector(stats::na.omit(anova(m2_null,m2,test="LRT")[,"Pr(>Chi)"]))) # LRT
           # globalpvalue <- try(aod::wald.test(b = m2$coefficients[-1], 
           #                                    Sigma = vcov(m2)[-1, -1], Terms = seq_len(length(m2$coefficients[-1])))$result$chi2[3])
           if (class(globalpvalue) == "try-error") 
@@ -874,7 +910,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
           nterms = length(m2$coefficients)
           
           m2_null <- stats::update(m2,data=m2$model,formula=as.formula(paste0(response,'~1' )))
-          globalpvalue <- try(as.vector(na.omit(anova(m2_null,m2)[,"Pr(Chi)"])))
+          globalpvalue <- try(as.vector(stats::na.omit(anova(m2_null,m2)[,"Pr(Chi)"])))
           # globalpvalue <- try(aod::wald.test(Sigma = vcov(m2)[1:nterms, 
           #                                                     1:nterms], b = m2$coefficients, Terms = 1:nterms)$result$chi2[3], 
           #                     silent = T)
@@ -1075,7 +1111,7 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
       # data <- dplyr::select(data, dplyr::any_of(c(response, 
       #                                             x_var, strataVar)))
       data <- data[,intersect(c(response, x_var, strataVar),names(data))]
-      data <- na.omit(data)
+      data <- stats::na.omit(data)
       x_var_str <- x_var
       if (testing) 
         print(x_var)
@@ -1190,26 +1226,36 @@ uvsum <- function (response, covs, data, id = NULL, corstr = NULL, family = NULL
 }
 
 
-#'Print univariate summary LaTeX table
+#' Print univariate summary LaTeX table
 #'
-#'Returns a LaTeX table of the univariate summary
+#' Returns a LaTeX table of the univariate summary
 #'
-#'@param response string vector with name of response
-#'@param covs character vector with the names of columns to fit univariate models to
-#'@param data dataframe containing data
-#'@param id character vector which identifies clusters. Only used for geeglm
-#'@param corstr character string specifying the correlation structure. Only used for geeglm. 
-#'The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
-#'@param family description of the error distribution and link function to be used in the model. Only used for geeglm
-#'@param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options in clude "linear","logistic","coxph","crr","boxcox","logistic"
-#'@param strata character vector of covariates to stratify by. Only used for coxph and crr
-#'@param TeX boolean indicating if you want to be able to view extra long tables in the LaTeX pdf. If TeX is T then the table will not convert properly to docx
-#'@param showN boolean indicating if you want to show sample sizes
-#'@param CIwidth width of confidence interval, default is 0.95
-#'@importFrom stats anova as.formula chisq.test coef fisher.test glm kruskal.test lm median model.matrix pchisq qnorm sd time vcov wilcox.test
-#'@importFrom xtable xtable print.xtable
-#'@keywords dataframe
-#'@export
+#' @param response string vector with name of response
+#' @param covs character vector with the names of columns to fit univariate
+#'   models to
+#' @param data dataframe containing data
+#' @param id character vector which identifies clusters. Only used for geeglm
+#' @param corstr character string specifying the correlation structure. Only
+#'   used for geeglm. The following are permitted: '"independence"',
+#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be
+#'   used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options in
+#'   clude "linear","logistic","coxph","crr","boxcox","logistic"
+#' @param strata character vector of covariates to stratify by. Only used for
+#'   coxph and crr
+#' @param TeX boolean indicating if you want to be able to view extra long
+#'   tables in the LaTeX pdf. If TeX is T then the table will not convert
+#'   properly to docx
+#' @param showN boolean indicating if you want to show sample sizes
+#' @param CIwidth width of confidence interval, default is 0.95
+#' @importFrom stats anova as.formula chisq.test coef fisher.test glm
+#'   kruskal.test lm median model.matrix pchisq qnorm sd time vcov wilcox.test
+#' @importFrom xtable xtable print.xtable
+#' @keywords dataframe
+#' @export
 puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,strata=1,TeX=FALSE,showN=FALSE,CIwidth=0.95){
   if(!TeX){
     print.xtable(xtable(uvsum(response,covs,data,id,corstr,family,type,strata,showN = showN,CIwidth = CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
@@ -1219,20 +1265,25 @@ puvsum<-function(response,covs,data,id=NULL,corstr=NULL,family=NULL,type=NULL,st
   
 }
 
-# TODO: Add support for svyglm and svycoxph functions. May need to check the feasibility of the global p-value here
-#'Get multivariate summary dataframe
+## TODO: Add support for svyglm and svycoxph functions. May need to check the feasibility of the global p-value here
+
+#' Get multivariate summary dataframe
 #'
-#'Returns a dataframe corresponding to a univariate table
+#' Returns a dataframe corresponding to a univariate table
 #'
-#'@param model fitted model object
-#'@param data dataframe containing data
-#'@param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
-#'@param markup boolean indicating if you want latex markup
-#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
-#'@param CIwidth width for confidence intervals, defaults to 0.95
-#'@keywords dataframe
-#'@export
+#' @param model fitted model object
+#' @param data dataframe containing data
+#' @param showN boolean indicating sample sizes should be shown for each
+#'   comparison, can be useful for interactions
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param CIwidth width for confidence intervals, defaults to 0.95
+#' @keywords dataframe
+#' @importFrom stats na.omit formula model.frame
+#' @export
 mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
                    CIwidth = 0.95) 
 {
@@ -1247,7 +1298,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     nicename <- identity
   if (class(model)[1] %in% c("lm", "lme", "multinom", 
                              "survreg", "polr")) {
-    call <- Reduce(paste, deparse(formula(model$terms), width.cutoff = 500))
+    call <- Reduce(paste, deparse(stats::formula(model$terms), width.cutoff = 500))
   } 
   else if (class(model)[1] %in% c("crr")) {
     call <- paste(deparse(model$call), collapse = "")
@@ -1317,8 +1368,8 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     beta <- "HR"
     expnt = TRUE
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
-    ss_data <- try(model.frame(model$call$formula, eval(parse(text = paste("data=", 
-                                                                           deparse(model$call$data))))), silent = TRUE, outFile)
+    ss_data <- try(stats::model.frame(model$call$formula, eval(parse(text = paste("data=", 
+                                                                           deparse(model$call$data))))), silent = TRUE)
   } 
   else {
     stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
@@ -1575,16 +1626,16 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
 }
 
 
-#'Print multivariate summary LaTeX table
-#'
-#'Returns a LaTeX table of the multivariate summary.
-#'
-#'@param model fitted model object
-#'@param data dataframe containing data
-#'@param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
-#'@param CIwidth width for confidence intervals, defaults to 0.95
-#'@keywords print
-#'@export
+#' Print multivariate summary LaTeX table
+#' 
+#' Returns a LaTeX table of the multivariate summary.
+#' 
+#' @param model fitted model object
+#' @param data dataframe containing data
+#' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
+#' @param CIwidth width for confidence intervals, defaults to 0.95
+#' @keywords print
+#' @export
 
 pmvsum<-function(model,data,showN=FALSE,CIwidth=0.95){
   print.xtable(xtable(mvsum(model=model,data=data,showN=showN,CIwidth=CIwidth)),include.rownames=F,sanitize.text.function=identity,table.placement="H")
@@ -1593,13 +1644,20 @@ pmvsum<-function(model,data,showN=FALSE,CIwidth=0.95){
 
 #' Convert .TeX to .docx
 #'
-#' Converts the knitr-compiled .TeX file to a .docx file. The function calls ImageMagick to convert .pdf images into .png and then calls pandoc (included with RStudio) to convert the .Tex file into .docx.
+#' Converts the knitr-compiled .TeX file to a .docx file. The function calls
+#' ImageMagick to convert .pdf images into .png and then calls pandoc (included
+#' with RStudio) to convert the .Tex file into .docx.
 #'
-#' Note: This function is deprecated and will not be supported in future versions of reportRx. Instead the rm_ functions can be used to output to pdf, Word or HTML from an Rmarkdown document.
+#' Note: This function is deprecated and will not be supported in future
+#' versions of reportRx. Instead the rm_ functions can be used to output to pdf,
+#' Word or HTML from an Rmarkdown document.
+#'
 #' @param dir full path of .TeX file directory
 #' @param fname .TeX file filename. Do not include extension.
-#' @param pdwd full path to pandoc. The default value is the usual installation path for Windows systems if RStudio is installed.
-#' @param imwd full path to image magick. Only include if there is at least one graphic.
+#' @param pdwd full path to pandoc. The default value is the usual installation
+#'   path for Windows systems if RStudio is installed.
+#' @param imwd full path to image magick. Only include if there is at least one
+#'   graphic.
 #' @keywords print
 #' @export
 makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
@@ -1649,24 +1707,24 @@ makedocx<-function(dir,fname,pdwd="C:/PROGRA~1/RStudio/bin/pandoc",imwd=""){
 }
 
 
-#'Plot CI curve
-#'
-#'Plots a CI curve. Currently not very powerful. Only plots a single curve
-#'
-#'@param data dataframe containing data
-#'@param response character vector or list of character vector. If a list it plot the '1' event for all outcomes on
-#'the same plot
-#'@param group string of the group want to stratify by
-#'@param units units of time
-#'@param main String corresponding to title
-#'@param CI Bool If True will plot CI and only the '1' event. if F will plot all events except for the final one
-#'@param legpos string indicating which position to put legend choies are "topright" etc
-#'@param xlim numeric vector corresponding to xlimits. Default is NULL
-#'@param outcomes character vector of the names of the different competing outcomes
-#'@importFrom cmprsk cuminc
-#'@keywords print
-#'@export
-
+#' Plot CI curve
+#' 
+#' Plots a CI curve. Currently not very powerful. Only plots a single curve
+#' 
+#' @param data dataframe containing data
+#' @param response character vector or list of character vector. 
+#'  If a list it plot the '1' event for all outcomes on the same plot
+#' @param group string of the group want to stratify by
+#' @param units units of time
+#' @param main String corresponding to title
+#' @param CI Bool If True will plot CI and only the '1' event. If F will plot 
+#'  all events except for the final one
+#' @param legpos string indicating which position to put legend choies are "topright" etc
+#' @param xlim numeric vector corresponding to xlimits. Default is NULL
+#' @param outcomes character vector of the names of the different competing outcomes
+#' @importFrom cmprsk cuminc
+#' @keywords print
+#' @export
 plotci<-function (data,response,group=NULL,units = "months",main="Viral Infections",CI=F,legpos="topleft",xlim=NULL,outcomes=NULL){
   if(!is.null(group)){
     groups=levels(data[,group])
@@ -1720,18 +1778,18 @@ plotci<-function (data,response,group=NULL,units = "months",main="Viral Infectio
 }
 
 
-
-
 #' Get CI cinfidence interval
-#'
-#' Returns the confidence interval of a CI at a specified time. Currently not very powerful. Only works on single strata.
-#'
+#' 
+#' Returns the confidence interval of a CI at a specified time. 
+#' 
+#' Currently not very powerful. Only works on single strata.
+#' 
 #' @param data dataframe containing data
 #' @param response character vector of response
 #' @param times numeric vector specifying single time to get CI for
 #' @param units string specifying the unit of times
 #' @param outcomes character vector specifying names of competing outcomes.
-#' Leave NULL if there is only one outcome
+#'  Leave NULL if there is only one outcome
 #' @param decimals positive integer corresponding to the number of decimals
 #' @keywords print
 #' @export
@@ -1763,17 +1821,23 @@ citime<-function (data,response,times,units="Years",outcomes=NULL,decimals=2)
 
 #' Create a forest plot
 #'
-#' Create a forest plot. All entires with cutoff=T will be plotted with an NA
+#' Create a forest plot. All entries with cutoff=T will be plotted with an NA
 #' rather than their original value.
 #'
 #' @param data dataframe containing data
-#' @param xlab String corresponding to xlabel. By default is set to names(data)[2]
-#' @param ylab String corresponding to ylabel. By default is set to names(data)[1]
-#' @param main String corresponding to main title. By default is set to "Forest plot for subgroup analysis"
-#' @param space numeric corresponding to offset of y label. Should be positive if y label is on top of the names of the y axis
-#' @param bool A boolean vector. All entries with T will be invisible in the plot
-#' @param xlim vector of length 2 corresponding to limits of x-axis. Default to NULL.
-#' @importFrom graphics abline axis legend lines mtext par plot
+#' @param xlab String corresponding to xlabel. By default is set to
+#'   names(data)[2]
+#' @param ylab String corresponding to ylabel. By default is set to
+#'   names(data)[1]
+#' @param main String corresponding to main title. By default is set to "Forest
+#'   plot for subgroup analysis"
+#' @param space numeric corresponding to offset of y label. Should be positive
+#'   if y label is on top of the names of the y axis
+#' @param bool A boolean vector. All entries with T will be invisible in the
+#'   plot
+#' @param xlim vector of length 2 corresponding to limits of x-axis. Default to
+#'   NULL.
+#' @importFrom graphics abline axis legend lines mtext par plot segments
 #' @keywords print
 #' @export
 forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,xlim=NULL)
@@ -1792,7 +1856,7 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
        yaxt = "n",xlim = xlim,ylab = "",xlab = "",
        main = main)
   abline(v = 1,col = "red",lty = 2)
-  segments(data[,3],c(1:l1),data[,4],c(1:l1),col=colors)
+  graphics::segments(data[,3],c(1:l1),data[,4],c(1:l1),col=colors)
   axis(2,at = c(1:l1),labels = data[,1],las = 1,cex.axis = 0.8)
   mtext(side = 1,xlab,line = 2)
   mtext(side = 2,ylab,line = space + 2.5)
@@ -1800,23 +1864,25 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 
 
 #' Create a forest plot using ggplot2
-#' 
-#'This function will accept a log or logistic regression fit from glm, and display the
-#'OR or RR for each variable on the appropriate log scale.
 #'
-#' @param model an object output from the glm function, must be from a logistic regression
+#' This function will accept a log or logistic regression fit from glm, and
+#' display the OR or RR for each variable on the appropriate log scale.
+#'
+#' @param model an object output from the glm function, must be from a logistic
+#'   regression
 #' @param conf.level controls the width of the confidence interval
 #' @param orderByRisk logical, should the plot be ordered by risk
-#' @param colours can specify colours for risks less than, 1 and greater tham 1.0. Default is red, black, green
+#' @param colours can specify colours for risks less than, 1 and greater than
+#'   1.0. Default is red, black, green
 #' @param showEst logical, should the risks be displayed on the plot in text
 #' @param rmRef logical, should the reference levels be removed for the plot?
 #' @param logScale logical, should OR/RR be shown on log scale, defaults to TRUE
-#' @param nxTicks Number of tick marks supplied to the log_breaks function to produce
+#' @param nxTicks Number of tick marks supplied to the log_breaks function to
+#'   produce
 #' @import ggplot2
 #' @importFrom scales log_breaks
 #' @keywords plot
 #' @export
-#'
 forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',showEst=TRUE,rmRef=FALSE,logScale=TRUE,nxTicks=5){
   
   if (class(model)[1]=='glm'){
@@ -1897,42 +1963,46 @@ forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',sho
 
 
 #' Plot multiple bivariate relationships in a single plot
-#' 
-#' This function is designed to accompany \code{\link{uvsum}} as a means
-#' of visualising the results, and uses similar syntax. 
-#' 
-#' Plots are displayed as follows:
-#' If response is continuous
-#'   For a numeric predictor scatterplot
-#'   For a categorical predictor: 
-#'     If 20+ observations available boxplot, otherwise dotplot with median line
-#' If response is a factor
-#'   For a numeric predictor:
-#'       If 20+ observations available boxplot, otherwise dotplot with median line
-#'   For a categorical predictor barplot
-#' Response variables are shown on the ordinate (y-axis) and covariates on the abscissa (x-axis)
+#'
+#' This function is designed to accompany \code{\link{uvsum}} as a means of
+#' visualising the results, and uses similar syntax.
+#'
+#' Plots are displayed as follows: If response is continuous For a numeric
+#' predictor scatterplot For a categorical predictor: If 20+ observations
+#' available boxplot, otherwise dotplot with median line If response is a factor
+#' For a numeric predictor: If 20+ observations available boxplot, otherwise
+#' dotplot with median line For a categorical predictor barplot Response
+#' variables are shown on the ordinate (y-axis) and covariates on the abscissa
+#' (x-axis)
+#'
 #' @param response character vector with names of columns to use for response
 #' @param covs character vector with names of columns to use for covariates
 #' @param data dataframe containing your data
-#' @param showN boolean indicating whether sample sizes should be shown on the plots
-#' @param showPoints boolean indicating whether individual data points should be shown when n>20 in a category
+#' @param showN boolean indicating whether sample sizes should be shown on the
+#'   plots
+#' @param showPoints boolean indicating whether individual data points should be
+#'   shown when n>20 in a category
 #' @param na.rm boolean indicating whether na values should be shown or removed
 #' @param response_title character value with title of the plot
-#' @param return_plotlist boolean indicating that the list of plots should be returned instead of a plot, useful for applying changes to the plot, see details
-#' @param ncol the number of columns of plots to be display in the ggarrange call, defaults to 2
-#' @param p_margins sets the TRBL margins of the individual plots, defaults to c(0,0.2,1,.2)
+#' @param return_plotlist boolean indicating that the list of plots should be
+#'   returned instead of a plot, useful for applying changes to the plot, see
+#'   details
+#' @param ncol the number of columns of plots to be display in the ggarrange
+#'   call, defaults to 2
+#' @param p_margins sets the TRBL margins of the individual plots, defaults to
+#'   c(0,0.2,1,.2)
 #' @keywords plot
-#' @importFrom ggplot2 ggplot aes_string geom_boxplot  geom_point geom_text stat_summary scale_x_discrete stat theme labs .data
+#' @importFrom ggplot2 ggplot aes_string geom_boxplot geom_point geom_text
+#'   stat_summary scale_x_discrete stat theme labs .data
 #' @importFrom ggpubr ggarrange
 #' @export
-#' @examples 
-#' ## Run multiple univariate analyses on the mtcars dataset to predict mpg and 
+#' @examples
+#' ## Run multiple univariate analyses on the pembrolizumab dataset to predict cbr and
 #' ## then visualise the relationships.
-#' # rm_uvsum(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
-#' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
-#' ## Set cylinder to a factor and re-run
-#' # mtcars$cyl = factor(mtcars$cyl)
-#' # plotuv(data=mtcars,response='mpg',covs=c('cyl','wt','gear','vs'))
+#' rm_uvsum(data=pembrolizumab,
+#' response='cbr',covs=c('age','sex','l_size','baseline_ctdna'))
+#' plotuv(data=pembrolizumab,  response='cbr',
+#' covs=c('age','sex','l_size','baseline_ctdna'),showN=TRUE)
 #' @seealso \code{\link{ggplot}} and \code{\link{ggarrange}}
 plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,response_title=NULL,return_plotlist=FALSE,ncol=2,p_margins=c(0,0.2,1,.2)){
   
@@ -2081,82 +2151,118 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
                                                nrow=ceiling(length(plist)/ncol)))
   }}
 
+
 #' Plot KM and CIF curves with ggplot
 #'
-#'This function will plot a KM or CIF curve with option to add the number at risk. You can specify if you want
-#'confidence bands, the hazard ratio, and pvalues, as well as the units of time used.
-#'
-#'
+#' This function will plot a KM or CIF curve with option to add the number at
+#' risk. You can specify if you want confidence bands, the hazard ratio, and
+#' pvalues, as well as the units of time used.
 #'
 #' @param response character vector with names of columns to use for response
 #' @param cov String specifying the column name of stratification variable
 #' @param data dataframe containing your data
-#' @param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type.
-#'Options include "KM", and ,"CIF"
-
-#' @param pval boolean to specify if you want p-values in the plot (Log Rank test for KM and Gray's test for CIF)
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options
+#'   include "KM", and ,"CIF"
+#'
+#' @param pval boolean to specify if you want p-values in the plot (Log Rank
+#'   test for KM and Gray's test for CIF)
 #' @param HR boolean to specify if you want hazard ratios included in the plot
 #' @param HR_pval boolean to specify if you want HR p-values in the plot
 #' @param conf.curves boolean to specify if you want confidence interval bands
-#' @param conf.type One of "none"(the default), "plain", "log" , "log-log" or "logit". Only enough of the string to uniquely identify it is necessary. The first option causes confidence intervals not to be generated. The second causes the standard intervals curve +- k *se(curve), where k is determined from conf.int. The log option calculates intervals based on the cumulative hazard or log(survival). The log-log option bases the intervals on the log hazard or log(-log(survival)), and the logit option on log(survival/(1-survival)).
+#' @param conf.type One of "none"(the default), "plain", "log" , "log-log" or
+#'   "logit". Only enough of the string to uniquely identify it is necessary.
+#'   The first option causes confidence intervals not to be generated. The
+#'   second causes the standard intervals curve +- k *se(curve), where k is
+#'   determined from conf.int. The log option calculates intervals based on the
+#'   cumulative hazard or log(survival). The log-log option bases the intervals
+#'   on the log hazard or log(-log(survival)), and the logit option on
+#'   log(survival/(1-survival)).
 #' @param table Logical value. If TRUE, includes the number at risk table
 #' @param times Numeric vector of times for the x-axis
 #' @param xlab String corresponding to xlabel. By default is "Time"
-#' @param ylab String corresponding to ylabel. When NULL uses "Survival probability" for KM cuves, and "Probability of an event" for CIF
-#' @param main String corresponding to main title. When NULL uses Kaplan-Meier Plot s, and "Cumulative Incidence Plot for CIF"
-
-#' @param stratalabs string corresponding to the labels of the covariate, when NULL will use the levels of the covariate
+#' @param ylab String corresponding to ylabel. When NULL uses "Survival
+#'   probability" for KM cuves, and "Probability of an event" for CIF
+#' @param main String corresponding to main title. When NULL uses Kaplan-Meier
+#'   Plot s, and "Cumulative Incidence Plot for CIF"
+#'
+#' @param stratalabs string corresponding to the labels of the covariate, when
+#'   NULL will use the levels of the covariate
 #' @param strataname String of the covariate name default is  nicename(cov)
-#' @param stratalabs.table String corresponding to the levels of the covariate for the number at risk table, when NULL will use the levels of the covariate. Can use a string of "-" when the labels are long
-#' @param strataname.table String of the covariate name for the number at risk table default is  nicename(cov)
-
-#' @param median.text boolean to specify if you want the median values added to the legend (or as added text if there are no covariates), for KM only
-#' @param median.lines boolean to specify if you want the median values added as lines to the plot, for KM only
-#' @param median.CI boolean to specify if you want the 95\% confidence interval with the median text (Only for KM)
-#' @param set.time.text string for the text to add survival at a specified time (eg. year OS)
-#' @param set.time.line boolean to specify if you want the survival added as lines to the plot at a specified point
-#' @param set.time Numeric values of the specific time of interest, default is 5 (Multiple values can be entered)
-#' @param set.time.CI boolean to specify if you want the 95\% confidence interval with the set time text
-
-
-
-#' @param censor.marks logical value. If TRUE, includes censor marks (only for KM curves)
+#' @param stratalabs.table String corresponding to the levels of the covariate
+#'   for the number at risk table, when NULL will use the levels of the
+#'   covariate. Can use a string of "-" when the labels are long
+#' @param strataname.table String of the covariate name for the number at risk
+#'   table default is  nicename(cov
+#'
+#' @param median.text boolean to specify if you want the median values added to
+#'   the legend (or as added text if there are no covariates), for KM only
+#' @param median.lines boolean to specify if you want the median values added as
+#'   lines to the plot, for KM only
+#' @param median.CI boolean to specify if you want the 95\% confidence interval
+#'   with the median text (Only for KM)
+#' @param set.time.text string for the text to add survival at a specified time
+#'   (eg. year OS)
+#' @param set.time.line boolean to specify if you want the survival added as
+#'   lines to the plot at a specified point
+#' @param set.time Numeric values of the specific time of interest, default is 5
+#'   (Multiple values can be entered)
+#' @param set.time.CI boolean to specify if you want the 95\% confidence
+#'   interval with the set time text
+#'
+#' @param censor.marks logical value. If TRUE, includes censor marks (only for
+#'   KM curves)
 #' @param censor.size size of censor marks, default is 3
 #' @param censor.stroke stroke of censor marks, default is 1.5
 #' @param fsize font size
 #' @param nsize font size for numbers in the numbers at risk table
 #' @param lsize line size
 #' @param psize size of the pvalue
-#' @param median.size size of the median text (Only when there are no covariates)
-#' @param median.pos vector of length 2 corresponding to the median position (Only when there are no covariates)
+#' @param median.size size of the median text (Only when there are no
+#'   covariates)
+#' @param median.pos vector of length 2 corresponding to the median position
+#'   (Only when there are no covariates)
 #' @param median.lsize line size of the median lines
-#' @param set.size size of the survival at a set time text (Only when there are no covariates)
-#' @param set.pos  vector of length 2 corresponding to the survival at a set point position (Only when there are no covariates)
+#' @param set.size size of the survival at a set time text (Only when there are
+#'   no covariates)
+#' @param set.pos  vector of length 2 corresponding to the survival at a set
+#'   point position (Only when there are no covariates)
 #' @param set.lsize line size of the survival at set points
-#' @param ylim vector of length 2 corresponding to limits of y-axis. Default to NULL
+#' @param ylim vector of length 2 corresponding to limits of y-axis. Default to
+#'   NULL
 #' @param col vector of colours
 #' @param linetype vector of line types
-#' @param xlim  vector of length 2 corresponding to limits of x-axis. Default to NULL
-#' @param legend.pos Can be either a string corresponding to the legend position ("left","top", "right", "bottom", "none") or a vector of length 2 corresponding to the legend position (uses normalized units (ie the c(0.5,0.5) is the middle of the plot))
+#' @param xlim  vector of length 2 corresponding to limits of x-axis. Default to
+#'   NULL
+#' @param legend.pos Can be either a string corresponding to the legend position
+#'   ("left","top", "right", "bottom", "none") or a vector of length 2
+#'   corresponding to the legend position (uses normalized units (ie the
+#'   c(0.5,0.5) is the middle of the plot))
 #' @param pval.pos  vector of length 2 corresponding to the p-value position
 #' @param plot.event  Which event(s) to plot (1,2, or c(1,2))
-#' @param event String specifying if the event should be mapped to the colour, or linetype when plotting both events to colour = "col", line type
+#' @param event String specifying if the event should be mapped to the colour,
+#'   or linetype when plotting both events to colour = "col", line type
 #' @param flip.CIF boolean to flip the CIF curve to start at 1
-#' @param cut numeric value indicating where to divide a continuous covariate (default is the median)
+#' @param cut numeric value indicating where to divide a continuous covariate
+#'   (default is the median)
 #' @param eventlabs String corresponding to the event type names
 #' @param event.name String corresponding to the label of the event types
 #' @param Numbers_at_risk_text String for the label of the number at risk
 #' @param HR.digits Number of digits printed of the  hazard ratio
 #' @param HR.pval.digits Number of digits printed of the hazard ratio pvalue
 #' @param pval.digits Number of digits printed of the Gray's/log rank pvalue
-
+#'
 #' @param median.digits Number of digits printed of the median pvalue
-#' @param set.time.digits Number of digits printed of the probability at a specified time
-#' @param print.n.missing Logical, should the number of missing be shown !Needs to be checked
+#' @param set.time.digits Number of digits printed of the probability at a
+#'   specified time
+#' @param print.n.missing Logical, should the number of missing be shown !Needs
+#'   to be checked
 #' @param returns Logical value returns a list with all ggplot objects in a list
-#' @importFrom survival survfit
+#' @importFrom survival survfit survdiff 
+#' @importFrom ggplot2 ggplot 
 #' @importFrom gridExtra grid.arrange
-#'@export
+#' @export
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=FALSE,HR_pval=FALSE,conf.curves=FALSE,conf.type = "log",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
                     main = NULL,stratalabs = NULL,strataname = nicename(cov),
@@ -2669,7 +2775,7 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
   
   # Log rank p-val ----------------------------------------------------------
   if(pval & type=="KM" & multiple_lines) {
-    sdiff <- survdiff(eval(sfit$call$formula), data = eval(sfit$call$data))
+    sdiff <- survival::survdiff(eval(sfit$call$formula), data = eval(sfit$call$data))
     pval <- pchisq(sdiff$chisq, length(sdiff$n)-1, lower.tail = FALSE)
     pvaltxt <- lpvalue2(pval,pval.digits)
     pvaltxt <- paste(pvaltxt,"(Log Rank)")
@@ -2876,13 +2982,13 @@ ggkmcif <- function(response,cov=NULL,data,type=NULL,
 
 
 #' Plot KM and CIF curves with ggplot
-#'
-#'This function put together a survival curve, and a number at risk table
-#'
-#'
-#'
+#' 
+#' This function put together a survival curve, and a number at risk table
+#' 
+#' 
+#' 
 #' @param list_gg list containing the results of ggkmcif
-#'@export
+#' @export
 modify_ggkmcif <- function(list_gg){
   gA <- ggplotGrob(list_gg[[1]])
   gB <- ggplotGrob(list_gg[[2]])
@@ -2900,25 +3006,28 @@ modify_ggkmcif <- function(list_gg){
 
 # Rmarkdown Reporting --------------------------------------------------------------
 
-
 #' Print tables to PDF/Latex HTML or Word
 #'
-#' Output the table nicely to whatever format is appropriate. 
-#' This is the output function used by the rm_* printing functions.
-#' 
-#' Entire rows can be bolded, and the first column can be indented. Currently 
+#' Output the table nicely to whatever format is appropriate. This is the output
+#' function used by the rm_* printing functions.
+#'
+#' Entire rows can be bolded, and the first column can be indented. Currently
 #' there is no support for cell-specific formatting. By default, underscores in
 #' column names are converted to spaces. To disable this set rm_ to FALSE
+#'
 #' @param tab a table to format
-#' @param to_indent numeric vector the length of nrow(tab) indicating which rows to indent
-#' @param to_bold numeric vector the length of nrow(tab) indicating which rows to bold
+#' @param to_indent numeric vector the length of nrow(tab) indicating which rows
+#'   to indent
+#' @param to_bold numeric vector the length of nrow(tab) indicating which rows
+#'   to bold
 #' @param caption table caption
-#' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
-#' @param align string specifying column alignment, defaults to left alignment of the first column and right alignment of all other columns
+#' @param digits number of digits to round numeric columns to, wither a single
+#'   number or a vector corresponding to the number of numeric columns
+#' @param align string specifying column alignment, defaults to left alignment
+#'   of the first column and right alignment of all other columns
 #' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
-#' 
 outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
   
   # strip tibble aspects
@@ -3024,36 +3133,44 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
   }
 }
 
-#' Combine two table columns into a single column with levels of one nested within levels of the other.
-#' 
-#' This function accepts a data frame (via the data argument) and combines two columns into
-#' a single column with values from the head_col serving as headers and values of the to_col displayed
-#' underneath each header. The resulting table is then passed to outTable for printing and output, to use the 
-#' grouped table as a data frame specify tableOnly=TRUE.
-#' By default the headers will be bolded and the remaining values indented. 
-#' Note that it is possible to combine multiple tables (more than two) with this function.
-#' 
+#' Combine two table columns into a single column with levels of one nested
+#' within levels of the other.
+#'
+#' This function accepts a data frame (via the data argument) and combines two
+#' columns into a single column with values from the head_col serving as headers
+#' and values of the to_col displayed underneath each header. The resulting
+#' table is then passed to outTable for printing and output, to use the grouped
+#' table as a data frame specify tableOnly=TRUE. By default the headers will be
+#' bolded and the remaining values indented.
+#'
+#' Note that it is possible to combine multiple tables (more than two) with this
+#' function.
+#'
 #' @param data dataframe
 #' @param head_col character value specifying the column name with the headers
-#' @param to_col character value specifying the column name to add the headers into
+#' @param to_col character value specifying the column name to add the headers
+#'   into
 #' @param caption table caption
 #' @param indent Boolean should the original values in the to_col be indented
 #' @param boldheaders Boolean should the header column values be bolded
 #' @param hdr_prefix character value that will prefix headers
 #' @param hdr_suffix character value that will suffix headers
-#' @param digits number of digits to round numeric columns to, wither a single number or a vector corresponding to the number of numeric columns
-#' @param tableOnly boolean indicating if the table should be formatted for printing or returned as a data frame
+#' @param digits number of digits to round numeric columns to, wither a single
+#'   number or a vector corresponding to the number of numeric columns
+#' @param tableOnly boolean indicating if the table should be formatted for
+#'   printing or returned as a data frame
 #' @export
-#' @examples 
-#' ## Create models to predict mileage and horsepower and show the outputs together
-#' # fit1 <- lm(mpg~cyl+disp+wt,data=mtcars)
-#' # m1 <- rm_mvsum(fit1,tableOnly=T)
-#' # m1$Response = 'mileage'
-#' # fit2 <- lm(hp~cyl+disp+wt,data=mtcars)
-#' # m2 <- rm_mvsum(fit2,tableOnly=T)
-#' # m2$Response = 'horsepower'
-#' # rbind(m1,m2)
-#' # nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
+#' @examples
+#' ## Investigate models to predict baseline ctDNA and tumour size and display together
+#' ## (not clinically useful!)
+#' fit1 <- lm(baseline_ctdna~age+l_size+pdl1,data=pembrolizumab)
+#' m1 <- rm_mvsum(fit1,tableOnly=TRUE)
+#' m1$Response = 'ctDNA'
+#' fit2 <- lm(l_size~age+baseline_ctdna+pdl1,data=pembrolizumab)
+#' m2 <- rm_mvsum(fit2,tableOnly=TRUE)
+#' m2$Response = 'Tumour Size'
+#' rbind(m1,m2)
+#' nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
 nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
   
   # strip any grouped data or tibble properties
@@ -3107,57 +3224,77 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
   outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
 }
 
-#' Outputs a descriptive covariate table 
+#' Outputs a descriptive covariate table
 #'
-#' Returns a data frame corresponding to a descriptive table. 
-#' This is a wrapper function around covsum for use in Rmarkdown documents
+#' Returns a data frame corresponding to a descriptive table.
 #'
-#'Comparisons for categorical variables default to chi-square tests, but if there are counts of <5 then the Fisher Exact 
-#'test will be used and if this is unsuccessful then a second attempt will be made computing p-values using MC simulation. 
-#'If testcont='ANOVA' then the t-test with unequal variance will be used for two groups and an ANOVA will be used for three or more.
-#'The statistical test used can be displayed by specifying show.tests=TRUE.
+#' Comparisons for categorical variables default to chi-square tests, but if
+#' there are counts of <5 then the Fisher Exact test will be used and if this is
+#' unsuccessful then a second attempt will be made computing p-values using MC
+#' simulation. If testcont='ANOVA' then the t-test with unequal variance will be
+#' used for two groups and an ANOVA will be used for three or more. The
+#' statistical test used can be displayed by specifying show.tests=TRUE.
 #'
-#'Further formatting options are available using tableOnly=TRUE and outputting the table with a call to outTable. 
+#' Further formatting options are available using tableOnly=TRUE and outputting
+#' the table with a call to outTable.
 #'
-#'@param data dataframe containing data
-#'@param covs character vector with the names of columns to include in table
-#'@param maincov covariate to stratify table by
-#'@param caption character containing table caption. If caption = NULL then 
-#'notes about unstable estimates and p-value adjustments will be added to the
-#'caption. To suppress the caption completely set caption='none'.
-#'@param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a 
-#'formatted printed object is returned (default).
-#'@param covTitle character with the names of the covariate column
-#'@param digits number of digits for summarizing mean data
-#'@param digits.cat number of digits for the proportions when summarizing categorical data (default: 0)
-#'@param nicenames booling indicating if you want to replace . and _ in strings with a space
-#'@param IQR boolean indicating if you want to display the inter quantile range (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
-#'@param all.stats boolean indicating if all summary statistics (Q1,Q3 + min,max on a separate line) should be displayed. Overrides IQR.
-#'@param pvalue boolean indicating if you want p-values included in the table
-#'@param show.tests boolean indicating if the type of statistical used should be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
-#'@param testcont test of choice for continuous variables,one of \emph{rank-sum} (default) or \emph{ANOVA}
-#'@param testcat test of choice for categorical variables,one of \emph{Chi-squared} (default) or \emph{Fisher}
-#'@param full boolean indicating if you want the full sample included in the table, ignored if maincov is NULL
-#'@param include_missing Option to include NA values of maincov. NAs will not be included in statistical tests
-#'@param percentage choice of how percentages are presented ,one of \emph{column} (default) or \emph{row}
-#'@param excludeLevels a named list of covariate levels to exclude from statistical tests in the form list(varname =c('level1','level2')). These levels will be excluded from association tests, but not the table. This can be useful for levels where there is a logical skip (ie not missing, but not presented). Ignored if pvalue=FALSE.
-#'@param numobs named list overriding the number of people you expect to have the covariate
-#'@param chunk_label only used if output is to Word to allow cross-referencing
-#'@param markup boolean indicating if you want latex markup
-#'@param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#'@keywords dataframe
-#'@return A formatted table displaying a summary of the covariates stratified by maincov
-#'@export
-#'@seealso \code{\link{fisher.test}}, \code{\link{chisq.test}}, \code{\link{wilcox.test}}, \code{\link{kruskal.test}},  \code{\link{anova}}, and \code{\link{outTable}}
+#' @param data dataframe containing data
+#' @param covs character vector with the names of columns to include in table
+#' @param maincov covariate to stratify table by
+#' @param caption character containing table caption. If caption = NULL then
+#'   notes about unstable estimates and p-value adjustments will be added to the
+#'   caption. To suppress the caption completely set caption='none'.
+#' @param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a
+#'   formatted printed object is returned (default).
+#' @param covTitle character with the names of the covariate column
+#' @param digits number of digits for summarizing mean data
+#' @param digits.cat number of digits for the proportions when summarizing
+#'   categorical data (default: 0)
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param IQR boolean indicating if you want to display the inter quantile range
+#'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
+#' @param all.stats boolean indicating if all summary statistics (Q1,Q3 +
+#'   min,max on a separate line) should be displayed. Overrides IQR.
+#' @param pvalue boolean indicating if you want p-values included in the table
+#' @param show.tests boolean indicating if the type of statistical used should
+#'   be shown in a column beside the pvalues. Ignored if pvalue=FALSE.
+#' @param testcont test of choice for continuous variables,one of
+#'   \emph{rank-sum} (default) or \emph{ANOVA}
+#' @param testcat test of choice for categorical variables,one of
+#'   \emph{Chi-squared} (default) or \emph{Fisher}
+#' @param full boolean indicating if you want the full sample included in the
+#'   table, ignored if maincov is NULL
+#' @param include_missing Option to include NA values of maincov. NAs will not
+#'   be included in statistical tests
+#' @param percentage choice of how percentages are presented ,one of
+#'   \emph{column} (default) or \emph{row}
+#' @param excludeLevels a named list of covariate levels to exclude from
+#'   statistical tests in the form list(varname =c('level1','level2')). These
+#'   levels will be excluded from association tests, but not the table. This can
+#'   be useful for levels where there is a logical skip (ie not missing, but not
+#'   presented). Ignored if pvalue=FALSE.
+#' @param numobs named list overriding the number of people you expect to have
+#'   the covariate
+#' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @param markup boolean indicating if you want latex markup
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @keywords dataframe
+#' @return A formatted table displaying a summary of the covariates stratified
+#'   by maincov
+#' @export
+#' @seealso \code{\link{fisher.test}}, \code{\link{chisq.test}},
+#'   \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
+#'   and \code{\link{outTable}}
 #' @examples
-#' rm_covsum(data=mtcars,maincov = 'Gears',
-#' covs=c('mpg','Cylinders','qsec'),show.tests=T)
-#' 
+#' rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
+#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
+#'
 #' # To make custom changes or change the fontsize in PDF/HTML
-#' tab <- rm_covsum(data=mtcars,maincov = 'Gears',
-#' covs=c('mpg','Cylinders','qsec'),show.tests=T,tableOnly = T)
+#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
+#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 #' outTable(tab, fontsize=7)
-#' 
 rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
                       digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
                       testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
@@ -3197,34 +3334,47 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 }
 
 #' Output several univariate models nicely in a single table
-#' 
+#'
 #' Wrapper for the uvsum function for use with Rmarkdown.
 #'
 #' @param response string vector with name of response
-#' @param covs character vector with the names of columns to fit univariate models to
+#' @param covs character vector with the names of columns to fit univariate
+#'   models to
 #' @param data dataframe containing data
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
-#' @param removeInf boolean indicating if infinite estimates should be removed from the table
+#' @param removeInf boolean indicating if infinite estimates should be removed
+#'   from the table
 #' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @param id character vector which identifies clusters. Only used for geeglm
-#' @param corstr character string specifying the correlation structure. Only used for geeglm. The following are permitted: '"independence"', '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
-#' @param family description of the error distribution and link function to be used in the model. Only used for geeglm
-#' @param type string indicating he type of univariate model to fit. The function will try and guess what type you want based on your response. If you want to override this you can manually specify the type. Options include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
-#' @param strata character vector of covariates to stratify by. Only used for coxph and crr
+#' @param corstr character string specifying the correlation structure. Only
+#'   used for geeglm. The following are permitted: '"independence"',
+#'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
+#' @param family description of the error distribution and link function to be
+#'   used in the model. Only used for geeglm
+#' @param type string indicating he type of univariate model to fit. The
+#'   function will try and guess what type you want based on your response. If
+#'   you want to override this you can manually specify the type. Options
+#'   include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
+#' @param strata character vector of covariates to stratify by. Only used for
+#'   coxph and crr
 #' @param markup boolean indicating if you want latex markup
-#' @param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings with a space
-#' @param testing boolean to indicate if you want to print out the covariates before the model fits.
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
+#' @param testing boolean to indicate if you want to print out the covariates
+#'   before the model fits.
 #' @param showN boolean indicating if you want to show sample sizes
 #' @param CIwidth width of confidence interval, default is 0.95
-#' @param reflevel manual specification of the reference level. Only used for ordinal This will allow you to see which model is not fitting if the function throws an error
-#' @export 
-#' @examples 
-#' rm_uvsum(response = 'Status',
-#' covs=c('wt.loss','Sex','ph.ecog','meal.cal','age'),data=lung,CIwidth=.9)
-
+#' @param reflevel manual specification of the reference level. Only used for
+#'   ordinal This will allow you to see which model is not fitting if the
+#'   function throws an error
+#' @export
+#' @examples
+#' rm_uvsum(response = 'change_ctdna_group',
+#' covs=c('age','sex','baseline_ctdna','l_size'),data=pembrolizumab,CIwidth=.9)
 rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,markup = T,sanitize = T,
                      nicenames = T,testing = F,showN = T,CIwidth = 0.95,reflevel){
   
@@ -3293,23 +3443,25 @@ rm_uvsum <- function(response, covs , data ,caption=NULL,tableOnly=FALSE,removeI
 
 #' Format a regression model nicely for Rmarkdown
 #' 
-#' This is a wrapper around mvsum for use with Rmarkdown
-#'
 #' @param model model fit
 #' @param data data that model was fit on (an attempt will be made to extract
-#' this from the model)
-#' @param showN boolean indicating sample sizes should be shown for each comparison, can be useful for interactions
+#'   this from the model)
+#' @param showN boolean indicating sample sizes should be shown for each
+#'   comparison, can be useful for interactions
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param p.adjust p-adjustments to be performed (Global p-values only)
 #' @param chunk_label only used if output is to Word to allow cross-referencing
 #' @param markup boolean indicating if you want latex markup
-#' @param sanitize boolean indicating if you want to sanitize all strings to not break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings with a space
+#' @param sanitize boolean indicating if you want to sanitize all strings to not
+#'   break LaTeX
+#' @param nicenames booling indicating if you want to replace . and _ in strings
+#'   with a space
 #' @export
 #' @examples
-#' glm_fit = glm(Status~Sex:age+wt.loss,data=lung,family = 'binomial')
+#' glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
+#' data=pembrolizumab,family = 'binomial')
 #' rm_mvsum(glm_fit)
 rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
   
@@ -3359,18 +3511,17 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
 #' lap between the uvsum and mvsum tables and all variables in the mvsum table
 #' must also appear in the uvsum table.
 #' 
-#'
-#' @param uvsumTable Output from rm_uvsum, with tableOnly=T 
-#' @param mvsumTable  Output from rm_mvsum. with tableOnly=T
+#' 
+#' @param uvsumTable Output from rm_uvsum, with tableOnly=TRUE 
+#' @param mvsumTable  Output from rm_mvsum, with tableOnly=TRUE
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param chunk_label only used if output is to Word to allow cross-referencing
-#' @param id character vector which identifies clusters. Only used for geeglm
 #' @export
-rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label){ 
+rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=FALSE,chunk_label){ 
   # Check that tables are data frames and not kable objects
-  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
-  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=T?')
+  if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
+  if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
   # Check that the first columns have the same name
   if (names(uvsumTable)[1] != names(mvsumTable)[1]) stop('The covariate columns must have the same name in both tables')
   # Check that there is overlap between the variables
@@ -3414,23 +3565,21 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=F,chunk_label)
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
 
-#'Print Event time summary
-#'
-#'Wrapper for the etsum function that prints paragraphs of text in R Markdown
-#'
-#'@param data data frame containing data
-#'@param response character vector with names of columns to use for response
-#'@param group string specifying the column name of stratification variable
-#'@param times numeric vector of times you want survival time probabilities for.
-#'@param units string indicating the unit of time. Use lower case and plural.
-#'@keywords print
-#'@export
-#'@examples
-#'require(survival)
-#'cancer$sex<-factor(cancer$sex)
-#'rm_etsum(cancer,c("time","status"),"sex")
-#'rm_etsum(cancer,c("time","status"))
-#'rm_etsum(cancer,c("time","status"),"sex",c(1,2,3),"months")
+#' Print Event time summary
+#' 
+#' Wrapper for the etsum function that prints paragraphs of text in R Markdown
+#' 
+#' @param data data frame containing data
+#' @param response character vector with names of columns to use for response
+#' @param group string specifying the column name of stratification variable
+#' @param times numeric vector of times you want survival time probabilities for.
+#' @param units string indicating the unit of time. Use lower case and plural.
+#' @keywords print
+#' @export
+#' @examples
+#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
+#' rm_etsum(pembrolizumab,c("os_time","os_status"))
+#' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
 rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   

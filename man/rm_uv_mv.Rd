@@ -4,20 +4,24 @@
 \alias{rm_uv_mv}
 \title{Combine univariate and multivariable regression tables}
 \usage{
-rm_uv_mv(uvsumTable, mvsumTable, caption = NULL, tableOnly = F, chunk_label)
+rm_uv_mv(
+  uvsumTable,
+  mvsumTable,
+  caption = NULL,
+  tableOnly = FALSE,
+  chunk_label
+)
 }
 \arguments{
-\item{uvsumTable}{Output from rm_uvsum, with tableOnly=T}
+\item{uvsumTable}{Output from rm_uvsum, with tableOnly=TRUE}
 
-\item{mvsumTable}{Output from rm_mvsum. with tableOnly=T}
+\item{mvsumTable}{Output from rm_mvsum, with tableOnly=TRUE}
 
 \item{caption}{table caption}
 
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
-
-\item{id}{character vector which identifies clusters. Only used for geeglm}
 }
 \description{
 This function will combine rm_uvsum and rm_mvsum outputs into a single table
