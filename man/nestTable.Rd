@@ -9,6 +9,7 @@ nestTable(
   data,
   head_col,
   to_col,
+  colHeader = "",
   caption = NULL,
   indent = TRUE,
   boldheaders = TRUE,
@@ -25,6 +26,10 @@ nestTable(
 
 \item{to_col}{character value specifying the column name to add the headers
 into}
+
+\item{colHeader}{character with the desired name of the first column.
+The default is to leave this empty for output or, for table only output to
+use the column name 'col1'.}
 
 \item{caption}{table caption}
 

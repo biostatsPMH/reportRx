@@ -150,7 +150,8 @@ This function will accept a log or logistic regression fit from glm, and
 display the OR or RR for each variable on the appropriate log scale.
 }
 \examples{
-glm_fit = glm(change_ctdna_group~sex+age+baseline_ctdna+l_size, data=pembrolizumab,family = 'binomial')
+glm_fit = glm(orr~change_ctdna_group+sex+age+l_size, 
+data=pembrolizumab,family = 'binomial')
 forestplot2(glm_fit)
 }
 \keyword{plot}

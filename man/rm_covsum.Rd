@@ -10,7 +10,7 @@ rm_covsum(
   maincov = NULL,
   caption = NULL,
   tableOnly = FALSE,
-  covTitle = "Covariate",
+  covTitle = "",
   digits = 1,
   digits.cat = 0,
   nicenames = TRUE,
@@ -37,14 +37,14 @@ rm_covsum(
 
 \item{maincov}{covariate to stratify table by}
 
-\item{caption}{character containing table caption. If caption = NULL then
-notes about unstable estimates and p-value adjustments will be added to the
-caption. To suppress the caption completely set caption='none'.}
+\item{caption}{character containing table caption (default is no caption)}
 
 \item{tableOnly}{Logical, if TRUE then a dataframe is returned, otherwise a
 formatted printed object is returned (default).}
 
-\item{covTitle}{character with the names of the covariate column}
+\item{covTitle}{character with the names of the covariate (predictor) column.
+The default is to leave this empty for output or, for table only output to
+use the column name 'Covariate'.}
 
 \item{digits}{number of digits for summarizing mean data}
 
@@ -115,11 +115,12 @@ Further formatting options are available using tableOnly=TRUE and outputting
 the table with a call to outTable.
 }
 \examples{
-rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
-covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
+rm_covsum(data=pembrolizumab, maincov = 'orr',
+covs=c('age','sex','pdl1','tmb','l_size','change_ctdna_group'),
+show.tests=TRUE)
 
 # To make custom changes or change the fontsize in PDF/HTML
-tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
+tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group',
 covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 outTable(tab, fontsize=7)
 }

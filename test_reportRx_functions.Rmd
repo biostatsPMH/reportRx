@@ -2,11 +2,11 @@
 title: "reportRx TestFile"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  bookdown::pdf_document2:
-    latex_engine: xelatex
   bookdown::word_document2:
     reference_docx: 'wordTemplate.docx'
     toc: yes
+  bookdown::pdf_document2:
+    latex_engine: xelatex
 sansfont: Calibri Light
 mainfont: Calibri Light
 bibliography:
@@ -62,6 +62,7 @@ test_data = tibble(
 ```{r test-covsum-1}
 rm_covsum(data=lung,
           covs=c('Status','Sex','age','AgeGroup','meal.cal','OneLevelFactor'),
+          digits = 2,digits.cat = 2,
           caption='Test Special characters in caption 80% $100.')
 
 ```
@@ -69,7 +70,10 @@ rm_covsum(data=lung,
 ```{r test-covsum-2}
 rm_covsum(data=lung,
           covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
-          maincov = 'Sex')
+          maincov = 'Sex',nicenames=F)
+tab <- covsum(data=lung,
+          covs=c('Status','age','AgeGroup','meal.cal','OneLevelFactor'),
+          maincov = 'Sex',nicenames=F,sanitize = F,markup=F)
 ```
 
 \newpage
@@ -180,6 +184,8 @@ rm_uvsum(response = 'Status',
          covs=c('age','Sex','wt.loss'),
          data=lung,
          digits=3,
+         covTitle = 'Predictor',
+         nicenames = F,
          type='logistic',
          chunk_label = 'test-uv-logistic-1' )
 
@@ -211,6 +217,8 @@ rm_uvsum(response = 'wt.loss',
          covs=c('Status','Sex','ph.ecog','meal.cal','age'),
          data=lung,
          CIwidth=.95)
+
+
 # rm_uvsum(response = 'wt.loss',
 #          covs=c('age'),
 #          data=lung,
@@ -223,7 +231,12 @@ rm_uvsum(response = 'wt.loss',
 rm_uvsum(response = c('time','status'),
          covs=c('Sex','ph.ecog','meal.cal','age'),
          data=lung,
-         CIwidth=.99)
+         CIwidth=.99,nicenames = F)
+
+uvsum(response = c('time','status'),
+         covs=c('Sex','ph.ecog','meal.cal','age'),
+         data=lung,
+         CIwidth=.99,nicenames = F,markup = FALSE,sanitize=FALSE)
 
 ```
 
@@ -277,7 +290,7 @@ rm_uvsum(response = 'weight',
          id='Rat',
          corstr="ar1",
          family=gaussian("identity"),
-         data=BodyWeight,showN=T)
+         data=BodyWeight,showN=T,nicenames = TRUE)
 
 ```
 
@@ -352,10 +365,14 @@ m = glm(Status~wt.loss+Sex+AgeGroup,
         data=lung,
         family='binomial')
 rm_mvsum(model=m,data = lung,p.adjust='holm',showN=T)
-rm_mvsum(model=m,p.adjust='holm',showN=T)
 
 fit_lm = lm(wt.loss~age+Sex,data=lung)
 rm_mvsum(model=fit_lm,showN=T)
+
+call <- as.character(m$call)
+f <- call[grep('~',call)]
+response <-trimws(gsub('~.*','',f))
+response
 
 ```
 
@@ -377,6 +394,8 @@ m = glm(wt.loss~Sex+age,
         family='gaussian')
 #summary(m)
 rm_mvsum(model=m,data = lung)
+
+
 ```
 
 ### Test with lm
@@ -385,6 +404,7 @@ rm_mvsum(model=m,data = lung)
 m = lm(wt.loss~Status+Sex+age,
        data=lung)
 rm_mvsum(model=m,data = lung,p.adjust='hochberg')
+
 
 ```
 
@@ -400,8 +420,6 @@ rm_mvsum(model=fm1BW.lme,data=BodyWeight)
 rm_mvsum(fm1BW.lme,showN = T)
 
 
-
-
 ```
 
 ### Test with polr
@@ -415,6 +433,16 @@ house.plr <- MASS::polr(Sat ~ Infl + Type + Cont, weights = Freq, data = housing
 #summary(house.plr)
 rm_mvsum(model=house.plr)
 rm_mvsum(model=house.plr,showN=T)
+
+```
+
+### Test cohph
+
+```{r}
+surv_fit <- survival::coxph(Surv(os_time,os_status)~age+sex+baseline_ctdna+l_size+change_ctdna_group,
+data=pembrolizumab)
+rm_mvsum(surv_fit,tableOnly = T)
+model=surv_fit
 
 
 ```
@@ -461,16 +489,15 @@ fm1BW.lme <- lme(weight ~ Time * Diet, BodyWeight,random = ~ Time)
 gee1 <- geeglm(weight ~ Time+Diet , data=BodyWeight, id=Rat, family=gaussian("identity"), corstr="ar1")
 summary(gee1)
 rm_mvsum(gee1,data=BodyWeight,showN=T)
-
 ```
 
 ## TO DO fix- bug
 ```{r, eval=F,echo=T}
 library(geepack)
 data(dietox)
-dietox$Cu     <- as.factor(dietox$Cu)
+dietox$Cu <- as.factor(dietox$Cu)
 mf <- formula(Weight ~ Cu * (Time + I(Time^2) + I(Time^3)))
-gee1 <- geeglm(mf, data=dietox, id=Pig, family=poisson("identity"), corstr="ar1")
+gee1 <- geeglm(mf, data=dietox, id=Pig, family=gaussian("identity"), corstr="ar1")
 summary(gee1)
 mvsum(gee1,data=dietox)
 
@@ -519,6 +546,22 @@ mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
 rm_uv_mv(uvsumTable,mvsumTable)
 ```
 
+```{r}
+# Bug Test
+
+uvsumTable  <- rm_uvsum(response = 'Status',
+         covs=c('Sex','wt.loss','AgeGroup'),
+         data=lung,
+         CIwidth=.95,
+         tableOnly = T)
+
+m <- glm(Status~Sex+wt.loss+AgeGroup,data=lung,family='binomial')
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+
+```
+
 \newpage
 
 ## Combining Tables with nestTable
@@ -540,8 +583,6 @@ tab2$Model = 'Model 2'
 newtab <- rbind(tab1,tab2)
 nestTable(data=newtab[,c(5,1,2,6,3,4)],
           head_col = 'Model',to_col = 'Covariate')
-
-
 
 ```
 
@@ -613,42 +654,7 @@ RxFuns %>% write.csv('../reportRxFunctionList.csv')
 
 # Appendix
 
-## Comparing p-values
-
-P-values agree between 
 
 ```{r}
-lung$ECOG <- as.factor(lung$ph.ecog)
-rm_uvsum(response = 'wt.loss',
-         covs=c('status','Status','sex','Sex','ph.ecog','ECOG'),
-         data=lung,
-         CIwidth=.95)
-```
-
-With lm:
-
-```{r}
-l1 <- lm(wt.loss~Sex,data=lung)
-summary(l1)
-
-```
-
-With t-test (using the default of non-homogenous variance):
-
-```{r}
-t1 <- t.test(wt.loss~Sex,data=lung)
-t1
-t1$p.value
-
-```
-
-
-With t-test using the pooled variance:
-
-```{r}
-t2 <- t.test(wt.loss~Sex,data=lung,var.equal=T)
-t2
-t2$p.value
-
 ```
 

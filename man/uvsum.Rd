@@ -77,4 +77,8 @@ Univariate summaries for a number of covariates, the type of model can be
 specified. If unspecified the function will guess the appropriate model based
 on the response variable.
 }
+\seealso{
+\code{\link{lm}},\code{\link{glm}},\code{\link{crr}},\code{\link{coxph}},
+  \code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
+}
 \keyword{dataframe}

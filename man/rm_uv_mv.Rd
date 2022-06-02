@@ -7,6 +7,7 @@
 rm_uv_mv(
   uvsumTable,
   mvsumTable,
+  covTitle = "",
   caption = NULL,
   tableOnly = FALSE,
   chunk_label
@@ -16,6 +17,10 @@ rm_uv_mv(
 \item{uvsumTable}{Output from rm_uvsum, with tableOnly=TRUE}
 
 \item{mvsumTable}{Output from rm_mvsum, with tableOnly=TRUE}
+
+\item{covTitle}{character with the names of the covariate (predictor) column.
+The default is to leave this empty for output or, for table only output to
+use the column name 'Covariate'.}
 
 \item{caption}{table caption}
 
@@ -31,4 +36,16 @@ and will contain the same columns as the uvsum and mvsum tables, but the
 p-values will be combined into a single column. There must be variable over-
 lap between the uvsum and mvsum tables and all variables in the mvsum table
 must also appear in the uvsum table.
+}
+\examples{
+require(survival)
+uvTab <- rm_uvsum(response = c('os_time','os_status'),
+covs=c('age','sex','baseline_ctdna','l_size','change_ctdna_group'),
+data=pembrolizumab,tableOnly=TRUE)
+mv_surv_fit <- coxph(Surv(os_time,os_status)~age+sex+
+baseline_ctdna+l_size+change_ctdna_group, data=pembrolizumab)
+uvTab <- rm_mvsum(mv_surv_fit)
+}
+\seealso{
+\code{\link{rm_uvsum}},\code{\link{rm_mvsum}}
 }

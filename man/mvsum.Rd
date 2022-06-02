@@ -7,6 +7,7 @@
 mvsum(
   model,
   data,
+  digits = 2,
   showN = F,
   markup = T,
   sanitize = T,
@@ -18,6 +19,8 @@ mvsum(
 \item{model}{fitted model object}
 
 \item{data}{dataframe containing data}
+
+\item{digits}{number of digits to round to}
 
 \item{showN}{boolean indicating sample sizes should be shown for each
 comparison, can be useful for interactions}

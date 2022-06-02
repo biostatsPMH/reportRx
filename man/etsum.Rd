@@ -11,13 +11,13 @@ etsum(data, response, group = 1, times = c(12, 24))
 
 \item{response}{character vector with names of columns to use for response}
 
-\item{group}{string specifiying the column name of stratification variable}
+\item{group}{string specifying the column name of stratification variable}
 
-\item{times}{numeric vector of times you want survival time provbabilities
+\item{times}{numeric vector of times you want survival time probabilities
 for.}
 }
 \description{
-This function will output a dataframe with usefull summary statistics from a
+This function will output a dataframe with useful summary statistics from a
 coxph model
 }
 \keyword{dataframe}

@@ -9,7 +9,8 @@ rm_uvsum(
   covs,
   data,
   digits = 2,
-  caption = "none",
+  covTitle = "",
+  caption = NULL,
   tableOnly = FALSE,
   removeInf = T,
   p.adjust = "none",
@@ -36,8 +37,11 @@ models to}
 
 \item{digits}{number of digits to round to}
 
-\item{caption}{table caption. If set to NULL the function will try to provide
-an informative caption. Default is none.}
+\item{covTitle}{character with the names of the covariate (predictor) column.
+The default is to leave this empty for output or, for table only output to
+use the column name 'Covariate'.}
+
+\item{caption}{character containing table caption (default is no caption)}
 
 \item{tableOnly}{boolean indicating if unformatted table should be returned}
 
@@ -83,6 +87,14 @@ the function throws an error}
 Wrapper for the uvsum function for use with Rmarkdown.
 }
 \examples{
-rm_uvsum(response = 'change_ctdna_group',
-covs=c('age','sex','baseline_ctdna','l_size'),data=pembrolizumab,CIwidth=.9)
+# Coxph model with 90\% CI
+rm_uvsum(response = c('os_time','os_status'),
+covs=c('age','sex','baseline_ctdna','l_size','change_ctdna_group'),
+data=pembrolizumab,CIwidth=.9)
+# Linear model with default 95\% CI
+rm_uvsum(response = 'baseline_ctdna', covs=c('age','sex','l_size','pdl1','tmb'),data=pembrolizumab)
+}
+\seealso{
+\code{\link{lm}},\code{\link{glm}},\code{\link{crr}},\code{\link{coxph}},
+  \code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
 }

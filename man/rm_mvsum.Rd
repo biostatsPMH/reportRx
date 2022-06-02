@@ -7,6 +7,8 @@
 rm_mvsum(
   model,
   data,
+  digits = 2,
+  covTitle = "",
   showN = FALSE,
   CIwidth = 0.95,
   caption = NULL,
@@ -23,6 +25,12 @@ rm_mvsum(
 
 \item{data}{data that model was fit on (an attempt will be made to extract
 this from the model)}
+
+\item{digits}{number of digits to round to}
+
+\item{covTitle}{character with the names of the covariate (predictor) column.
+The default is to leave this empty for output or, for table only output to
+use the column name 'Covariate'.}
 
 \item{showN}{boolean indicating sample sizes should be shown for each
 comparison, can be useful for interactions}

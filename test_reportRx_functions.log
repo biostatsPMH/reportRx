@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2022.2.3)  31 MAY 2022 11:22
+This is XeTeX, Version 3.141592653-2.6-0.999993 (TeX Live 2021/W32TeX) (preloaded format=xelatex 2022.2.3)  31 MAY 2022 13:36
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -688,12 +688,6 @@ Package: makecell 2009/08/03 V0.1e Managing of Tab Column Heads and Cells
 LaTeX Warning: Label `tab:unnamed-chunk-4' multiply defined.
 
 
-LaTeX Warning: Label `tab:test-uv-linear' multiply defined.
-
-
-LaTeX Warning: Label `tab:test-uv-crr' multiply defined.
-
-
 LaTeX Warning: Label `tab:unnamed-chunk-11' multiply defined.
 
 )
@@ -1058,6 +1052,15 @@ File: test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf Graphic file 
 <use test_reportRx_functions_files/figure-latex/test-plotuv-1.pdf>
 File: test_reportRx_functions_files/figure-latex/test-plotuv-2-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/test-plotuv-2-1.pdf>
+
+LaTeX Warning: Reference `tab:test-uv-logistic-1' on page 10 undefined on input line 494.
+
+
+LaTeX Warning: Reference `tab:test-uv-logistic-2' on page 10 undefined on input line 494.
+
+
+LaTeX Warning: Reference `tab:test-uv-logistic-3' on page 10 undefined on input line 494.
+
 [10] [11] [12] [13]
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-6-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-6-1.pdf>
@@ -1066,7 +1069,7 @@ File: test_reportRx_functions_files/figure-latex/unnamed-chunk-7-1.pdf Graphic f
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-7-2.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-7-2.pdf>
 
-Underfull \hbox (badness 10000) in paragraph at lines 699--700
+Underfull \hbox (badness 10000) in paragraph at lines 636--637
 []
  []
 
@@ -1074,7 +1077,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 699--700
 Overfull \vbox (26.0599pt too high) has occurred while \output is active []
 
 [16]
-Overfull \hbox (1661.74498pt too wide) in paragraph at lines 717--717
+Overfull \hbox (1661.74498pt too wide) in paragraph at lines 654--654
 []\TU/lmtt/m/n/10 ##   There are 228 patients. There were 165 (72\%) events. The median and range of the follow-up times is 255.5 (5-1022) days. The KM median event time is 310 with 95\% confidence Interval (285,363). The first and last event times occurred at 5 and 883 days respectively. The 365,720 and 883 day probabilities of 'survival' and their 95\% confidence intervals are 41 (34-49),12 (8-20) and 5 (2-12) percent.[] 
  []
 
@@ -1082,29 +1085,32 @@ Overfull \hbox (1661.74498pt too wide) in paragraph at lines 717--717
 File: test_reportRx_functions_files/figure-latex/unnamed-chunk-20-1.pdf Graphic file (type pdf)
 <use test_reportRx_functions_files/figure-latex/unnamed-chunk-20-1.pdf>
 [22] [23] [24]
-Overfull \hbox (3.96861pt too wide) in paragraph at lines 1154--1170
+Overfull \hbox (3.96861pt too wide) in paragraph at lines 1091--1107
  [][] 
  []
 
 
-Overfull \hbox (3.96861pt too wide) in paragraph at lines 1178--1197
+Overfull \hbox (3.96861pt too wide) in paragraph at lines 1115--1134
  [][] 
  []
 
 [25]
 LaTeX Font Info:    Font shape `TU/CalibriLight(0)/m/it' will be
-(Font)              scaled to size 10.0pt on input line 1207.
-[26] [27]
-Overfull \hbox (81.49498pt too wide) in paragraph at lines 1288--1288
+(Font)              scaled to size 10.0pt on input line 1144.
+[26]
+Overfull \hbox (81.49498pt too wide) in paragraph at lines 1220--1220
 []\TU/lmtt/m/n/10 ## alternative hypothesis: true difference in means between group Male and group Female is not equal to 0[] 
  []
 
-
-Overfull \hbox (81.49498pt too wide) in paragraph at lines 1308--1308
+[27]
+Overfull \hbox (81.49498pt too wide) in paragraph at lines 1240--1240
 []\TU/lmtt/m/n/10 ## alternative hypothesis: true difference in means between group Male and group Female is not equal to 0[] 
  []
 
 [28] (./test_reportRx_functions.aux)
+
+LaTeX Warning: There were undefined references.
+
 
 LaTeX Warning: There were multiply-defined labels.
 
@@ -1112,12 +1118,12 @@ Package rerunfilecheck Info: File `test_reportRx_functions.out' has not changed.
 (rerunfilecheck)             Checksum: 64C15FB739969D05A011C43B25BFF261;2565.
  ) 
 Here is how much of TeX's memory you used:
- 18901 strings out of 478190
- 349581 string characters out of 5854532
- 809104 words of memory out of 5000000
- 39213 multiletter control sequences out of 15000+600000
+ 18894 strings out of 478190
+ 349445 string characters out of 5854532
+ 808438 words of memory out of 5000000
+ 39206 multiletter control sequences out of 15000+600000
  473408 words of font info for 79 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 86i,10n,122p,534b,477s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 86i,10n,122p,534b,473s stack positions out of 5000i,500n,10000p,200000b,80000s
 
 Output written on test_reportRx_functions.pdf (28 pages).

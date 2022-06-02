@@ -34,13 +34,13 @@ crrRx<-function(f,data){
 
 #' Get event time summary dataframe
 #'
-#' This function will output a dataframe with usefull summary statistics from a
+#' This function will output a dataframe with useful summary statistics from a
 #' coxph model
 #'
 #' @param data dataframe containing data
 #' @param response character vector with names of columns to use for response
-#' @param group string specifiying the column name of stratification variable
-#' @param times numeric vector of times you want survival time provbabilities
+#' @param group string specifying the column name of stratification variable
+#' @param times numeric vector of times you want survival time probabilities
 #'   for.
 #' @keywords dataframe
 #' @importFrom stats reshape
@@ -587,7 +587,11 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
 #' @param reflevel manual specification of the reference level. Only used for
 #'   ordinal This will allow you to see which model is not fitting if the
 #'   function throws an error
+#' @seealso 
+#'   \code{\link{lm}},\code{\link{glm}},\code{\link{crr}},\code{\link{coxph}},
+#'   \code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
 #' @keywords dataframe
+#' @importFrom MASS polr
 #' @importFrom survival coxph Surv
 #' @importFrom aod wald.test
 #' @importFrom geepack geeglm
@@ -1111,6 +1115,7 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
 #'
 #' @param model fitted model object
 #' @param data dataframe containing data
+#' @param digits number of digits to round to
 #' @param showN boolean indicating sample sizes should be shown for each
 #'   comparison, can be useful for interactions
 #' @param markup boolean indicating if you want latex markup
@@ -1121,7 +1126,7 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @keywords dataframe
 #' @importFrom stats na.omit formula model.frame
-mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames = T, 
+mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, nicenames = T, 
                    CIwidth = 0.95) 
 {
   if (!markup) {
@@ -1136,11 +1141,9 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
   if (class(model)[1] %in% c("lm", "lme", "multinom", 
                              "survreg", "polr")) {
     call <- Reduce(paste, deparse(stats::formula(model$terms), width.cutoff = 500))
-  } 
-  else if (class(model)[1] %in% c("crr")) {
+  }  else if (class(model)[1] %in% c("crr")) {
     call <- paste(deparse(model$call), collapse = "")
-  } 
-  else call <- paste(deparse(model$formula), collapse = "")
+  }  else call <- paste(deparse(model$formula), collapse = "")
   call <- unlist(strsplit(call, "~", fixed = T))[2]
   call <- unlist(strsplit(call, ",", fixed = T))[1]
   if (substr(call, nchar(call), nchar(call)) == "\"") 
@@ -1206,7 +1209,7 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     expnt = TRUE
     betanames <- attributes(summary(model)$coef)$dimnames[[1]]
     ss_data <- try(stats::model.frame(model$call$formula, eval(parse(text = paste("data=", 
-                                                                           deparse(model$call$data))))), silent = TRUE)
+                                                                                  deparse(model$call$data))))), silent = TRUE)
   } 
   else {
     stop("type must be either polr, coxph, logistic, lm, geeglm, crr, lme (or NULL)")
@@ -1308,35 +1311,32 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
     globalpvalue <- lpvalue(globalpvalue)
     if (type == "coxph" | type == "crr") {
       hazardratio <- c(apply(matrix(summary(model, conf.int = CIwidth)$conf.int[covariateindex, 
-                                                                                c(1, 3, 4)], ncol = 3), 1, psthr))
+                                                                                c(1, 3, 4)], ncol = 3), 1, psthr,digits))
       pvalues <- c(sapply(summary(model)$coef[covariateindex, 
                                               5], lpvalue))
     }
     else if (type == "glm" & expnt) {
       m <- summary(model, conf.int = CIwidth)$coefficients
       Z_mult = qnorm(1 - (1 - CIwidth)/2)
-      hazardratio <- apply(cbind(exp(m[covariateindex, 
-                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
-                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
-                                                                                                                             2])), 1, psthr)
+      hazardratio <- apply(cbind(exp(m[covariateindex, 1]), 
+                                 exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 2]), 
+                                 exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 2])), 1, psthr,digits)
       pvalues <- c(sapply(m[covariateindex, 4], lpvalue))
     }
     else if (type == "geeglm" & expnt) {
       m <- summary(model, conf.int = CIwidth)$coefficients
       Z_mult = qnorm(1 - (1 - CIwidth)/2)
-      hazardratio <- apply(cbind(exp(m[covariateindex, 
-                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
-                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
-                                                                                                                             2])), 1, psthr)
+      hazardratio <- apply(cbind(exp(m[covariateindex, 1]), 
+                                 exp(m[covariateindex, 1] - Z_mult * m[covariateindex,2]), 
+                                 exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 2])), 1, psthr,digits)
       pvalues <- c(sapply(m[covariateindex, 4], lpvalue))
     }
     else if (type == "polr") {
       m <- summary(model)$coefficients
       Z_mult = qnorm(1 - (1 - CIwidth)/2)
-      hazardratio <- apply(cbind(exp(m[covariateindex, 
-                                       1]), exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 
-                                                                                  2]), exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 
-                                                                                                                             2])), 1, psthr)
+      hazardratio <- apply(cbind(exp(m[covariateindex,1]), 
+                                 exp(m[covariateindex, 1] - Z_mult * m[covariateindex, 2]), 
+                                 exp(m[covariateindex, 1] + Z_mult * m[covariateindex, 2])), 1, psthr,digits)
       pvalues = stats::pnorm(abs(m[covariateindex, "Value"]/m[covariateindex, 
                                                               "Std. Error"]), lower.tail = FALSE) * 2
       pvalues <- c(sapply(pvalues, lpvalue))
@@ -1345,29 +1345,24 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
       T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
       m <- summary(model, conf.int = CIwidth)$coefficients
       hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
-                                 m[covariateindex, "Estimate"] - T_mult * 
-                                   m[covariateindex, "Std. Error"], m[covariateindex, 
-                                                                      "Estimate"] + T_mult * m[covariateindex, 
-                                                                                               "Std. Error"]), 1, psthr)
+                                 m[covariateindex, "Estimate"] - T_mult * m[covariateindex, "Std. Error"], 
+                                 m[covariateindex, "Estimate"] + T_mult * m[covariateindex, "Std. Error"]), 1, psthr,digits)
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "geeglm" & !expnt) {
       T_mult = abs(stats::qt((1 - CIwidth)/2, model$df.residual))
       m <- summary(model, conf.int = CIwidth)$coefficients
       hazardratio <- apply(cbind(m[covariateindex, "Estimate"], 
-                                 m[covariateindex, "Estimate"] - T_mult * 
-                                   m[covariateindex, "Std.err"], m[covariateindex, 
-                                                                   "Estimate"] + T_mult * m[covariateindex, 
-                                                                                            "Std.err"]), 1, psthr)
+                                 m[covariateindex, "Estimate"] - T_mult * m[covariateindex, "Std.err"], 
+                                 m[covariateindex, "Estimate"] + T_mult * m[covariateindex, "Std.err"]), 1, psthr,digits)
       pvalues <- sapply(m[covariateindex, 4], lpvalue)
     }
     else if (type == "lme") {
       T_mult = abs(stats::qt((1 - CIwidth)/2, summary(model)$fixDF$X))[covariateindex]
       m <- summary(model, conf.int = CIwidth)$tTable
       hazardratio <- apply(cbind(m[covariateindex, 1], 
-                                 m[covariateindex, 1] - T_mult * m[covariateindex, 
-                                                                   2], m[covariateindex, 1] + T_mult * m[covariateindex, 
-                                                                                                         2]), 1, psthr)
+                                 m[covariateindex, 1] - T_mult * m[covariateindex, 2], 
+                                 m[covariateindex, 1] + T_mult * m[covariateindex,2]), 1, psthr,digits)
       pvalues <- c(sapply(m[covariateindex, 5], lpvalue))
     }
     if (length(betaname[[1]]) == 1) {
@@ -1597,7 +1592,8 @@ mvsum <- function (model, data, showN = F, markup = T, sanitize = T, nicenames =
 #' @keywords plot
 #' @export
 #' @examples 
-#' glm_fit = glm(change_ctdna_group~sex+age+baseline_ctdna+l_size, data=pembrolizumab,family = 'binomial')
+#' glm_fit = glm(orr~change_ctdna_group+sex+age+l_size, 
+#' data=pembrolizumab,family = 'binomial')
 #' forestplot2(glm_fit)
 forestplot2 = function(model,conf.level=0.95,orderByRisk=T,colours='default',showEst=TRUE,rmRef=FALSE,logScale=TRUE,nxTicks=5){
   
@@ -1882,19 +1878,30 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #' column names are converted to spaces. To disable this set rm_ to FALSE
 #'
 #' @param tab a table to format
-#' @param to_indent numeric vector the length of nrow(tab) indicating which rows
-#'   to indent
-#' @param to_bold numeric vector the length of nrow(tab) indicating which rows
-#'   to bold
+#' @param to_indent numeric vector indicating which rows to indent in the first
+#'   column.
+#' @param rows_bold numeric vector indicating which rows to bold
+#' @param cells_bold array indices indicating which cells to bold. These will be
+#'   in addition to rows bolded by rows_bold. Only implemented for Word output.
 #' @param caption table caption
 #' @param digits number of digits to round numeric columns to, wither a single
-#'   number or a vector corresponding to the number of numeric columns
+#'   number or a vector corresponding to the number of numeric columns in tab
 #' @param align string specifying column alignment, defaults to left alignment
-#'   of the first column and right alignment of all other columns
+#'   of the first column and right alignment of all other columns. The align
+#'   argument accepts a single string with 'l' for left, 'c' for centre and 'r'
+#'   for right, with no separations. For example, to set the left column to be
+#'   centred, the middle column right-aligned and the right column left aligned
+#'   use: align='crl'
 #' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
-outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,digits,align,chunk_label,fontsize){
+#' @examples
+#' # To make custom changes or change the fontsize in PDF/HTML
+#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group',
+#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
+#' outTable(tab, fontsize=7)
+
+outTable <- function(tab,to_indent=numeric(0),rows_bold=numeric(0),cells_bold,caption=NULL,digits,align,chunk_label,fontsize){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
@@ -1929,6 +1936,7 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
   
   if (is.null(to_indent)) to_indent = numeric(0)
   to_indent = as.vector(to_indent)
+  if (missing(cells_bold)) cells_bold <- NULL
   
   
   if (out_fmt=='doc'){
@@ -1937,31 +1945,19 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
     tab[tab==''] <-'&nbsp;'
     
     tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
-    if (length(to_bold)>0) {
+    if (length(rows_bold)==0) rows_bold <- NULL 
       pander::pander(tab,
                      caption=caption,
-                     emphasize.strong.rows=to_bold,
+                     emphasize.strong.rows=rows_bold,
+                     emphasize.strong.cells=cells_bold,
                      split.table=Inf, split.cells=15,
                      justify = alignSpec)
       
-    } else {
-      pander::pander(tab,
-                     caption=caption,
-                     split.table=Inf, split.cells=15,
-                     justify = alignSpec)
-    }
+    
   } else {  # For PDF, HTML
     # set NA to empty in kable
     options(knitr.kable.NA = '')
     if(!is.null(caption)) caption <- sanitize(caption)
-    # kout <- knitr::kable(tab, format = out_fmt,
-    #                      booktabs=TRUE,
-    #                      longtable=TRUE,
-    #                      linesep='',
-    #                      caption=caption,
-    #                      align =alignSpec)
-    # kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-    
     # This may not work as expected if a small table is split over pages
     # better to also repeat table headers
     if (nrow(tab)>30){
@@ -1972,13 +1968,6 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            caption=caption,
                            align =alignSpec)
       kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      # There is now a conflict with the tabu package, full_width=T fails with longtable
-      #       if (ncol(tab)>4) {
-      #         kout <- kableExtra::kable_styling(kout,full_width = TRUE,latex_options = c('repeat_header'))
-      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      #       } else {
-      #         kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
-      #       }
     } else {
       kout <- knitr::kable(tab, format = out_fmt,
                            booktabs=TRUE,
@@ -1986,11 +1975,10 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
                            linesep='',
                            caption=caption,
                            align = alignSpec)
-      #      if (ncol(tab)>4) kout <- kableExtra::kable_styling(kout, full_width = TRUE)
     }
     kout <- kableExtra::add_indent(kout,positions = to_indent)
-    if (length(to_bold)>0){
-      kout<- kableExtra::row_spec(kout,to_bold,bold=TRUE)
+    if (length(rows_bold)>0){
+      kout<- kableExtra::row_spec(kout,rows_bold,bold=TRUE)
     }
     if (!missing(fontsize)){
       kout <- kableExtra::kable_styling(kout,font_size = fontsize)
@@ -2016,6 +2004,9 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' @param head_col character value specifying the column name with the headers
 #' @param to_col character value specifying the column name to add the headers
 #'   into
+#' @param colHeader character with the desired name of the first column.
+#'   The default is to leave this empty for output or, for table only output to
+#'   use the column name 'col1'.
 #' @param caption table caption
 #' @param indent Boolean should the original values in the to_col be indented
 #' @param boldheaders Boolean should the header column values be bolded
@@ -2037,14 +2028,14 @@ outTable <- function(tab,to_indent=numeric(0),to_bold=numeric(0),caption=NULL,di
 #' m2$Response = 'Tumour Size'
 #' rbind(m1,m2)
 #' nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
-nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
+nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRUE,boldheaders=TRUE,hdr_prefix='',hdr_suffix='',digits=2,tableOnly=FALSE){
   
   # strip any grouped data or tibble properties
   if ('data.frame' %in% class(data)){
     data <- data.frame(data)
   } else stop('data must be a data.frame')
-
-    # ensure that the data are sorted by the header column and covariates in the order they first appear
+  
+  # ensure that the data are sorted by the header column and covariates in the order they first appear
   data[[to_col]] <- factor(data[[to_col]],levels=unique(data[[to_col]]),ordered = T)
   data <- data[order(data[[head_col]],data[[to_col]]),]
   data[[to_col]] <- as.character(data[[to_col]])
@@ -2082,12 +2073,14 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
   
   # data <- dplyr::select(data,-all_of(head_col))
   data <- data[,setdiff(names(data),head_col)]
+  names(data)[1] <-colHeader
   
   if (tableOnly){
+    if (names(data)[1]=='')  names(data)[1] <- 'Col1'
     return(data)
   }
-  if (boldheaders) to_bold = header_rows else to_bold=numeric(0)
-  outTable(tab=data,to_indent=to_indent,to_bold=to_bold,caption=caption)
+  if (boldheaders) rows_bold = header_rows else rows_bold=numeric(0)
+  outTable(tab=data,to_indent=to_indent,rows_bold=rows_bold,caption=caption)
 }
 
 #' Outputs a descriptive covariate table
@@ -2107,12 +2100,12 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 #' @param data dataframe containing data
 #' @param covs character vector with the names of columns to include in table
 #' @param maincov covariate to stratify table by
-#' @param caption character containing table caption. If caption = NULL then
-#'   notes about unstable estimates and p-value adjustments will be added to the
-#'   caption. To suppress the caption completely set caption='none'.
+#' @param caption character containing table caption (default is no caption)
 #' @param tableOnly Logical, if TRUE then a dataframe is returned, otherwise a
 #'   formatted printed object is returned (default).
-#' @param covTitle character with the names of the covariate column
+#' @param covTitle character with the names of the covariate (predictor) column.
+#'   The default is to leave this empty for output or, for table only output to
+#'   use the column name 'Covariate'.
 #' @param digits number of digits for summarizing mean data
 #' @param digits.cat number of digits for the proportions when summarizing
 #'   categorical data (default: 0)
@@ -2154,14 +2147,15 @@ nestTable <- function(data,head_col,to_col,caption=NULL,indent=TRUE,boldheaders=
 #'   \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
 #'   and \code{\link{outTable}}
 #' @examples
-#' rm_covsum(data=pembrolizumab, maincov = 'change_ctdna_group', 
-#' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=TRUE)
+#' rm_covsum(data=pembrolizumab, maincov = 'orr',
+#' covs=c('age','sex','pdl1','tmb','l_size','change_ctdna_group'),
+#' show.tests=TRUE)
 #'
 #' # To make custom changes or change the fontsize in PDF/HTML
-#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group', 
+#' tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group',
 #' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 #' outTable(tab, fontsize=7)
-rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='Covariate',
+rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTitle='',
                       digits=1,digits.cat = 0,nicenames=TRUE,IQR = FALSE,all.stats=FALSE,pvalue=TRUE,show.tests=FALSE,
                       testcont = c('rank-sum test','ANOVA'),testcat = c('Chi-squared','Fisher'),
                       full=TRUE,include_missing=FALSE,percentage=c('column','row'),
@@ -2172,28 +2166,30 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
   covsumArgs <- argList[names(argList) %in% argsToPass]
   covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
   tab <- do.call(covsum,covsumArgs)
-  to_bold = numeric(0)
+  rows_bold = numeric(0)
   if ('p-value' %in% names(tab)) {
     # format p-values nicely
     p_vals <- tab[['p-value']]
     new_p <- sapply(p_vals,formatp)
     tab[['p-value']] <- new_p
-    to_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
+    rows_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
   } 
-  nice_var_names = gsub('[_.]',' ',covs)
-  to_indent <- which(!tab$Covariate %in% nice_var_names )
-  if (covTitle !='Covariate') names(tab[1]) <-covTitle
-  if (nicenames) {names(tab) <- gsub('_|[.]',' ',names(tab))}  
+  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
+  to_indent <- which(!tab$Covariate %in% output_var_names)
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  names(tab)[1] <-covTitle
   if (tableOnly){
+    if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     return(tab)
   }
-  if (is.null(caption)) {
-    if (!is.null(maincov)){
-      caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
-    } else
-      caption = 'Summary sample statistics.'
-  }
-  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+  # if (!is.null(caption)){
+  #   if (caption=='default'){
+  #     if (!is.null(maincov)){
+  #       caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
+  #     } else
+  #       caption = 'Summary sample statistics.'
+  #   }}
+  outTable(tab=tab,to_indent=to_indent,rows_bold=rows_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
@@ -2208,8 +2204,10 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #'   models to
 #' @param data dataframe containing data
 #' @param digits number of digits to round to
-#' @param caption table caption. If set to NULL the function will try to provide
-#'   an informative caption. Default is none.
+#' @param covTitle character with the names of the covariate (predictor) column.
+#'   The default is to leave this empty for output or, for table only output to
+#'   use the column name 'Covariate'.
+#' @param caption character containing table caption (default is no caption)
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param removeInf boolean indicating if infinite estimates should be removed
 #'   from the table
@@ -2236,11 +2234,18 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' @param reflevel manual specification of the reference level. Only used for
 #'   ordinal regression This will allow you to see which model is not fitting if
 #'   the function throws an error
+#' @seealso 
+#'   \code{\link{lm}},\code{\link{glm}},\code{\link{crr}},\code{\link{coxph}},
+#'   \code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
 #' @export
 #' @examples
-#' rm_uvsum(response = 'change_ctdna_group',
-#' covs=c('age','sex','baseline_ctdna','l_size'),data=pembrolizumab,CIwidth=.9)
-rm_uvsum <- function(response, covs , data , digits=2, caption='none',
+#' # Coxph model with 90% CI
+#' rm_uvsum(response = c('os_time','os_status'),
+#' covs=c('age','sex','baseline_ctdna','l_size','change_ctdna_group'),
+#' data=pembrolizumab,CIwidth=.9)
+#' # Linear model with default 95% CI
+#' rm_uvsum(response = 'baseline_ctdna', covs=c('age','sex','l_size','pdl1','tmb'),data=pembrolizumab)
+rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
                      tableOnly=FALSE,removeInf=T,p.adjust='none',chunk_label,
                      id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,
                      nicenames = TRUE,testing = FALSE,showN = TRUE,CIwidth = 0.95,reflevel=NULL){
@@ -2250,7 +2255,7 @@ rm_uvsum <- function(response, covs , data , digits=2, caption='none',
                corstr = corstr,family = family,type = type,strata = strata,
                nicenames = nicenames,testing = testing,showN = showN,
                CIwidth = CIwidth,reflevel=reflevel)
-
+  
   cap_warn <- character(0)
   if (removeInf){
     # Do not display unstable estimates
@@ -2267,33 +2272,35 @@ rm_uvsum <- function(response, covs , data , digits=2, caption='none',
   # if an adjustment was made, add this to the cap_warn text
   if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
   
-  to_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  nice_var_names <- gsub('[_.]',' ',covs)
-  to_indent <- which(!tab$Covariate %in% nice_var_names )
+  rows_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
+  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
+  to_indent <- which(!tab$Covariate %in% output_var_names)
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
   
   tab[["p-value"]] <- formatp(tab[["p-value"]])
   tab[["Global p-value"]] <- formatp(p_sig)
-
+  
   # If all outcomes are continuous (and so all p-values are NA), remove this column & rename Global p-value to p-value
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
     tab <- tab[,-which(names(tab)=="p-value")]
     names(tab) <- gsub('Global p-value','p-value',names(tab))
   }
   
+  names(tab)[1] <-covTitle
   if (tableOnly){
+    if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     if (length(cap_warn)>0) warning(cap_warn)
     return(tab)
   }
-  if(is.null(caption)){
-    if (length(response)==2) {outcome = 'survival'} else{ outcome = niceStr(response)}
-    caption = paste0('Univariate analysis of predictors of ',outcome,'.',cap_warn)
-  } else if (caption=='none' & identical(cap_warn,character(0))) {
-    caption=NULL
-  } else caption = paste0(caption,cap_warn)
   
+  # if (!is.null(caption)){
+  #   if (caption=='default'){
+  #     if (length(response)==2) {outcome = 'survival'} else{ outcome = niceStr(response)}
+  #     caption = paste0('Univariate analysis of predictors of ',outcome,'.',cap_warn)
+  #   }}
+  # 
   outTable(tab=tab, 
-           to_indent=to_indent,to_bold=to_bold,
+           to_indent=to_indent,rows_bold=rows_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
@@ -2314,6 +2321,10 @@ rm_uvsum <- function(response, covs , data , digits=2, caption='none',
 #' @param model model fit
 #' @param data data that model was fit on (an attempt will be made to extract
 #'   this from the model)
+#' @param digits number of digits to round to
+#' @param covTitle character with the names of the covariate (predictor) column.
+#'   The default is to leave this empty for output or, for table only output to
+#'   use the column name 'Covariate'.
 #' @param showN boolean indicating sample sizes should be shown for each
 #'   comparison, can be useful for interactions
 #' @param CIwidth width for confidence intervals, defaults to 0.95
@@ -2331,39 +2342,40 @@ rm_uvsum <- function(response, covs , data , digits=2, caption='none',
 #' glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
 #' data=pembrolizumab,family = 'binomial')
 #' rm_mvsum(glm_fit)
-rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
+rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
   
   # get the table
-  tab <- mvsum(model=model,data=data,markup = FALSE, sanitize = FALSE, nicenames = T,showN=showN,CIwidth = CIwidth)
+  tab <- mvsum(model=model,data=data,digits=digits,markup = FALSE, sanitize = FALSE, nicenames = nicenames,showN=showN,CIwidth = CIwidth)
   
   # Reduce the number of significant digits in p-values
   p_val <-  formatp(tab$`p-value`)
   gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
-  if (p.adjust!='none') caption <- paste0(caption,ifelse(is.null(caption),'',', '),'Global p-values were adjusted according to the ',p.adjust,' method.')
   
-  to_bold <- which(as.numeric(gp)<0.05)
+  # if (!is.null(caption)){
+  #   if (caption=='default'){
+  #     if (p.adjust!='none') 
+  #       caption <- paste0('Multivariable regression using ',class(model)[1],'.')
+  #       caption <- paste0(caption,'. Global p-values were adjusted according to the ',p.adjust,' method.')    
+  #   }}
+  
+  rows_bold <- which(as.numeric(gp)<0.05)
   to_indent <- which(is.na(gp))
   
   tab$`p-value` <- p_val
   tab$`Global p-value` <- formatp(gp)
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
   
-  tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  
-  # TO DO: possibly automate this... need to extract response from mvsum
-  # if(is.null(caption)){
-  #   caption = paste0('Multivariable analysis of predictors of ',niceStr(response),'.')
-  # } else if (caption=='none') {
-  #   caption=NULL
-  # }
-  #response <- names(model$model)[1]
   
   # If all outcomes are continuous (and so all p-values are NA), remove this column
   if (sum(is.na(tab[["p-value"]]))==nrow(tab)) tab <- tab[,-which(names(tab)=="p-value")]
   
+  
+  names(tab)[1] <-covTitle
   if (tableOnly){
+    if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     return(tab)
   }
-  outTable(tab=tab,to_indent=to_indent,to_bold=to_bold,
+  outTable(tab=tab,to_indent=to_indent,rows_bold=rows_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
@@ -2382,11 +2394,24 @@ rm_mvsum <- function(model , data ,showN=FALSE,CIwidth=0.95,caption=NULL,tableOn
 #' 
 #' @param uvsumTable Output from rm_uvsum, with tableOnly=TRUE 
 #' @param mvsumTable  Output from rm_mvsum, with tableOnly=TRUE
+#' @param covTitle character with the names of the covariate (predictor) column.
+#'   The default is to leave this empty for output or, for table only output to
+#'   use the column name 'Covariate'.
 #' @param caption table caption
 #' @param tableOnly boolean indicating if unformatted table should be returned
 #' @param chunk_label only used if output is to Word to allow cross-referencing
+#' @seealso 
+#'   \code{\link{rm_uvsum}},\code{\link{rm_mvsum}}
 #' @export
-rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=FALSE,chunk_label){ 
+#' @examples 
+#' require(survival)
+#' uvTab <- rm_uvsum(response = c('os_time','os_status'),
+#' covs=c('age','sex','baseline_ctdna','l_size','change_ctdna_group'),
+#' data=pembrolizumab,tableOnly=TRUE)
+#' mv_surv_fit <- coxph(Surv(os_time,os_status)~age+sex+
+#' baseline_ctdna+l_size+change_ctdna_group, data=pembrolizumab)
+#' uvTab <- rm_mvsum(mv_surv_fit)
+rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FALSE,chunk_label){ 
   # Check that tables are data frames and not kable objects
   if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
   if (!'data.frame' %in% class(mvsumTable)) stop('mvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
@@ -2425,10 +2450,13 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,caption=NULL,tableOnly=FALSE,chunk_la
   names(out) <- gsub('[.]x','',names(out))
   out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
   
-  if (tableOnly) return(out)
-  
-  to_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
-  outTable(tab=out,to_indent=to_indent,to_bold=to_bold,
+  names(tab)[1] <-covTitle
+  if (tableOnly){
+    if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
+    return(tab)
+  }  
+  rows_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
+  outTable(tab=out,to_indent=to_indent,rows_bold=rows_bold,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }

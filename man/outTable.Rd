@@ -7,7 +7,8 @@
 outTable(
   tab,
   to_indent = numeric(0),
-  to_bold = numeric(0),
+  rows_bold = numeric(0),
+  cells_bold,
   caption = NULL,
   digits,
   align,
@@ -18,19 +19,25 @@ outTable(
 \arguments{
 \item{tab}{a table to format}
 
-\item{to_indent}{numeric vector the length of nrow(tab) indicating which rows
-to indent}
+\item{to_indent}{numeric vector indicating which rows to indent in the first
+column.}
 
-\item{to_bold}{numeric vector the length of nrow(tab) indicating which rows
-to bold}
+\item{rows_bold}{numeric vector indicating which rows to bold}
+
+\item{cells_bold}{array indices indicating which cells to bold. These will be
+in addition to rows bolded by rows_bold. Only implemented for Word output.}
 
 \item{caption}{table caption}
 
 \item{digits}{number of digits to round numeric columns to, wither a single
-number or a vector corresponding to the number of numeric columns}
+number or a vector corresponding to the number of numeric columns in tab}
 
 \item{align}{string specifying column alignment, defaults to left alignment
-of the first column and right alignment of all other columns}
+of the first column and right alignment of all other columns. The align
+argument accepts a single string with 'l' for left, 'c' for centre and 'r'
+for right, with no separations. For example, to set the left column to be
+centred, the middle column right-aligned and the right column left aligned
+use: align='crl'}
 
 \item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 
@@ -44,4 +51,10 @@ function used by the rm_* printing functions.
 Entire rows can be bolded, and the first column can be indented. Currently
 there is no support for cell-specific formatting. By default, underscores in
 column names are converted to spaces. To disable this set rm_ to FALSE
+}
+\examples{
+# To make custom changes or change the fontsize in PDF/HTML
+tab <- rm_covsum(data=pembrolizumab,maincov = 'change_ctdna_group',
+covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
+outTable(tab, fontsize=7)
 }
