@@ -1517,6 +1517,7 @@ mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, n
   if (all(table[,"Global p-value"]=='')) table <- table[, -which(colnames(table)=="Global p-value")]
   if (!showN) table <- table[, -which(colnames(table)=="N")]
   colnames(table) <- sapply(colnames(table), lbld)
+  attr(table,'covs') <- ucall
   return(table)
 }
 
@@ -2433,11 +2434,12 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
 rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
   
   # get the table
-  tab <- mvsum(model=model,data=data,digits=digits,markup = FALSE, sanitize = FALSE, nicenames = nicenames,showN=showN,CIwidth = CIwidth)
+  tab <- mvsum(model=model,data=data,digits=digits,markup = FALSE, 
+               sanitize = FALSE, nicenames = FALSE,showN=showN,CIwidth = CIwidth)
   
-  # Reduce the number of significant digits in p-values
-  p_val <-  formatp(tab$`p-value`,digits=digits)
-  gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  # # Reduce the number of significant digits in p-values
+  # p_val <-  formatp(tab$`p-value`,digits=digits)
+  # gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
   
   # if (!is.null(caption)){
   #   if (caption=='default'){
@@ -2446,20 +2448,37 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
   #       caption <- paste0(caption,'. Global p-values were adjusted according to the ',p.adjust,' method.')    
   #   }}
   
-  rows_bold <- which(as.numeric(gp)<0.05)
-  to_indent <- which(is.na(gp))
   
-  tab$`p-value` <- p_val
-  tab$`Global p-value` <- formatp(gp,digits=digits)
-  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  # tab$`p-value` <- p_val
+  # tab$`Global p-value` <- formatp(gp,digits=digits)
   
-  # If all outcomes are continuous (and so all p-values are NA), remove this column
-  # and rename GLobal p-value to p-value
-  if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
-    tab <- tab[,-which(names(tab)=="p-value")]
-    names(tab) <- gsub('Global p-value','p-value',names(tab))
+  # # If all outcomes are continuous (and so all p-values are NA), remove this column
+  # # and rename GLobal p-value to p-value
+  # if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
+  #   tab <- tab[,-which(names(tab)=="p-value")]
+  #   names(tab) <- gsub('Global p-value','p-value',names(tab))
+  # }
+  
+  # perform p-value adjustment across all p-values
+  if ("Global p-value" %in% names(tab)){
+    raw_p <- ifelse(tab[["Global p-value"]]=='',tab[["p-value"]],tab[["Global p-value"]])
+    p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
+    p_sig <- sapply(p_sig,formatp,digits = digits)
+    tab[["Global p-value"]][tab[["Global p-value"]]!='']  <- p_sig[tab[["Global p-value"]]!='']
+    tab[["p-value"]][tab[["Global p-value"]]=='']  <- p_sig[tab[["Global p-value"]]=='']
+  } else {
+    raw_p <- tab[["p-value"]]
+    p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
+    tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
-  
+  rows_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
+  to_indent <- setdiff(1:nrow(tab),
+                       sapply(attr(tab,'covs'),function(x) grep(x,tab$Covariate)[1],
+                              USE.NAMES = FALSE))
+  if ("Global p-value" %in% names(tab)) 
+    to_indent <- setdiff(to_indent,which(tab[["Global p-value"]]!=''))
+    
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
   names(tab)[1] <-covTitle
   if (tableOnly){
     if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
@@ -2567,7 +2586,7 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
 #' rm_etsum(pembrolizumab,c("os_time","os_status"))
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
- rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
+rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   
   names<-names(t)

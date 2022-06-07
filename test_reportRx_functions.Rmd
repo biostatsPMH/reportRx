@@ -466,7 +466,7 @@ rm_mvsum(model=house.plr,showN=T)
 ```{r}
 surv_fit <- survival::coxph(Surv(os_time,os_status)~age+sex+baseline_ctdna+l_size+change_ctdna_group,
 data=pembrolizumab)
-rm_mvsum(surv_fit,tableOnly = F)
+rm_mvsum(surv_fit,tableOnly = F,nicenames = T)
 summary(surv_fit)$coefficients
 
 
