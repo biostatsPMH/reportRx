@@ -219,7 +219,8 @@ etsum<- function(data,response,group=1,times=c(12,24)){
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean
+#' indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param IQR boolean indicating if you want to display the inter quantile range
 #'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
@@ -578,7 +579,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param testing boolean to indicate if you want to print out the covariates
 #'   before the model fits.
@@ -1160,7 +1161,7 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @keywords dataframe
@@ -2175,7 +2176,7 @@ nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRU
 #' @param digits number of digits for summarizing mean data
 #' @param digits.cat number of digits for the proportions when summarizing
 #'   categorical data (default: 0)
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param IQR boolean indicating if you want to display the inter quantile range
 #'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
@@ -2192,7 +2193,7 @@ nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRU
 #'   table, ignored if maincov is NULL
 #' @param include_missing Option to include NA values of maincov. NAs will not
 #'   be included in statistical tests
-#' @param percentage choice of how percentages are presented ,one of
+#' @param percentage choice of how percentages are presented, one of
 #'   \emph{column} (default) or \emph{row}
 #' @param excludeLevels a named list of covariate levels to exclude from
 #'   statistical tests in the form list(varname =c('level1','level2')). These
@@ -2286,13 +2287,13 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #'   '"exchangeable"', '"ar1"', '"unstructured"' and '"userdefined"'
 #' @param family description of the error distribution and link function to be
 #'   used in the model. Only used for geeglm
-#' @param type string indicating he type of univariate model to fit. The
+#' @param type string indicating the type of univariate model to fit. The
 #'   function will try and guess what type you want based on your response. If
 #'   you want to override this you can manually specify the type. Options
 #'   include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"
 #' @param strata character vector of covariates to stratify by. Only used for
 #'   coxph and crr
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param testing boolean to indicate if you want to print out the covariates
 #'   before the model fits.
@@ -2406,7 +2407,7 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @export
 #' @examples
@@ -2456,12 +2457,12 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
 
 #' Combine univariate and multivariable regression tables
 #' 
-#' This function will combine rm_uvsum and rm_mvsum outputs into a single table
+#' This function will combine rm_uvsum and rm_mvsum outputs into a single table.
 #' The tableOnly argument must be set to TRUE when tables to be combined are
 #' created. The resulting table will be in the same order as the uvsum table
 #' and will contain the same columns as the uvsum and mvsum tables, but the 
-#' p-values will be combined into a single column. There must be variable over-
-#' lap between the uvsum and mvsum tables and all variables in the mvsum table
+#' p-values will be combined into a single column. There must be a variable overlapping
+#' between the uvsum and mvsum tables and all variables in the mvsum table
 #' must also appear in the uvsum table.
 #' 
 #' 
@@ -2550,7 +2551,7 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
 #' rm_etsum(pembrolizumab,c("os_time","os_status"))
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
-rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
+ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   
   names<-names(t)
@@ -3094,6 +3095,10 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 #' median.text = F,set.time.text = 'mo OS',
 #' set.time = c(12,24),conf.type = 'log-log',conf.curves=TRUE)
 #' @export
+#' @examples
+#' #KM plot with 95% CI and censor marks
+#' ggkmcif(c('os_time','os_status'),'sex',data = pembrolizumab, type = 'KM', HR=TRUE, HR_pval = TRUE, 
+#' conf.curves = TRUE,conf.type='log-log', set.time.CI = TRUE, censor.marks=TRUE)
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=FALSE,HR_pval=FALSE,conf.curves=FALSE,conf.type = "log",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
                     main = NULL,stratalabs = NULL,strataname = nicename(cov),
@@ -3820,6 +3825,8 @@ modify_ggkmcif <- function(list_gg){
 #' 
 #' @param list_gg list containing the results of ggkmcif
 #' @export
+#' @example 
+#' 
 ggkmcif_paste <- function(list_gg){
   gA <- ggplotGrob(list_gg[[1]])
   gB <- ggplotGrob(list_gg[[2]])
