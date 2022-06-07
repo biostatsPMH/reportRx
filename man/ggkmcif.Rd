@@ -225,3 +225,22 @@ This function will plot a KM or CIF curve with option to add the number at
 risk. You can specify if you want confidence bands, the hazard ratio, and
 pvalues, as well as the units of time used.
 }
+\examples{
+# Simple plot without confidence intervals
+ggkmcif(response = c('os_time','os_status'),
+cov='cohort',
+data=pembrolizumab)
+
+# Plot with median survival time
+ggkmcif(response = c('os_time','os_status'),
+cov='sex',
+data=pembrolizumab, 
+median.text = T,median.lines=T,conf.curves=TRUE)
+
+# Plot with specified survival times and log-log CI
+ggkmcif(response = c('os_time','os_status'),
+cov='sex',
+data=pembrolizumab,
+median.text = F,set.time.text = 'mo OS',
+set.time = c(12,24),conf.type = 'log-log',conf.curves=TRUE)
+}

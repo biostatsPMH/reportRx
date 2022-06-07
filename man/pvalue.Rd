@@ -4,11 +4,14 @@
 \alias{pvalue}
 \title{Formats p-values}
 \usage{
-pvalue(x)
+pvalue(x, digits)
 }
 \arguments{
 \item{x}{an integer}
+
+\item{digits}{the number of significant digits to return}
 }
 \description{
-Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits
+Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified
+significant digits
 }

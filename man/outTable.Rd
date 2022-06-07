@@ -12,8 +12,9 @@ outTable(
   caption = NULL,
   digits,
   align,
-  chunk_label,
-  fontsize
+  keep.rownames = FALSE,
+  fontsize,
+  chunk_label
 )
 }
 \arguments{
@@ -39,9 +40,11 @@ for right, with no separations. For example, to set the left column to be
 centred, the middle column right-aligned and the right column left aligned
 use: align='crl'}
 
-\item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
+\item{keep.rownames}{if TRUE the rownames will be output as the first column, default is FALSE}
 
 \item{fontsize}{PDF/HTML output only, manually set the table fontsize}
+
+\item{chunk_label}{only used knitting to Word docs to allow cross-referencing}
 }
 \description{
 Output the table nicely to whatever format is appropriate. This is the output

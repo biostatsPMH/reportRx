@@ -12,7 +12,7 @@ rm_uvsum(
   covTitle = "",
   caption = NULL,
   tableOnly = FALSE,
-  removeInf = T,
+  removeInf = TRUE,
   p.adjust = "none",
   chunk_label,
   id = NULL,
@@ -92,9 +92,12 @@ rm_uvsum(response = c('os_time','os_status'),
 covs=c('age','sex','baseline_ctdna','l_size','change_ctdna_group'),
 data=pembrolizumab,CIwidth=.9)
 # Linear model with default 95\% CI
-rm_uvsum(response = 'baseline_ctdna', covs=c('age','sex','l_size','pdl1','tmb'),data=pembrolizumab)
+rm_uvsum(response = 'baseline_ctdna',
+covs=c('age','sex','l_size','pdl1','tmb'),
+data=pembrolizumab)
 }
 \seealso{
-\code{\link{lm}},\code{\link{glm}},\code{\link{crr}},\code{\link{coxph}},
-  \code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
+\code{\link{uvsum}},\code{\link{lm}},\code{\link{glm}},\code{\link{crr}},
+\code{\link{coxph}},
+\code{\link{lme}},\code{\link{geeglm}},\code{\link{polr}}
 }

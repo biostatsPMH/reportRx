@@ -127,22 +127,29 @@ nicename<-function(strings){
 
 #' Formats p-values
 #'
-#' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to 2 significant digits
+#' Returns <0.001 if pvalue is <0.001. Else rounds the pvalue to specified
+#' significant digits
 #'
 #' @param x an integer
+#' @param digits the number of significant digits to return
 #' @export
-pvalue<-function(x){
+pvalue<-function(x,digits){
   if(is.na(x)|class(x)=="character") return(x)
   else if (x<=0.001) return("<0.001")
-  else return(signif(x,2))
+  else return(signif(x,digits))
 }
 
-formatp<- function(pvalues){
+formatp<- function(pvalues,digits=2){
   p_out <- sapply(pvalues, function(x){
-    
     xsig <-suppressWarnings(as.numeric(x))
-    nsmall <- ifelse(xsig<0.1,3,2)
-    x <- ifelse(x=='excl','excl',ifelse(is.na(nsmall),NA_character_,ifelse(xsig<0.001,"<0.001",format(round(xsig,nsmall),nsmall))))})
+    if (digits>3) {
+      fmtX <- ifelse(round(x,digits)==0,paste0("<0.",paste(rep(0,digits-1),collapse=''),'1'),
+                     format(round(x,digits),nsmall=digits,scientific = FALSE))
+    } else{
+      fmtX <- ifelse(xsig<0.001,"<0.001",format(round(xsig,3),nsmall=3))
+    }
+    x <- ifelse(x=='excl','excl',fmtX)
+  }) 
   p_out = unname(p_out)
   return(p_out)
 }
@@ -404,7 +411,7 @@ format_glm = function(glm_fit,conf.level = 0.95,digits=c(2,3),orderByRisk=TRUE){
     tab <- tab[tab$coef.type=='coefficient',]
     tab$p.value = stats::pnorm(abs(tab$statistic),lower.tail = FALSE) * 2
   }
-
+  
   tab$conf.low=exp(tab$estimate-Z*tab$std.error)
   tab$conf.high=exp(tab$estimate+Z*tab$std.error)
   tab$estimate = exp(tab$estimate)
@@ -522,7 +529,7 @@ label_wrap_reportRx <- function (width = 25, multi_line = TRUE) {
 
 
 reportRx_pal <- function(
-  direction = 1
+    direction = 1
 ) {
   
   function(n) {
@@ -536,8 +543,8 @@ reportRx_pal <- function(
 }
 
 scale_colour_reportRx <- function(
-  direction = 1, 
-  ...
+    direction = 1, 
+    ...
 ) {
   ggplot2::discrete_scale(
     aesthetics = c("colour","fill"),

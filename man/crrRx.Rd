@@ -7,8 +7,9 @@
 crrRx(f, data)
 }
 \arguments{
-\item{f}{formula for the model. Currently the formula only works by using the name
-of the column in a dataframe. It does not work by using $ or [] notation.}
+\item{f}{formula for the model. Currently the formula only works by using the
+name of the column in a dataframe. It does not work by using $ or []
+notation.}
 
 \item{data}{dataframe containing data}
 }

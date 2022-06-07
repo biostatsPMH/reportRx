@@ -231,7 +231,7 @@ rm_uvsum(response = 'wt.loss',
 rm_uvsum(response = c('time','status'),
          covs=c('Sex','ph.ecog','meal.cal','age'),
          data=lung,
-         CIwidth=.99,nicenames = F)
+         CIwidth=.99,nicenames = F,digits=3)
 
 uvsum(response = c('time','status'),
          covs=c('Sex','ph.ecog','meal.cal','age'),
@@ -240,19 +240,20 @@ uvsum(response = c('time','status'),
 
 ```
 
-### Test crr 
-See Appendix
 
 ### Test ordinal
 
 ```{r test-uv-ord}
 mtcars$cyl <- factor(mtcars$cyl,ordered=T)
+tab<-rm_uvsum(response = 'cyl',
+         covs=c('qsec'),
+         data=mtcars,
+         CIwidth=.90,showN=F,tableOnly = T)
+
 rm_uvsum(response = 'cyl',
          covs=c('qsec'),
          data=mtcars,
-         CIwidth=.90)
-
-
+         CIwidth=.90,showN=F)
 ```
 
 ### Test crr
@@ -300,6 +301,33 @@ rm_uvsum(response = 'weight',
 ```{r}
 ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
         set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE)
+
+
+ggkmcif(response = c('os_time','os_status'),
+        cov='sex',
+        data=pembrolizumab, 
+        median.text = T,median.lines=T,conf.curves=TRUE)
+
+ggkmcif(response = c('os_time','os_status'),
+        cov='sex',
+        data=pembrolizumab,
+        median.text = F,set.time.text = 'mo OS',
+        set.time = c(12,24),conf.type = 'log-log',conf.curves=TRUE)
+
+type=NULL;
+                    pval = TRUE;HR=FALSE;HR_pval=FALSE;conf.curves=FALSE;conf.type = "log";table = TRUE;times = NULL;xlab = "Time";ylab=NULL ;
+                    main = NULL;stratalabs = NULL;strataname = nicename(cov);
+                    stratalabs.table=NULL;strataname.table=strataname;
+                    median.text=FALSE;median.lines=FALSE;median.CI=FALSE;set.time.text=NULL;set.time.line=F;set.time=5;set.time.CI=FALSE;
+                    censor.marks = TRUE;censor.size = 3;censor.stroke = 1.5;
+                    fsize = 15; nsize = 4.5; lsize = 1.5; psize = 4.5;
+                    median.size=4.5;median.pos=NULL;median.lsize=1.1;
+                    set.size=4.5;set.pos=NULL;set.lsize=1.1;
+                    ylim=c(0.1); col=NULL;linetype=NULL; xlim=NULL;
+                    legend.pos = NULL;  pval.pos=NULL;plot.event=1;event=c("col","linetype");flip.CIF =F;
+                    cut=NULL;eventlabs=NULL;event.name=NULL;Numbers_at_risk_text="Numbers at risk";
+                    HR.digits = 2;HR.pval.digits=3; pval.digits=3;
+                    median.digits=3;set.time.digits=3;returns = FALSE;print.n.missing=T
 
 ```
 
@@ -369,10 +397,7 @@ rm_mvsum(model=m,data = lung,p.adjust='holm',showN=T)
 fit_lm = lm(wt.loss~age+Sex,data=lung)
 rm_mvsum(model=fit_lm,showN=T)
 
-call <- as.character(m$call)
-f <- call[grep('~',call)]
-response <-trimws(gsub('~.*','',f))
-response
+
 
 ```
 
@@ -436,15 +461,19 @@ rm_mvsum(model=house.plr,showN=T)
 
 ```
 
-### Test cohph
+### Test coxph
 
 ```{r}
 surv_fit <- survival::coxph(Surv(os_time,os_status)~age+sex+baseline_ctdna+l_size+change_ctdna_group,
 data=pembrolizumab)
-rm_mvsum(surv_fit,tableOnly = T)
-model=surv_fit
+rm_mvsum(surv_fit,tableOnly = F)
+summary(surv_fit)$coefficients
 
 
+surv_fit <- survival::coxph(Surv(os_time,os_status)~baseline_ctdna,
+data=pembrolizumab)
+summary(surv_fit)$coefficients
+anova(surv_fit)
 ```
 
 ### Test crr
@@ -656,5 +685,60 @@ RxFuns %>% write.csv('../reportRxFunctionList.csv')
 
 
 ```{r}
+uvsumTable  <- rm_uvsum(response = 'wt.loss', 
+                        covs=c('Sex','ph.ecog','meal.cal','AgeGroup'),
+                        data=lung,
+                        CIwidth=.95,
+                        tableOnly = T)
+
+m <- lm(wt.loss~meal.cal,data=lung)
+mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
+
+rm_uv_mv(uvsumTable,mvsumTable)
+
+
 ```
 
+# Reporting p-values
+
+```{r}
+# N <- 40
+# Ei <- rnorm(N)
+# data <- data.frame(x1=rnorm(N),
+#                    x2=rnorm(N,2,.5),
+#                    x3=rnorm(N,5),
+#                    c1=factor(sample(c('little','big'),N,T)),
+#                    c2=factor(sample(c('A','B','C'),N,T)))
+# attach(data)
+# data$y = .3*x1+.5*x2+.25*x3+as.numeric(c1)+2*as.numeric(c2)+Ei
+# data$yBin = ifelse(data$y<median(data$y),0,1)
+# data$z = ifelse(Ei<quantile(Ei,.2),0,1)
+
+# LM
+m1 <- lm(y~x1+x2+c1+c2,data=data)
+round(summary(m1)$coefficients,4)
+round(data.frame(car::Anova(m1)),4)
+rm_mvsum(m1,digits=4)
+
+# GLM
+m1 <- glm(y~x1+x2+x3+c1+c2,data=data)
+round(summary(m1)$coefficients,4)
+round(data.frame(car::Anova(m1)),4)
+#pchisq(summary(m1)$coefficients[,3]^2,1,lower.tail = F)
+pf(summary(m1)$coefficients[,3]^2,1,10000,lower.tail = F)
+pf(summary(m1)$coefficients[,3]^2,1,34,lower.tail = F)
+rm_mvsum(m1,digits=4)
+
+# GLM Logistic
+m1 <- glm(yBin~x1+x2+x3,data=data,family='binomial')
+round(summary(m1)$coefficients,4)
+round(data.frame(car::Anova(m1)),4)
+rm_mvsum(m1,digits=4)
+
+# CoxPh
+m1 <- coxph(Surv(y,z)~x1+x2+c1+c2,data = data)
+round(summary(m1)$coefficients,4)
+round(data.frame(car::Anova(m1)),4)
+rm_mvsum(m1,data=data,digits=4)
+
+```

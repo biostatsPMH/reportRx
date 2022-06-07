@@ -125,7 +125,8 @@ covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 outTable(tab, fontsize=7)
 }
 \seealso{
-\code{\link{fisher.test}}, \code{\link{chisq.test}},
+\code{\link{covsum}},\code{\link{fisher.test}}, 
+\code{\link{chisq.test}},
   \code{\link{wilcox.test}}, \code{\link{kruskal.test}}, \code{\link{anova}},
   and \code{\link{outTable}}
 }
