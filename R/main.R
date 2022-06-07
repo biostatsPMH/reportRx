@@ -661,6 +661,8 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
     }
     else {
       if (length(response) == 2) {
+        # Check that responses are numeric
+        for (i in 1:2) if (class(data[[response[i]]])[1] != 'numeric') stop('Both response variables must be numeric')
         if (length(unique(data[[response[2]]])) < 3) {
           type <- "coxph"
         }
@@ -682,6 +684,7 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
         }
       }
       else {
+        if (class(data[[response]])[1] != 'numeric') stop('Response variable must be numeric')
         type <- "linear"
         beta <- "Estimate"
       }
@@ -1938,6 +1941,8 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #' column names are converted to spaces. To disable this set rm_ to FALSE
 #'
 #' @param tab a table to format
+#' @param row.names a string specifying the column name to assign to the
+#'   rownames. If NULL (the default) then rownames are removed.
 #' @param to_indent numeric vector indicating which rows to indent in the first
 #'   column.
 #' @param rows_bold numeric vector indicating which rows to bold
@@ -1952,7 +1957,6 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #'   for right, with no separations. For example, to set the left column to be
 #'   centred, the middle column right-aligned and the right column left aligned
 #'   use: align='crl'
-#' @param keep.rownames if TRUE the rownames will be output as the first column, default is FALSE
 #' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
@@ -1962,11 +1966,14 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 #' outTable(tab, fontsize=7)
 
-outTable <- function(tab,to_indent=numeric(0),rows_bold=numeric(0),cells_bold,caption=NULL,digits,align,keep.rownames=FALSE,fontsize,chunk_label){
+outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0),cells_bold,caption=NULL,digits,align,keep.rownames=FALSE,fontsize,chunk_label){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
-  if (keep.rownames) tab <- cbind(rownames(tab),tab)
+  if (!is.null(row.names)) {
+    tab <- cbind(rownames(tab),tab)
+    names(tab)[1] <- row.names
+  }
   rownames(tab) <- NULL
   
   # define column alignment
@@ -2265,7 +2272,16 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 
 #' Output several univariate models nicely in a single table
 #'
-#' Wrapper for the uvsum function for use with Rmarkdown.
+#' A table with the model parameters from running separate univariate models on
+#' each covariate. For factors with more than two levels a Global p-value is
+#' returned.
+#'
+#' Global p-values are likelihood ratio tests for lm, glm and polr models. For
+#' lme models an attempt is made to re-fit the model using ML and if,successful
+#' LRT is used to obtain a global p-value. For coxph models the model is re-run
+#' without robust variances with and without each variable and a LRT is
+#' presented. If unsuccessful a Wald p-value is returned. For GEE and CRR models
+#' Wald global p-values are returned.
 #'
 #' @param response string vector with name of response
 #' @param covs character vector with the names of columns to fit univariate
