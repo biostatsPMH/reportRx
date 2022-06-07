@@ -2381,11 +2381,9 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
   if (tableOnly){
     if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     if (length(cap_warn)>0) warning(cap_warn)
+    attr(tab,'indented') <- to_indent
     return(tab)
   }
-  outTable(tab=tab, digits = digits,
-           to_indent=to_indent,rows_bold=rows_bold,
-           caption=caption)
   outTable(tab=tab, digits = digits,
            to_indent=to_indent,rows_bold=rows_bold,
            caption=caption,
@@ -2533,9 +2531,12 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
     stop(paste('The following variables were not in the univariate model:',paste0(setdiff(mvsumTable[,1],uvsumTable[,1]),collapse=", "),
                '\nRun uvsum with all the variables in the multivariable model.'))
   }
-  # identify the rows to be indented
-  to_indent <- numeric(0)
-  if ('Global p-value' %in% names(uvsumTable)) to_indent <- which(is.na(uvsumTable[['Global p-value']]))
+  if (is.null(attr(uvsumTable,'indented'))) {
+    warning('Please re-generate the uvsumTable to correct variable indenting')
+    to_indent <- numeric(0)
+  } else{
+    to_indent <- attr(uvsumTable,'indented')
+  }
   x <- lapply(list(uvsumTable,mvsumTable), function(t) {
     p_cols <- grep('p-value',names(t))
     # add a column for the variable name

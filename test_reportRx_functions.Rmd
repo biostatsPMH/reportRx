@@ -683,7 +683,7 @@ RxFuns %>% write.csv('../reportRxFunctionList.csv')
 
 # Appendix
 
-
+Testing error from Yanning
 ```{r}
 uvsumTable  <- rm_uvsum(response = 'wt.loss', 
                         covs=c('Sex','ph.ecog','meal.cal','AgeGroup'),
