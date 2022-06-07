@@ -3002,6 +3002,9 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 #' @importFrom ggplot2 ggplot 
 #' @importFrom gridExtra grid.arrange
 #' @export
+#' @examples
+#' #KM plot with 95% CI and censor marks
+#' ggkmcif(c('os_time','os_status'),'sex',data = pembrolizumab, type = 'KM', HR=TRUE, HR_pval = TRUE, conf.curves = TRUE,set.time.CI = TRUE, censor.marks=TRUE)
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=FALSE,HR_pval=FALSE,conf.curves=FALSE,conf.type = "log",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
                     main = NULL,stratalabs = NULL,strataname = nicename(cov),
