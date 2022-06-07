@@ -219,7 +219,8 @@ etsum<- function(data,response,group=1,times=c(12,24)){
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean
+#' indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param IQR boolean indicating if you want to display the inter quantile range
 #'   (Q1,Q3) as opposed to (min,max) in the summary for continuous variables
@@ -578,7 +579,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param testing boolean to indicate if you want to print out the covariates
 #'   before the model fits.
@@ -1121,7 +1122,7 @@ uvsum <- function (response, covs, data, digits=2,id = NULL, corstr = NULL, fami
 #' @param markup boolean indicating if you want latex markup
 #' @param sanitize boolean indicating if you want to sanitize all strings to not
 #'   break LaTeX
-#' @param nicenames booling indicating if you want to replace . and _ in strings
+#' @param nicenames boolean indicating if you want to replace . and _ in strings
 #'   with a space
 #' @param CIwidth width for confidence intervals, defaults to 0.95
 #' @keywords dataframe
@@ -2476,7 +2477,7 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex")
 #' rm_etsum(pembrolizumab,c("os_time","os_status"))
 #' rm_etsum(pembrolizumab,c("os_time","os_status"),"sex",c(1,2,3),"months")
-rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
+ rm_etsum<-function(data,response,group=1,times=c(12,14),units="months"){
   t<-etsum(data,response,group,times)
   
   names<-names(t)
