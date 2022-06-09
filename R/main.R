@@ -328,6 +328,7 @@ covsum <- function(data,covs,maincov=NULL,digits=1,numobs=NULL,markup=TRUE,sanit
             p_type <- 'Fisher Exact'
             p <- try(stats::fisher.test(pdata[[maincov]], pdata[[cov]])$p.value,silent=T)
             if (class(p)[1]=='try-error'){
+              set.seed(1)
               p <- try(stats::fisher.test(pdata[[maincov]], pdata[[cov]],simulate.p.value =  T)$p.value,silent=T)
               p_type <- 'MC sim'
             }
@@ -1183,7 +1184,9 @@ mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, n
     nicename <- identity
   if (class(model)[1] %in% c("lm", "lme", "multinom", 
                              "survreg", "polr")) {
-    call <- Reduce(paste, deparse(stats::formula(model$terms), width.cutoff = 500))
+    call <- Reduce(paste, 
+                   deparse(stats::formula(model$terms), 
+                           width.cutoff = 500))
   }  else if (class(model)[1] %in% c("crr")) {
     call <- paste(deparse(model$call), collapse = "")
   }  else call <- paste(deparse(model$formula), collapse = "")
@@ -1274,7 +1277,8 @@ mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, n
   }
   beta = betaWithCI(beta, CIwidth)
   ucall = unique(call)
-  indx = matchcovariate(betanames, ucall)
+  indx = try(matchcovariate(betanames, ucall),silent = T)
+  if ('try-error' %in% class(indx)) stop('This function not yet implemented for complex function calls. Try re-specifying the model.')
   data = data.frame(data)
   for (v in ucall) {
     if (class(data[[v]])[1] == "character") 
@@ -1294,6 +1298,7 @@ mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, n
     betaname <- strsplit(betaname, ":", fixed = T)
     oldcovname <- covnm(betaname[[1]], call)
     oldcovname <- getvarname(oldcovname)
+    oldcovname <- paste(oldcovname,collapse = ":")
     levelnameslist <- lapply(betaname, function(level) {
       mapply(function(lvl, cn) {
         result <- ifelse(length(grep(paste0(cn, cn), 
@@ -1305,8 +1310,7 @@ mvsum <- function (model, data, digits=2, showN = F, markup = T, sanitize = T, n
     levelnames <- unlist(lapply(levelnameslist, function(x) paste(x, 
                                                                   collapse = ":")))
     levelnames <- addspace(sanitizestr(nicename(levelnames)))
-    covariatename <- lbld(sanitizestr(nicename(paste(oldcovname, 
-                                                     collapse = ":"))))
+    covariatename <- lbld(sanitizestr(nicename(oldcovname)))
     reference = NULL
     title = NULL
     body = NULL
@@ -1946,9 +1950,11 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #'   rownames. If NULL (the default) then rownames are removed.
 #' @param to_indent numeric vector indicating which rows to indent in the first
 #'   column.
+#' @param  bold_headers boolean indicating if the column headers should be
+#'   bolded
 #' @param rows_bold numeric vector indicating which rows to bold
-#' @param cells_bold array indices indicating which cells to bold. These will be
-#'   in addition to rows bolded by rows_bold. Only implemented for Word output.
+#' @param bold_cells array indices indicating which cells to bold. These will be
+#'   in addition to rows bolded by rows_bold.
 #' @param caption table caption
 #' @param digits number of digits to round numeric columns to, wither a single
 #'   number or a vector corresponding to the number of numeric columns in tab
@@ -1958,6 +1964,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #'   for right, with no separations. For example, to set the left column to be
 #'   centred, the middle column right-aligned and the right column left aligned
 #'   use: align='crl'
+#' @param keep.rownames should the row names be included in the output
 #' @param fontsize PDF/HTML output only, manually set the table fontsize
 #' @param chunk_label only used knitting to Word docs to allow cross-referencing
 #' @export
@@ -1967,7 +1974,7 @@ plotuv <- function(response,covs,data,showN=FALSE,showPoints=TRUE,na.rm=TRUE,res
 #' covs=c('age','sex','pdl1','tmb','l_size'),show.tests=T,tableOnly = TRUE)
 #' outTable(tab, fontsize=7)
 
-outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0),cells_bold,caption=NULL,digits,align,keep.rownames=FALSE,fontsize,chunk_label){
+outTable <- function(tab,row.names=NULL,to_indent=numeric(0),bold_headers=TRUE,rows_bold=numeric(0),bold_cells=NULL,caption=NULL,digits,align,keep.rownames=FALSE,fontsize,chunk_label){
   
   # strip tibble aspects
   tab=as.data.frame(tab)
@@ -2008,20 +2015,22 @@ outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0
   
   if (is.null(to_indent)) to_indent = numeric(0)
   to_indent = as.vector(to_indent)
-  if (missing(cells_bold)) cells_bold <- NULL
-  
-  
+
+  if (length(rows_bold)>0){
+      arrInd <- as.matrix(expand.grid(rows_bold,1:ncol(tab)))
+      arrInd <- arrInd[!is.na(tab[arrInd]),]
+      bold_cells <- rbind(bold_cells,arrInd)
+      dimnames(bold_cells) <- NULL
+  }
   if (out_fmt=='doc'){
     caption = if (!is.null(caption)) {ifelse(chunk_label=='NOLABELTOADD',caption,paste0('(\\#tab:',chunk_label,')',caption))}
     tab[is.na(tab)] <-'&nbsp;' # This is necessary to assign the 'Compact' style to empty cells
     tab[tab==''] <-'&nbsp;'
     
     tab[[1]][to_indent] <- sapply(tab[[1]][to_indent],function(x) paste('&nbsp;&nbsp;',x))
-    if (length(rows_bold)==0) rows_bold <- NULL 
     pander::pander(tab,
                    caption=caption,
-                   emphasize.strong.rows=rows_bold,
-                   emphasize.strong.cells=cells_bold,
+                   emphasize.strong.cells=bold_cells,
                    split.table=Inf, split.cells=15,
                    justify = alignSpec)
     
@@ -2030,10 +2039,13 @@ outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0
     # set NA to empty in kable
     options(knitr.kable.NA = '')
     if(!is.null(caption)) caption <- sanitize(caption)
+    if (!is.null(bold_cells)) tab[bold_cells] <- sapply(tab[bold_cells],function(x) kableExtra::cell_spec(x, out_fmt, bold = T))
+    names(tab) <- sanitize(names(tab))
     # This may not work as expected if a small table is split over pages
     # better to also repeat table headers
     if (nrow(tab)>30){
       kout <- knitr::kable(tab, format = out_fmt,
+                           escape = FALSE,
                            booktabs=TRUE,
                            longtable=TRUE,
                            linesep='',
@@ -2042,6 +2054,7 @@ outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0
       kout <- kableExtra::kable_styling(kout,latex_options = c('repeat_header'))
     } else {
       kout <- knitr::kable(tab, format = out_fmt,
+                           escape = FALSE,
                            booktabs=TRUE,
                            longtable=FALSE,
                            linesep='',
@@ -2049,11 +2062,12 @@ outTable <- function(tab,row.names=NULL,to_indent=numeric(0),rows_bold=numeric(0
                            align = alignSpec)
     }
     kout <- kableExtra::add_indent(kout,positions = to_indent)
-    if (length(rows_bold)>0){
-      kout<- kableExtra::row_spec(kout,rows_bold,bold=TRUE)
-    }
     if (!missing(fontsize)){
       kout <- kableExtra::kable_styling(kout,font_size = fontsize)
+    }
+    if (out_fmt=='html'){
+      kout <- kableExtra::kable_styling(kout,full_width = T)
+      
     }
     kout
   }
@@ -2104,9 +2118,9 @@ nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRU
   
   # strip any grouped data or tibble properties
   if ('data.frame' %in% class(data)){
+    colNames <- names(data)
     data <- data.frame(data)
   } else stop('data must be a data.frame')
-  
   # ensure that the data are sorted by the header column and covariates in the order they first appear
   # necessary if there is a misplaced row
   data[[head_col]] <- factor(data[[head_col]],levels=unique(data[[head_col]]),ordered = T)
@@ -2120,10 +2134,12 @@ nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRU
   if (!missing(digits)){
     coltypes <- unlist(lapply(data, class))
     numCols <- names(coltypes)[coltypes=='numeric']
+    if (length(numCols)>0){
     colRound <- cbind(numCols,digits)
     colDigits <- as.numeric(colRound[,2])
     names(colDigits) <- colRound[,1]
     for (v in numCols) data[[v]] <- sapply(data[[v]],function(x) niceNum(x,digits=colDigits[v]))
+    }
   }
   
   for (i in 1:ncol(new_row)) new_row[1,i] <- NA
@@ -2146,10 +2162,8 @@ nestTable <- function(data,head_col,to_col,colHeader ='',caption=NULL,indent=TRU
   
   data[[to_col]][header_rows] <- paste0(hdr_prefix,data[[to_col]][header_rows],hdr_suffix)
   
-  # data <- dplyr::select(data,-all_of(head_col))
   data <- data[,setdiff(names(data),head_col)]
-  names(data)[1] <-colHeader
-  
+  names(data) <- c(colHeader,setdiff(colNames,c(to_col,head_col)))
   if (tableOnly){
     if (names(data)[1]=='')  names(data)[1] <- 'Col1'
     return(data)
@@ -2242,30 +2256,30 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
   covsumArgs <- argList[names(argList) %in% argsToPass]
   covsumArgs[["markup"]] <- FALSE; covsumArgs[["sanitize"]] <- FALSE
   tab <- do.call(covsum,covsumArgs)
-  rows_bold = numeric(0)
+  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
+  to_indent <- which(!tab$Covariate %in% output_var_names)
+  to_bold_name <- which(tab$Covariate %in% output_var_names)
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  names(tab)[1] <-covTitle
+  bold_cells <- arrayInd(to_bold_name, dim(tab))
+  
   if ('p-value' %in% names(tab)) {
     # format p-values nicely
     p_vals <- tab[['p-value']]
     new_p <- sapply(p_vals,formatp)
     tab[['p-value']] <- new_p
-    rows_bold <- which(suppressWarnings(as.numeric(p_vals))<0.05)
+    to_bold_p <- which(tab[["p-value"]]<.05 & !tab[["p-value"]]=="")
+    bold_cells <- rbind(bold_cells,
+                        matrix(cbind(to_bold_p, which(names(tab)=='p-value')),ncol=2))
   } 
-  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
-  to_indent <- which(!tab$Covariate %in% output_var_names)
-  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  names(tab)[1] <-covTitle
+
   if (tableOnly){
     if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     return(tab)
   }
-  # if (!is.null(caption)){
-  #   if (caption=='default'){
-  #     if (!is.null(maincov)){
-  #       caption = paste0('Summary sample statistics by ',nicename(maincov),'.')
-  #     } else
-  #       caption = 'Summary sample statistics.'
-  #   }}
-  outTable(tab=tab,to_indent=to_indent,rows_bold=rows_bold,
+  
+  
+  outTable(tab=tab,to_indent=to_indent,bold_cells = bold_cells,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
@@ -2349,7 +2363,8 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
     # Do not display unstable estimates
     inf_values =  grep('Inf',tab[,2])
     if (length(inf_values)>0){
-      tab[inf_values,2:4] <-NA
+       if ('Global p-values' %in% names(tab)) to_hide <-2:4 else to_hide <-2:3
+      tab[inf_values,to_hide] <-NA
       cap_warn <- paste0(cap_warn,ifelse(identical(cap_warn,character(0)),'',', '),
                          'Covariates with unstable estimates:',
                          paste(tab$Covariate[inf_values],collapse=','),'.')
@@ -2358,24 +2373,34 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
   # if an adjustment was made, add this to the cap_warn text
   if (p.adjust!='none') cap_warn <- paste0(cap_warn,'. Global p-values were adjusted according to the ',p.adjust,' method.')
   
+  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
+  to_indent <- which(!tab$Covariate %in% output_var_names)
+  to_bold_name <- which(tab$Covariate %in% output_var_names)
+  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
+  bold_cells <- arrayInd(to_bold_name, dim(tab))
+  
   # perform p-value adjustment across all p-values
   if ("Global p-value" %in% names(tab)){
     raw_p <- ifelse(tab[["Global p-value"]]=='',tab[["p-value"]],tab[["Global p-value"]])
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     p_sig <- sapply(p_sig,formatp,digits = digits)
-    tab[["Global p-value"]][tab[["Global p-value"]]!='']  <- p_sig[tab[["Global p-value"]]!='']
-    tab[["p-value"]][tab[["Global p-value"]]=='']  <- p_sig[tab[["Global p-value"]]=='']
+    gp_vals <- which(tab[["Global p-value"]]!='' & !is.na(tab[["Global p-value"]]))
+    tab[["Global p-value"]][gp_vals]  <- p_sig[gp_vals]
+    p_vals <- which(tab[["p-value"]]!='' & !is.na(tab[["p-value"]]))
+    tab[["p-value"]][p_vals]  <- p_sig[p_vals]
+    
+    to_bold_p <- which(tab[["Global p-value"]]<.05 & !tab[["Global p-value"]]=="")
+    if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
+                        matrix(cbind(to_bold_p, which(names(tab)=='Global p-value')),ncol=2))
+    
   } else {
     raw_p <- tab[["p-value"]]
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
-  
-  rows_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  if (nicenames) output_var_names <- gsub('[_.]',' ',covs) else output_var_names <- covs
-  to_indent <- which(!tab$Covariate %in% output_var_names)
-  if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
-  
+  to_bold_p <- which(tab[["p-value"]]<.05 & !tab[["p-value"]]=="")
+  if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
+                      matrix(cbind(to_bold_p, which(names(tab)=='p-value')),ncol=2))
   
   names(tab)[1] <-covTitle
   if (tableOnly){
@@ -2385,7 +2410,7 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
     return(tab)
   }
   outTable(tab=tab, digits = digits,
-           to_indent=to_indent,rows_bold=rows_bold,
+           to_indent=to_indent,bold_cells=bold_cells,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
@@ -2435,27 +2460,14 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
   tab <- mvsum(model=model,data=data,digits=digits,markup = FALSE, 
                sanitize = FALSE, nicenames = FALSE,showN=showN,CIwidth = CIwidth)
   
-  # # Reduce the number of significant digits in p-values
-  # p_val <-  formatp(tab$`p-value`,digits=digits)
-  # gp <- suppressWarnings(stats::p.adjust(tab$`Global p-value`,method=p.adjust))
+  to_indent <- setdiff(1:nrow(tab),
+                       sapply(attr(tab,'covs'),function(x) grep(x,tab$Covariate)[1],
+                              USE.NAMES = FALSE))
   
-  # if (!is.null(caption)){
-  #   if (caption=='default'){
-  #     if (p.adjust!='none') 
-  #       caption <- paste0('Multivariable regression using ',class(model)[1],'.')
-  #       caption <- paste0(caption,'. Global p-values were adjusted according to the ',p.adjust,' method.')    
-  #   }}
-  
-  
-  # tab$`p-value` <- p_val
-  # tab$`Global p-value` <- formatp(gp,digits=digits)
-  
-  # # If all outcomes are continuous (and so all p-values are NA), remove this column
-  # # and rename GLobal p-value to p-value
-  # if (sum(is.na(tab[["p-value"]]))==nrow(tab)) {
-  #   tab <- tab[,-which(names(tab)=="p-value")]
-  #   names(tab) <- gsub('Global p-value','p-value',names(tab))
-  # }
+  if ("Global p-value" %in% names(tab)) 
+    to_indent <- setdiff(to_indent,which(tab[["Global p-value"]]!=''))
+  to_bold_name <- setdiff(1:nrow(tab),to_indent)
+  bold_cells <- arrayInd(to_bold_name, dim(tab))
   
   # perform p-value adjustment across all p-values
   if ("Global p-value" %in% names(tab)){
@@ -2464,25 +2476,31 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
     p_sig <- sapply(p_sig,formatp,digits = digits)
     tab[["Global p-value"]][tab[["Global p-value"]]!='']  <- p_sig[tab[["Global p-value"]]!='']
     tab[["p-value"]][tab[["Global p-value"]]=='']  <- p_sig[tab[["Global p-value"]]=='']
+    to_bold_p <- which(tab[["Global p-value"]]<.05 & 
+                         !tab[["Global p-value"]]=="" &
+                         !is.na(tab[["Global p-value"]]))
+    if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
+                        matrix(cbind(to_bold_p, which(names(tab)=='Global p-value')),ncol=2))
+    
   } else {
     raw_p <- tab[["p-value"]]
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
-  rows_bold <- which(suppressWarnings(as.numeric(p_sig))<0.05)
-  to_indent <- setdiff(1:nrow(tab),
-                       sapply(attr(tab,'covs'),function(x) grep(x,tab$Covariate)[1],
-                              USE.NAMES = FALSE))
-  if ("Global p-value" %in% names(tab)) 
-    to_indent <- setdiff(to_indent,which(tab[["Global p-value"]]!=''))
-    
+  to_bold_p <- which(tab[["p-value"]]<.05 & 
+                       !tab[["p-value"]]=="" &
+                       !is.na(tab[["p-value"]]))
+  if (length(to_bold_p)>0)  bold_cells <- rbind(bold_cells,
+                      matrix(cbind(to_bold_p, which(names(tab)=='p-value')),ncol=2))
+  
+  
   if (nicenames) tab$Covariate <- gsub('[_.]',' ',tab$Covariate)
   names(tab)[1] <-covTitle
   if (tableOnly){
     if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
     return(tab)
   }
-  outTable(tab=tab,to_indent=to_indent,rows_bold=rows_bold,
+  outTable(tab=tab,to_indent=to_indent,bold_cells = bold_cells,
            caption=caption, digits = digits,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
   
@@ -2541,14 +2559,15 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
     p_cols <- grep('p-value',names(t))
     # add a column for the variable name
     vname <- character(nrow(t))
-    vname[1] <- t$Covariate[1]
-    p_var <- ifelse('Global p-value' %in% names(t),'Global p-value','p-value')
-    if (nrow(t)>1){    
-      for (i in 2:nrow(t)) vname[i] <-ifelse(is.na(t[[p_var]][i]),vname[i-1],t$Covariate[i])}
+    vname[setdiff(1:nrow(t),to_indent)] <- t$Covariate[setdiff(1:nrow(t),to_indent)]
+    for (i in 1:nrow(t)) vname[i] <- ifelse(vname[i]=='',vname[i-1],vname[i])
+    if ('Global p-value' %in% names(t)){
+      t[['Global p-value']][t[['Global p-value']]==''] <- NA
+      p_var <- ifelse(is.na(t[['Global p-value']]),t[['p-value']] ,t[['Global p-value']])
+    } else p_var <- t[['p-value']]
+    p_var <- ifelse(p_var=='',NA,p_var)
+    t$p <- p_var
     t$var_level <- paste(vname,t[,1],sep='_')
-    if (length(p_cols)==2){
-      t$p <- ifelse(is.na(t[['p-value']]),t[['Global p-value']],t[['p-value']])  
-    } else {t$p <- t[,grep('p-value',names(t))] }
     return(t[,setdiff(1:ncol(t),p_cols)])
   })
   x[[1]]$varOrder = 1:nrow(x[[1]])
@@ -2561,13 +2580,23 @@ rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FA
   names(out) <- gsub('[.]x','',names(out))
   out <- out[order(out$varOrder),-which(names(out)=='varOrder')]
   
-  names(tab)[1] <-covTitle
+  names(out)[1] <-covTitle
   if (tableOnly){
-    if (names(tab)[1]=='') names(tab)[1]<- 'Covariate'
-    return(tab)
+    if (names(out)[1]=='') names(out)[1]<- 'Covariate'
+    return(out)
   }  
-  rows_bold <- which(out[['p (adj)']]=='<0.001' | suppressWarnings(as.numeric(out[['p (adj)']]))<0.05)
-  outTable(tab=out,to_indent=to_indent,rows_bold=rows_bold,
+  
+  to_bold_name <- setdiff(1:nrow(out),to_indent)
+  bold_cells <- arrayInd(to_bold_name, dim(out))
+  
+  to_bold_p <- which(out[["p"]]<.05 & !is.na(out[["p"]]))
+  if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
+                                               matrix(cbind(to_bold_p, which(names(out)=='p')),ncol=2))
+  to_bold_p <- which(out[["p (adj)"]]<.05 & !is.na(out[["p (adj)"]]))
+  if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
+                                               matrix(cbind(to_bold_p, which(names(out)=='p (adj)')),ncol=2))
+  
+  outTable(tab=out,to_indent=to_indent,bold_cells = bold_cells,
            caption=caption,
            chunk_label=ifelse(missing(chunk_label),'NOLABELTOADD',chunk_label))
 }
@@ -3122,19 +3151,20 @@ forestplot<-function (data,xlab = NULL,ylab = NULL,main = NULL,space = 0,bool=F,
 #' ggkmcif(response = c('os_time','os_status'),
 #' cov='sex',
 #' data=pembrolizumab, 
-#' median.text = T,median.lines=T,conf.curves=TRUE)
+#' median.text = TRUE,median.lines=TRUE,conf.curves=TRUE)
 #' 
 #' # Plot with specified survival times and log-log CI
 #' ggkmcif(response = c('os_time','os_status'),
 #' cov='sex',
 #' data=pembrolizumab,
-#' median.text = F,set.time.text = 'mo OS',
+#' median.text = FALSE,set.time.text = 'mo OS',
 #' set.time = c(12,24),conf.type = 'log-log',conf.curves=TRUE)
+#' 
+#' # KM plot with 95% CI and censor marks
+#' ggkmcif(c('os_time','os_status'),'sex',data = pembrolizumab, type = 'KM', 
+#' HR=TRUE, HR_pval = TRUE, conf.curves = TRUE,conf.type='log-log', 
+#' set.time.CI = TRUE, censor.marks=TRUE)
 #' @export
-#' @examples
-#' #KM plot with 95% CI and censor marks
-#' ggkmcif(c('os_time','os_status'),'sex',data = pembrolizumab, type = 'KM', HR=TRUE, HR_pval = TRUE, 
-#' conf.curves = TRUE,conf.type='log-log', set.time.CI = TRUE, censor.marks=TRUE)
 ggkmcif <- function(response,cov=NULL,data,type=NULL,
                     pval = TRUE,HR=FALSE,HR_pval=FALSE,conf.curves=FALSE,conf.type = "log",table = TRUE,times = NULL,xlab = "Time",ylab=NULL ,
                     main = NULL,stratalabs = NULL,strataname = nicename(cov),
@@ -3861,8 +3891,16 @@ modify_ggkmcif <- function(list_gg){
 #' 
 #' @param list_gg list containing the results of ggkmcif
 #' @export
-#' @example 
+#' @examples
+#' plot <- ggkmcif(response=c('pfs_time','pfs_status'),
+#' data=pembrolizumab,returns = TRUE)
 #' 
+#' # Highlighting a section of the curve
+#' plot[[1]] <- plot[[1]] + 
+#' ggplot2::geom_rect(xmin=4,xmax=8,ymin=0.15,ymax=0.4,alpha=0.01,fill='yellow')
+#' 
+#' # Putting the curve back together
+#' ggkmcif_paste(plot) 
 ggkmcif_paste <- function(list_gg){
   gA <- ggplotGrob(list_gg[[1]])
   gB <- ggplotGrob(list_gg[[2]])

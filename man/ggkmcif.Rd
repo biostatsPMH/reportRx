@@ -235,12 +235,17 @@ data=pembrolizumab)
 ggkmcif(response = c('os_time','os_status'),
 cov='sex',
 data=pembrolizumab, 
-median.text = T,median.lines=T,conf.curves=TRUE)
+median.text = TRUE,median.lines=TRUE,conf.curves=TRUE)
 
 # Plot with specified survival times and log-log CI
 ggkmcif(response = c('os_time','os_status'),
 cov='sex',
 data=pembrolizumab,
-median.text = F,set.time.text = 'mo OS',
+median.text = FALSE,set.time.text = 'mo OS',
 set.time = c(12,24),conf.type = 'log-log',conf.curves=TRUE)
+
+#KM plot with 95\% CI and censor marks
+ggkmcif(c('os_time','os_status'),'sex',data = pembrolizumab, type = 'KM', 
+HR=TRUE, HR_pval = TRUE, conf.curves = TRUE,conf.type='log-log', 
+set.time.CI = TRUE, censor.marks=TRUE)
 }

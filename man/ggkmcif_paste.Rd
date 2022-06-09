@@ -12,3 +12,14 @@ ggkmcif_paste(list_gg)
 \description{
 This function puts together a survival curve, and a number at risk table
 }
+\examples{
+plot <- ggkmcif(response=c('pfs_time','pfs_status'),
+data=pembrolizumab,returns = TRUE)
+
+# Highlighting a section of the curve
+plot[[1]] <- plot[[1]] + 
+ggplot2::geom_rect(xmin=4,xmax=8,ymin=0.15,ymax=0.4,alpha=0.01,fill='yellow')
+
+# Putting the curve back together
+ggkmcif_paste(plot) 
+}

@@ -6,9 +6,11 @@
 \usage{
 outTable(
   tab,
+  row.names = NULL,
   to_indent = numeric(0),
+  bold_headers = TRUE,
   rows_bold = numeric(0),
-  cells_bold,
+  bold_cells = NULL,
   caption = NULL,
   digits,
   align,
@@ -20,13 +22,19 @@ outTable(
 \arguments{
 \item{tab}{a table to format}
 
+\item{row.names}{a string specifying the column name to assign to the
+rownames. If NULL (the default) then rownames are removed.}
+
 \item{to_indent}{numeric vector indicating which rows to indent in the first
 column.}
 
+\item{bold_headers}{boolean indicating if the column headers should be
+bolded}
+
 \item{rows_bold}{numeric vector indicating which rows to bold}
 
-\item{cells_bold}{array indices indicating which cells to bold. These will be
-in addition to rows bolded by rows_bold. Only implemented for Word output.}
+\item{bold_cells}{array indices indicating which cells to bold. These will be
+in addition to rows bolded by rows_bold.}
 
 \item{caption}{table caption}
 
@@ -40,7 +48,7 @@ for right, with no separations. For example, to set the left column to be
 centred, the middle column right-aligned and the right column left aligned
 use: align='crl'}
 
-\item{keep.rownames}{if TRUE the rownames will be output as the first column, default is FALSE}
+\item{keep.rownames}{should the row names be included in the output}
 
 \item{fontsize}{PDF/HTML output only, manually set the table fontsize}
 

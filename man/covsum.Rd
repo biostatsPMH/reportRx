@@ -43,8 +43,9 @@ the covariate}
 \item{sanitize}{boolean indicating if you want to sanitize all strings to not
 break LaTeX}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings
-with a space}
+\item{nicenames}{boolean
+indicating if you want to replace . and _ in strings
+  with a space}
 
 \item{IQR}{boolean indicating if you want to display the inter quantile range
 (Q1,Q3) as opposed to (min,max) in the summary for continuous variables}

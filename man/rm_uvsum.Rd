@@ -61,7 +61,7 @@ used for geeglm. The following are permitted: '"independence"',
 \item{family}{description of the error distribution and link function to be
 used in the model. Only used for geeglm}
 
-\item{type}{string indicating he type of univariate model to fit. The
+\item{type}{string indicating the type of univariate model to fit. The
 function will try and guess what type you want based on your response. If
 you want to override this you can manually specify the type. Options
 include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"}
@@ -69,7 +69,7 @@ include "linear", "logistic", "coxph", "crr", "boxcox", "ordinal", "geeglm"}
 \item{strata}{character vector of covariates to stratify by. Only used for
 coxph and crr}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings
+\item{nicenames}{boolean indicating if you want to replace . and _ in strings
 with a space}
 
 \item{testing}{boolean to indicate if you want to print out the covariates
@@ -84,7 +84,17 @@ ordinal regression This will allow you to see which model is not fitting if
 the function throws an error}
 }
 \description{
-Wrapper for the uvsum function for use with Rmarkdown.
+A table with the model parameters from running separate univariate models on
+each covariate. For factors with more than two levels a Global p-value is
+returned.
+}
+\details{
+Global p-values are likelihood ratio tests for lm, glm and polr models. For
+lme models an attempt is made to re-fit the model using ML and if,successful
+LRT is used to obtain a global p-value. For coxph models the model is re-run
+without robust variances with and without each variable and a LRT is
+presented. If unsuccessful a Wald p-value is returned. For GEE and CRR models
+Wald global p-values are returned.
 }
 \examples{
 # Coxph model with 90\% CI

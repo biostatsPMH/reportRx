@@ -51,7 +51,7 @@ use the column name 'Covariate'.}
 \item{digits.cat}{number of digits for the proportions when summarizing
 categorical data (default: 0)}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings
+\item{nicenames}{boolean indicating if you want to replace . and _ in strings
 with a space}
 
 \item{IQR}{boolean indicating if you want to display the inter quantile range
@@ -77,7 +77,7 @@ table, ignored if maincov is NULL}
 \item{include_missing}{Option to include NA values of maincov. NAs will not
 be included in statistical tests}
 
-\item{percentage}{choice of how percentages are presented ,one of
+\item{percentage}{choice of how percentages are presented, one of
 \emph{column} (default) or \emph{row}}
 
 \item{excludeLevels}{a named list of covariate levels to exclude from

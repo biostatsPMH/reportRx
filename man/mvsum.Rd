@@ -30,7 +30,7 @@ comparison, can be useful for interactions}
 \item{sanitize}{boolean indicating if you want to sanitize all strings to not
 break LaTeX}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings
+\item{nicenames}{boolean indicating if you want to replace . and _ in strings
 with a space}
 
 \item{CIwidth}{width for confidence intervals, defaults to 0.95}

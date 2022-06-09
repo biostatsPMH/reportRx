@@ -1,0 +1,84 @@
+---
+title: "Report Title"
+author: "Lisa Avery, PMH Biostatistics"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+  bookdown::word_document2:
+#    reference_docx: 'wordTemplate.docx'
+    toc: yes
+    number_sections: FALSE
+# The font may not work for Mac OS
+sansfont: Calibri Light
+mainfont: Calibri Light
+#bibliography: bibfile.bib  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE,message = FALSE,comment = '',dpi=300)
+library(tidyverse)
+# createBibfile::rmdBibfile("../sanitised-library.bib","bibfile.bib")
+theme_pmh <- function(base_size=10){
+  theme_bw(base_size=base_size)  %+replace% 
+    theme(legend.position = 'bottom')
+}
+theme_set(theme_pmh(base_size=10))
+
+# This can lead to some unexpected behaviour - if colours go awry comment this out
+options(list(ggplot2.discrete.fill = function() ggsci::scale_fill_aaas(),
+             ggplot2.discrete.colour = function() ggsci::scale_color_aaas()))
+
+devtools::load_all()
+
+```
+
+```{r}
+data(cancer, package='survival')
+lung <- cancer
+
+lung <- lung %>%
+  mutate(
+    Status=factor(status-1),
+    Sex = factor(sex,labels = c('Male','Female')),
+    AgeGroup = cut(age, breaks=seq(0,100,10)),
+    OneLevelFactor = factor(x='one level')
+  ) %>%
+  arrange(Status)
+
+```
+
+```{r}
+tab <- covsum(data=lung,
+              covs=c('Status','meal.cal','OneLevelFactor'),
+              maincov = 'Sex',nicenames=F,sanitize = F,markup=F)
+#to_bold_name <- which(tab$Covariate %in% nice_var_names)
+to_bold_name <- which(tab$Covariate %in% c('Status','meal.cal','OneLevelFactor'))
+bold_cells <- arrayInd(to_bold_name, dim(tab))
+to_bold_p <- which(tab[["p-value"]]<.05 & !tab[["p-value"]]=="")
+bold_cells <- rbind(bold_cells,
+                    matrix(cbind(to_bold_p, which(names(tab)=='p-value')),ncol=2))
+if ("Global p-value" %in% names(tab)){
+  to_bold_gp <- which(tab[["Global p-value"]]<.05)
+  bold_cells <- rbind(bold_cells,
+                      matrix(cbind(to_bold_gp, which(names(tab)=='Global p-value')),ncol=2))
+}
+
+# tab[bold_cells] <- sapply(tab[bold_cells],function(x) kableExtra::cell_spec(x, "latex", bold = T))
+# knitr::kable(tab, format="latex", booktabs = T, escape = F)
+# outTable(tab)
+outTable(tab,bold_cells = bold_cells)
+
+```
+
+```{r}
+ fit1 <- lm(baseline_ctdna~age+l_size+pdl1,data=pembrolizumab)
+ m1 <- rm_mvsum(model=fit1,tableOnly=TRUE)
+ m1$Response = 'ctDNA'
+ fit2 <- lm(l_size~age+baseline_ctdna+pdl1,data=pembrolizumab)
+ m2 <- rm_mvsum(fit2,tableOnly=TRUE)
+ m2$Response = 'Tumour Size'
+ rbind(m1,m2)
+ nestTable(rbind(m1,m2),head_col='Response',to_col='Covariate')
+```
+

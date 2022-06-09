@@ -29,12 +29,12 @@ use the column name 'Covariate'.}
 \item{chunk_label}{only used if output is to Word to allow cross-referencing}
 }
 \description{
-This function will combine rm_uvsum and rm_mvsum outputs into a single table
+This function will combine rm_uvsum and rm_mvsum outputs into a single table.
 The tableOnly argument must be set to TRUE when tables to be combined are
 created. The resulting table will be in the same order as the uvsum table
 and will contain the same columns as the uvsum and mvsum tables, but the 
-p-values will be combined into a single column. There must be variable over-
-lap between the uvsum and mvsum tables and all variables in the mvsum table
+p-values will be combined into a single column. There must be a variable overlapping
+between the uvsum and mvsum tables and all variables in the mvsum table
 must also appear in the uvsum table.
 }
 \examples{

@@ -292,7 +292,6 @@ rm_uvsum(response = 'weight',
          corstr="ar1",
          family=gaussian("identity"),
          data=BodyWeight,showN=T,nicenames = TRUE)
-
 ```
 
 \newpage
@@ -337,7 +336,7 @@ type=NULL;
 km <- ggkmcif(response = c('time','status'),data=lung,median.text = T,set.time.text = 'Y OS',
               set.time = c(500,100,1100),conf.type = 'log-log',conf.curves=TRUE,returns = T)
 km[[1]] <- km[[1]] + ggplot2::theme_minimal()
-modify_ggkmcif(km)
+ggkmcif_paste(km)
 ```
 
 
@@ -419,7 +418,7 @@ m = glm(wt.loss~Sex+age,
         family='gaussian')
 #summary(m)
 rm_mvsum(model=m,data = lung)
-
+tab <- mvsum(model=m,data = lung,markup = F,sanitize = F)
 
 ```
 
@@ -528,7 +527,8 @@ dietox$Cu <- as.factor(dietox$Cu)
 mf <- formula(Weight ~ Cu * (Time + I(Time^2) + I(Time^3)))
 gee1 <- geeglm(mf, data=dietox, id=Pig, family=gaussian("identity"), corstr="ar1")
 summary(gee1)
-mvsum(gee1,data=dietox)
+mvsum(model=gee1,data=dietox)
+
 
 ```
 
@@ -568,7 +568,6 @@ uvsumTable  <- rm_uvsum(response = 'Status',
          data=lung,
          CIwidth=.95,
          tableOnly = T)
-
 m <- glm(Status~Sex+ph.ecog+meal.cal,data=lung,family='binomial')
 mvsumTable  <- rm_mvsum(m, tableOnly = T,showN=T)
 
@@ -606,13 +605,12 @@ m2 = glm(Status~wt.loss+Sex+AgeGroup,
 tab2 <- rm_mvsum(model=m2,data = lung,p.adjust='none',tableOnly = T,showN = T)
 
 tab1$Model = 'Model 1'
-tab1$`p-value` = NA # necessary to make the columns match
+tab1$`Global p-value` = NA # necessary to make the columns match
 tab2$Model = 'Model 2'
 
 newtab <- rbind(tab1,tab2)
 nestTable(data=newtab[,c(5,1,2,6,3,4)],
           head_col = 'Model',to_col = 'Covariate')
-
 ```
 
 Check - what happens if the columns aren't sorted?
@@ -683,7 +681,7 @@ RxFuns %>% write.csv('../reportRxFunctionList.csv')
 
 # Appendix
 
-Testing error from Yanning
+
 ```{r}
 uvsumTable  <- rm_uvsum(response = 'wt.loss', 
                         covs=c('Sex','ph.ecog','meal.cal','AgeGroup'),
@@ -702,17 +700,17 @@ rm_uv_mv(uvsumTable,mvsumTable)
 # Reporting p-values
 
 ```{r}
-# N <- 40
-# Ei <- rnorm(N)
-# data <- data.frame(x1=rnorm(N),
-#                    x2=rnorm(N,2,.5),
-#                    x3=rnorm(N,5),
-#                    c1=factor(sample(c('little','big'),N,T)),
-#                    c2=factor(sample(c('A','B','C'),N,T)))
-# attach(data)
-# data$y = .3*x1+.5*x2+.25*x3+as.numeric(c1)+2*as.numeric(c2)+Ei
-# data$yBin = ifelse(data$y<median(data$y),0,1)
-# data$z = ifelse(Ei<quantile(Ei,.2),0,1)
+N <- 40
+Ei <- rnorm(N)
+data <- data.frame(x1=rnorm(N),
+                   x2=rnorm(N,2,.5),
+                   x3=rnorm(N,5),
+                   c1=factor(sample(c('little','big'),N,T)),
+                   c2=factor(sample(c('A','B','C'),N,T)))
+attach(data)
+data$y = .3*x1+.5*x2+.25*x3+as.numeric(c1)+2*as.numeric(c2)+Ei
+data$yBin = ifelse(data$y<median(data$y),0,1)
+data$z = ifelse(Ei<quantile(Ei,.2),0,1)
 
 # LM
 m1 <- lm(y~x1+x2+c1+c2,data=data)

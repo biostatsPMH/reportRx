@@ -55,7 +55,7 @@ coxph and crr}
 \item{sanitize}{boolean indicating if you want to sanitize all strings to not
 break LaTeX}
 
-\item{nicenames}{booling indicating if you want to replace . and _ in strings
+\item{nicenames}{boolean indicating if you want to replace . and _ in strings
 with a space}
 
 \item{testing}{boolean to indicate if you want to print out the covariates
