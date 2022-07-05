@@ -2347,6 +2347,11 @@ rm_covsum <- function(data,covs,maincov=NULL,caption=NULL,tableOnly=FALSE,covTit
 #' rm_uvsum(response = 'baseline_ctdna',
 #' covs=c('age','sex','l_size','pdl1','tmb'),
 #' data=pembrolizumab)
+#' # Logistic model with default 95% CI
+#' rm_uvsum(response = 'os_status',
+#' covs=c('age','sex','l_size','pdl1','tmb'),
+#' data=pembrolizumab,family = binomial)
+
 rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
                      tableOnly=FALSE,removeInf=TRUE,p.adjust='none',chunk_label,
                      id = NULL,corstr = NULL,family = NULL,type = NULL,strata = 1,
@@ -2398,6 +2403,8 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
+  #if(p.adjust!='none') tab[["raw p-value"]]<-raw_p
+  
   to_bold_p <- which(tab[["p-value"]]<.05 & !tab[["p-value"]]=="")
   if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
                       matrix(cbind(to_bold_p, which(names(tab)=='p-value')),ncol=2))
@@ -2454,6 +2461,13 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
 #' glm_fit = glm(change_ctdna_group~sex:age+baseline_ctdna+l_size,
 #' data=pembrolizumab,family = 'binomial')
 #' rm_mvsum(glm_fit)
+#' #linear model with p-value adjustment
+#' lm_fit=lm(baseline_ctdna~age+sex+l_size+tmb,data=pembrolizumab)
+#' rm_mvsum(lm_fit,p.adjust = "bonferroni")
+#' #Coxph
+#' res.cox <- coxph(Surv(os_time, os_status) ~ sex+age+l_size+tmb, data = pembrolizumab)
+#' rm_mvsum(res.cox)
+
 rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,caption=NULL,tableOnly=FALSE,p.adjust='none',chunk_label, markup = T,sanitize = T,nicenames = T){
   
   # get the table
@@ -2487,6 +2501,7 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
+  if(p.adjust!='none') tab[["raw p-value"]]<-formatp(raw_p)
   to_bold_p <- which(tab[["p-value"]]<.05 & 
                        !tab[["p-value"]]=="" &
                        !is.na(tab[["p-value"]]))
@@ -2536,6 +2551,21 @@ rm_mvsum <- function(model, data, digits=2,covTitle='',showN=FALSE,CIwidth=0.95,
 #' mv_surv_fit <- coxph(Surv(os_time,os_status)~age+sex+
 #' baseline_ctdna+l_size+change_ctdna_group, data=pembrolizumab)
 #' uvTab <- rm_mvsum(mv_surv_fit)
+#' #linear model
+#' uvtab<-rm_uvsum(response = 'baseline_ctdna',
+#' covs=c('age','sex','l_size','pdl1','tmb'),
+#' data=pembrolizumab,tableOnly=TRUE)
+#' lm_fit=lm(baseline_ctdna~age+sex+l_size+tmb,data=pembrolizumab)
+#' mvtab<-rm_mvsum(lm_fit,tableOnly = TRUE)
+#' rm_uv_mv(uvtab,mvtab,tableOnly=TRUE)
+#' #logistic model
+#' uvtab<-rm_uvsum(response = 'os_status',
+#' covs=c('age','sex','l_size','pdl1','tmb'),
+#' data=pembrolizumab,family = binomial,tableOnly=TRUE)
+#' logis_fit<-glm(os_status~age+sex+l_size+pdl1+tmb,data = pembrolizumab,family = 'binomial')
+#' mvtab<-rm_mvsum(logis_fit,tableOnly = TRUE)
+#' rm_uv_mv(uvtab,mvtab,tableOnly=TRUE)
+
 rm_uv_mv <- function(uvsumTable,mvsumTable,covTitle='',caption=NULL,tableOnly=FALSE,chunk_label){ 
   # Check that tables are data frames and not kable objects
   if (!'data.frame' %in% class(uvsumTable)) stop('uvsumTable must be a data.frame. Did you forget to specify tableOnly=TRUE?')
