@@ -2403,7 +2403,7 @@ rm_uvsum <- function(response, covs , data , digits=2, covTitle='',caption=NULL,
     p_sig <- suppressWarnings(stats::p.adjust(raw_p,method=p.adjust))
     tab[["p-value"]] <- sapply(p_sig,formatp,digits = digits)
   }
-  if(p.adjust!='none') tab[["raw p-value"]]<-raw_p
+  if(p.adjust!='none') tab[["raw p-value"]]<-formatp(raw_p)
   
   to_bold_p <- which(tab[["p-value"]]<.05 & !tab[["p-value"]]=="")
   if (length(to_bold_p)>0) bold_cells <- rbind(bold_cells,
