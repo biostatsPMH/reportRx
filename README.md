@@ -31,4 +31,6 @@ For the latest stable version. And
 devtools::install_github("biostatsPMH/reportRx", ref="devel")
 ```
 
+
+
 For the current development version.
