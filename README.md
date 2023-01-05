@@ -17,6 +17,14 @@ repository.
 
 ## Installation
 
+Jasper's update for Mac, Linux, Windows Env:
+
+``` r
+devtools::install_github("jasperzyzhang/reportRx", ref="master")
+```
+
+Original PMH version:
+
 You can install the current versions of reportRx from
 [GitHub](https://github.com) using:
 
