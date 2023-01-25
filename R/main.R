@@ -274,6 +274,7 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=T,sanitize=T,nicename
     if(numobs[[cov]][1]-n>0) {ismiss=T
                               factornames<-c(factornames,"Missing")
     }
+    
     #if the covariate is a factor
     if(is.factor(data[,cov])){
       factornames<-c(levels(data[,cov]),factornames)
