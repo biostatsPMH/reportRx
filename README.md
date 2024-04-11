@@ -3,9 +3,9 @@
 
 # reportRx
 
-<!-- badges: start -->
+**reportRx is deprecated and no longer supported**
 
-<!-- badges: end -->
+It has been replaced by reportRmd.
 
 This is a revisited version of the original reportRx package described
 [here](https://github.com/rdelbel/reportRx).
