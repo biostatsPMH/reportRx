@@ -274,6 +274,7 @@ covsum<-function(data,covs,maincov=NULL,numobs=NULL,markup=T,sanitize=T,nicename
     if(numobs[[cov]][1]-n>0) {ismiss=T
                               factornames<-c(factornames,"Missing")
     }
+    
     #if the covariate is a factor
     if(is.factor(data[,cov])){
       factornames<-c(levels(data[,cov]),factornames)
@@ -749,12 +750,24 @@ makedocx<-function(dir,fname,pdwd,imwd=""){
   if(imwd!=""){
     setwd(imwd)
     command<-paste("mogrify -path ", dir,"figure\\ ", "-format png ", dir, "figure\\*.pdf",sep="" )
-    shell(command)
+    # check system name and make ReportRx compatible for Windows/Mac/Linux
+    if(.Platform$OS.type == "windows"){
+      shell(command)
+    } else{
+      system(command)
+    }
   }
   setwd(pdwd)
   command<-paste("pandoc -o ",dir,fname,".docx ",dir,fname,".tex ",
                  "--default-image-extension=png",sep="")
-  shell(command)
+  
+  # check system name and make ReportRx compatible for Windows/Mac/Linux
+  if(.Platform$OS.type == "windows"){
+      shell(command)
+    } else{
+      system(command)
+    }
+  
   setwd(oldwd)
 }
 

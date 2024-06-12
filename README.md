@@ -18,6 +18,14 @@ repository.
 
 ## Installation
 
+Jasper's update for Mac, Linux, Windows Env:
+
+``` r
+devtools::install_github("jasperzyzhang/reportRx", ref="master")
+```
+
+Original PMH version:
+
 You can install the current versions of reportRx from
 [GitHub](https://github.com) using:
 
@@ -30,5 +38,7 @@ For the latest stable version. And
 ``` r
 devtools::install_github("biostatsPMH/reportRx", ref="devel")
 ```
+
+
 
 For the current development version.
